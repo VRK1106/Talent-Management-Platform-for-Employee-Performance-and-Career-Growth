@@ -597,15 +597,19 @@
         <div class="sb-chat-history">
             <a href="/assistant/session/create"
                style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;
-                      padding:0.3rem 0.4rem;border-radius:6px;border:1px solid var(--ts-border);
+                      padding:0.35rem 0.5rem;border-radius:6px;border:1px solid var(--ts-border);
                       background:rgba(255,255,255,0.04);color:var(--ts-text);text-decoration:none;
-                      margin-bottom:0.4rem;white-space:nowrap;">
-                ➕ New Chat
+                      margin-bottom:0.4rem;white-space:nowrap;transition:all 0.2s;font-weight:500;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                New Chat
             </a>
             {% if session.get('renaming_session_id') %}
             <div style="padding:0.4rem;border:1px solid var(--ts-border);border-radius:6px;
                         margin-bottom:0.4rem;background:rgba(255,255,255,0.02);">
-                <div style="font-size:0.75rem;font-weight:600;color:var(--ts-primary);margin-bottom:0.2rem;">✏️ Rename</div>
+                <div style="font-size:0.75rem;font-weight:600;color:var(--ts-primary);margin-bottom:0.2rem;display:flex;align-items:center;gap:0.25rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Rename
+                </div>
                 <form action="/assistant/session/rename/save" method="POST">
                     <input type="text" name="new_title" value="{{ session.get('renaming_session_title') }}"
                            style="width:100%;padding:0.25rem;margin-bottom:0.3rem;border-radius:4px;
@@ -632,9 +636,20 @@
                               background:rgba(255,255,255,0.03);
                               color:{% if s.session_id==active_chat_session_id %}var(--ts-primary){% else %}var(--ts-text){% endif %};
                               text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-                              font-weight:{% if s.session_id==active_chat_session_id %}600{% else %}400{% endif %};">{% if s.session_id==active_chat_session_id %}⭐{% else %}💬{% endif %} {{ s.title }}</a>
-                    <a href="/assistant/session/rename?id={{ s.session_id }}" title="Rename" style="text-decoration:none;font-size:0.78rem;padding:0.2rem;">✏️</a>
-                    <a href="/assistant/session/delete?id={{ s.session_id }}" title="Delete" style="text-decoration:none;font-size:0.78rem;padding:0.2rem;">🗑️</a>
+                              font-weight:{% if s.session_id==active_chat_session_id %}600{% else %}400{% endif %};display:flex;align-items:center;">
+                        {% if s.session_id==active_chat_session_id %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem; flex-shrink: 0; color: var(--ts-primary);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem; flex-shrink: 0; opacity: 0.75;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        {% endif %}
+                        {{ s.title }}
+                    </a>
+                    <a href="/assistant/session/rename?id={{ s.session_id }}" title="Rename" style="text-decoration:none;font-size:0.78rem;padding:0.25rem;display:inline-flex;align-items:center;color:var(--ts-text-secondary);transition:color 0.2s;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </a>
+                    <a href="/assistant/session/delete?id={{ s.session_id }}" title="Delete" style="text-decoration:none;font-size:0.78rem;padding:0.25rem;display:inline-flex;align-items:center;color:rgba(239,68,68,0.7);transition:color 0.2s;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </a>
                 </div>
                 {% endfor %}
             </div>

@@ -19,17 +19,21 @@
         min-height: 0 !important;
     }
 
+    /* Premium glassmorphic chat container */
     .chat-container {
         display: flex;
         flex-direction: column;
         flex-grow: 1;
         height: 0;
         min-height: 250px;
-        background: rgba(255, 255, 255, 0.01);
-        border: 1px solid var(--ts-border);
-        border-radius: 12px;
+        background: rgba(10, 15, 30, 0.4);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
         overflow: hidden;
-        margin-top: 0.5rem;
+        margin-top: 0.75rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
     }
 
     .main-container .ts-card {
@@ -41,18 +45,21 @@
     
     .chat-messages {
         flex-grow: 1;
-        padding: 1.5rem;
+        padding: 1.75rem;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 1.2rem;
+        gap: 1.5rem;
+        scroll-behavior: smooth;
     }
     
-    /* Message Bubbles */
+    /* Message Rows and Spacing with Slide-in Animation */
     .message-row {
         display: flex;
+        gap: 0.85rem;
         width: 100%;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
+        animation: messageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     .message-row.user {
         justify-content: flex-end;
@@ -60,87 +67,250 @@
     .message-row.assistant {
         justify-content: flex-start;
     }
+
+    @keyframes messageFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
     
+    /* Redesigned Premium Message Bubbles */
     .message-bubble {
-        max-width: 75%;
+        max-width: 72%;
         padding: 1rem 1.25rem;
         border-radius: 16px;
         line-height: 1.6;
         font-size: 0.95rem;
         word-break: break-word;
         box-shadow: var(--ts-shadow);
-        border: 1px solid var(--ts-border);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        position: relative;
+        transition: border-color 0.2s;
     }
+    
     .message-row.user .message-bubble {
-        background: var(--ts-primary);
-        color: #FFFFFF !important;
+        background: rgba(96, 165, 250, 0.12);
+        color: #ffffff !important;
         border-bottom-right-radius: 4px;
-        border-color: var(--ts-primary);
+        border: 1px solid rgba(96, 165, 250, 0.25);
     }
     .message-row.user .message-bubble * {
-        color: #FFFFFF !important;
+        color: #ffffff !important;
     }
+    
     .message-row.assistant .message-bubble {
-        background: var(--ts-inner-bg);
+        background: rgba(255, 255, 255, 0.025);
         color: var(--ts-text);
         border-bottom-left-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .message-bubble:hover {
+        border-color: rgba(96, 165, 250, 0.3);
     }
     
-    .message-avatar {
-        font-size: 1.5rem;
-        margin: 0 0.5rem;
+    /* Professional Vector Avatars */
+    .avatar-wrapper {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        user-select: none;
+    }
+    .avatar-wrapper.assistant {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+    }
+    .avatar-wrapper.user {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: var(--ts-text);
     }
     
-    /* Input Form Area */
-    .chat-input-area {
-        padding: 1rem;
-        border-top: 1px solid var(--ts-border);
-        background: rgba(255, 255, 255, 0.02);
+    /* Code Blocks Redesign */
+    .code-block-container {
+        position: relative;
+        background: #0d1117;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        margin: 1rem 0;
+        overflow: hidden;
+    }
+    .code-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0.45rem 1rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.72rem;
+        color: var(--ts-text-secondary);
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        user-select: none;
+    }
+    .code-block-copy-btn {
+        background: transparent;
+        border: none;
+        color: var(--ts-text-muted);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: color 0.2s, transform 0.1s;
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+    }
+    .code-block-copy-btn:hover {
+        color: var(--ts-text);
+        background: rgba(255, 255, 255, 0.04);
+    }
+    .code-block-copy-btn:active {
+        transform: scale(0.95);
+    }
+    .message-text pre {
+        margin: 0 !important;
+        padding: 1rem !important;
+        overflow-x: auto;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+    .message-text code {
+        font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+        font-size: 0.88rem;
+        color: #e2e8f0;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    /* Inline code style */
+    .message-text :not(pre) > code {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: var(--ts-primary) !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 4px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Welcome cards styling */
+    .welcome-action-card {
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        padding: 1.5rem !important;
+        border-radius: 14px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        text-align: left;
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.6rem;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    .welcome-action-card:hover {
+        background: rgba(96, 165, 250, 0.05) !important;
+        transform: translateY(-4px);
+        border-color: rgba(96, 165, 250, 0.3) !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 15px rgba(96, 165, 250, 0.1) !important;
+    }
+    .action-card-icon {
+        color: var(--ts-primary);
+        opacity: 0.85;
+        transition: transform 0.3s ease;
+    }
+    .welcome-action-card:hover .action-card-icon {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+
+    /* Redesigned Input Area */
+    .chat-input-area {
+        padding: 1.25rem 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(10, 15, 30, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
     }
     
     .chat-input-row {
         display: flex;
         gap: 0.75rem;
+        align-items: flex-end;
     }
     
     .chat-input-field {
         flex-grow: 1;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border: 1px solid var(--ts-border);
-        background-color: var(--ts-input-bg, #0f172a);
+        padding: 0.8rem 1.1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: rgba(15, 23, 42, 0.6);
         color: var(--ts-text);
         outline: none;
         font-size: 0.95rem;
         resize: none;
-        height: 44px;
+        height: 48px;
         box-sizing: border-box;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+        line-height: 1.4;
+    }
+    .chat-input-field:focus {
+        border-color: var(--ts-primary);
+        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    }
+    .chat-input-field:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
-    /* ── Voice / Mic button ─────────────────────────────────────────── */
+    /* Modern Rounded Buttons */
+    .btn-ts {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        height: 44px !important;
+        cursor: pointer;
+    }
+
+    /* Voice / Mic button */
     #micBtn {
-        width: 44px;
-        height: 44px;
+        width: 48px;
+        height: 48px;
         flex-shrink: 0;
-        border-radius: 50%;
-        border: 1.5px solid var(--ts-border);
-        background: var(--ts-input-bg, #0f172a);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
         color: var(--ts-text);
-        font-size: 1.15rem;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-        position: relative;
-        overflow: visible;
+        transition: all 0.2s;
     }
-    #micBtn:hover { border-color: var(--ts-primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    #micBtn:hover {
+        border-color: var(--ts-primary);
+        background: rgba(96, 165, 250, 0.08);
+        box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
+    }
     #micBtn.recording {
         background: rgba(239,68,68,0.15);
         border-color: #ef4444;
@@ -286,6 +456,32 @@
     .message-text tr:nth-child(even) {
         background-color: rgba(255, 255, 255, 0.02);
     }
+
+    /* Custom Model Dropdown Styling */
+    select#chatModel {
+        padding: 0.35rem 1.8rem 0.35rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(15, 23, 42, 0.6);
+        color: var(--ts-text);
+        font-size: 0.82rem;
+        font-weight: 500;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1em;
+        min-width: 180px;
+        max-width: 240px;
+    }
+    select#chatModel:hover {
+        border-color: rgba(96, 165, 250, 0.35);
+        background-color: rgba(15, 23, 42, 0.8);
+    }
 </style>
 <!-- Markdown Parser CDN for client-side streaming rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -296,7 +492,10 @@
 {% block content %}
 <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; flex-shrink: 0; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.5rem;">
-    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--ts-text-heading);">🤖 AI Study Assistant</h2>
+    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--ts-text-heading); display: flex; align-items: center; gap: 0.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--ts-primary);"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        AI Study Assistant
+    </h2>
     <span style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Interactive Learning Coach</span>
 </div>
 
@@ -307,14 +506,14 @@
 
     <!-- Left: model picker -->
     <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1;">
-        <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text-secondary); white-space: nowrap;">🤖 Model</span>
+        <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-10 10c0 5.523 4.477 10 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2z"/><path d="M12 6v12"/><path d="M8 10h8"/><path d="M8 14h8"/></svg>
+            Model
+        </span>
         {% if not groq_api_key %}
             <span style="font-size: 0.78rem; color: #f87171;">⚠️ Groq API key missing</span>
         {% else %}
-            <select id="chatModel"
-                    style="padding: 0.28rem 0.5rem; border-radius: 6px; border: 1px solid var(--ts-border);
-                           background: var(--ts-input-bg); color: var(--ts-text); font-size: 0.82rem;
-                           outline: none; max-width: 240px; flex: 1;">
+            <select id="chatModel">
                 {% for m in ollama_models %}
                     <option value="{{ m }}" {% if "llama" in m.lower() %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
@@ -326,22 +525,24 @@
     <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
         {% if session.get('user_role') != 'admin' %}
         <button type="button" id="ephemeralToggleBtn" onclick="toggleEphemeralDrawer()"
-                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.7rem;
-                       border-radius: 6px; border: 1px solid rgba(99,102,241,0.4);
+                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem;
+                       border-radius: 8px; border: 1px solid rgba(99,102,241,0.4);
                        background: rgba(99,102,241,0.08); color: var(--ts-primary,#6366f1);
-                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
-            📎 <span id="ephemeralBtnLabel">Session Docs</span>
+                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <span id="ephemeralBtnLabel">Session Docs</span>
             <span id="ephemeralChevron" style="transition: transform 0.25s ease;">▾</span>
         </button>
         {% endif %}
         <form action="/assistant/clear" method="POST"
               onsubmit="return confirm('Clear this conversation?')" style="margin: 0;">
             <button type="submit"
-                    style="display: flex; align-items: center; gap: 0.3rem; padding: 0.28rem 0.7rem;
-                           border-radius: 6px; border: 1px solid var(--ts-border);
+                    style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem;
+                           border-radius: 8px; border: 1px solid var(--ts-border);
                            background: transparent; color: var(--ts-text-secondary); font-size: 0.8rem;
-                           cursor: pointer; white-space: nowrap;">
-                🧹 Clear
+                           cursor: pointer; white-space: nowrap; font-weight: 500; transition: all 0.2s;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                Clear
             </button>
         </form>
     </div>
@@ -412,80 +613,73 @@
             <div style="margin: auto; max-width: 680px; width: 100%; padding: 2rem 1rem; text-align: center; display: flex; flex-direction: column; gap: 1.8rem; align-items: center;">
                 
                 <!-- Animated Hero Greeting -->
-                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2rem; border-radius: 16px; box-shadow: var(--ts-shadow); width: 100%;">
-                    <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%); border: 1px solid rgba(99, 102, 241, 0.2); padding: 2.25rem; border-radius: 16px; box-shadow: var(--ts-shadow); width: 100%;">
+                    <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(to right, #ffffff, var(--ts-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.6rem; letter-spacing: -0.5px;">
                         Hello, {{ session.get('user_info', {}).get('full_name', 'Trainee') }}!
                     </div>
-                    <div style="font-size: 1rem; color: var(--ts-text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.5;">
+                    <div style="font-size: 0.98rem; color: var(--ts-text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.6;">
                         I am your unified AI Study Coach. I can help you analyze documents, review exam topics, and track performance.
                     </div>
                 </div>
                 
                 <!-- Quick Action Cards Grid -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; width: 100%;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1.25rem; width: 100%;">
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 1: Attach Document (Trainee only) -->
-                    <div class="welcome-action-card" onclick="toggleUploadCard()" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📎</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Session Documents</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Upload a temporary PDF to ask questions directly from it.</div>
+                    <div class="welcome-action-card" onclick="toggleUploadCard()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Session Documents</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Upload a temporary PDF to ask questions directly from it.</div>
                     </div>
                     {% else %}
                     <!-- Card 1: Review student (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is trainee RK performing?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">👥</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Trainee Insights</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Instantly query trainee scores, session logs, and webcam proctor flags.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('How is trainee RK performing?')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Trainee Insights</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Instantly query trainee scores, session logs, and webcam proctor flags.</div>
                     </div>
                     {% endif %}
                     
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 2: Performance Summary (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is my performance?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📊</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">My Progress</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Review your study actions, session stats, and overall exam completion.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('How is my performance?')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">My Progress</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Review your study actions, session stats, and overall exam completion.</div>
                     </div>
                     {% else %}
                     <!-- Card 2: Create Exam Assessment (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me create a new exam.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📝</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Create Exam</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Design and compile a new exam using our structured, interactive AI wizard.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('Help me create a new exam.')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Create Exam</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Design and compile a new exam using our structured, interactive AI wizard.</div>
                     </div>
                     {% endif %}
                     
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 3: Weakness analysis (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('What are my weakest areas and how do I study them?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">💡</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Weak Area Review</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Identify subjects where you scored under 70% in exams.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('What are my weakest areas and how do I study them?')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1 .5 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Weak Area Review</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Identify subjects where you scored under 70% in exams.</div>
                     </div>
                     {% else %}
                     <!-- Card 3: Create Announcement (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me write a new announcement.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📢</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Write Announcement</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Draft custom announcements with targeted distributions for specific courses.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('Help me write a new announcement.')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="m3 11 18-5v12L3 13v-2Z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Write Announcement</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Draft custom announcements with targeted distributions for specific courses.</div>
                     </div>
                     {% endif %}
                 </div>
-                
-                <!-- Hover effect styles -->
-                <style>
-                    .welcome-action-card:hover {
-                        transform: translateY(-4px);
-                        border-color: var(--ts-primary) !important;
-                        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
-                    }
-                </style>
             </div>
         {% else %}
             {% for msg in active_messages %}
                 <div class="message-row {{ msg.role }}">
                     {% if msg.role == 'assistant' %}
-                        <div class="message-avatar">🤖</div>
+                        <div class="avatar-wrapper assistant" title="AI Coach">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+                        </div>
                     {% endif %}
                     
                     <div class="message-bubble">
@@ -543,7 +737,9 @@
                     </div>
                     
                     {% if msg.role == 'user' %}
-                        <div class="message-avatar">👤</div>
+                        <div class="avatar-wrapper user" title="You">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
                     {% endif %}
                 </div>
             {% endfor %}
@@ -561,15 +757,15 @@
             <!-- Mic button for voice input (Groq Whisper Large V3) -->
             <button id="micBtn" onclick="toggleVoiceRecording()" title="Hold to record voice message (Whisper Large V3)"
                     {% if not groq_api_key %}disabled style="opacity:0.4;cursor:not-allowed;"{% endif %}>
-                🎙️
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
             </button>
-            <button id="sendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0 1.5rem; height: 44px;" 
+            <button id="sendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0 1.5rem; height: 48px;" 
                     onclick="submitMessage()" {% if not groq_api_key %}disabled{% endif %}>
-                🚀 Send
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send
             </button>
-            <button id="stopBtn" class="btn-ts" style="width: auto; padding: 0 1.5rem; height: 44px; display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);"
+            <button id="stopBtn" class="btn-ts" style="width: auto; padding: 0 1.5rem; height: 48px; display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);"
                     onclick="stopGeneration()">
-                ⏹️ Stop
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg> Stop
             </button>
         </div>
         <!-- Voice recording status bar -->
@@ -577,7 +773,7 @@
             <div class="voice-waveform" id="voiceWaveform">
                 <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <span id="voiceStatusText">🎙️ Recording… click mic again to stop &amp; transcribe</span>
+            <span id="voiceStatusText">Recording… click mic again to stop &amp; transcribe</span>
         </div>
     </div>
 <!-- Citation Modal -->
@@ -624,60 +820,109 @@
     }
 
     async function postRenderProcessing() {
+        // 1. Process Mermaid diagrams
         const codeElements = document.querySelectorAll('code.language-mermaid');
-        if (codeElements.length === 0 || typeof mermaid === 'undefined') return;
-
-        for (let i = 0; i < codeElements.length; i++) {
-            const codeEl = codeElements[i];
-            const preEl = codeEl.parentElement;
-            if (preEl && preEl.tagName === 'PRE') {
-                let codeText = codeEl.textContent;
-                codeText = codeText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
-                
-                // Client-side automatic Mermaid syntax repair:
-                // 1. Fix invalid link labels with double arrows like "-->|Text|>" to "-->|Text|"
-                codeText = codeText.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                codeText = codeText.replace(/--\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                codeText = codeText.replace(/->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                
-                // 2. Wrap unquoted node labels in double quotes (e.g. A[Label Text] to A["Label Text"])
-                codeText = codeText.replace(/([A-Za-z0-9_]+)\[([^"\]]+)\]/g, '$1["$2"]');
-                codeText = codeText.replace(/([A-Za-z0-9_]+)\(([^"\/)]+)\)/g, '$1("$2")');
-                codeText = codeText.replace(/([A-Za-z0-9_]+)\{\{([^"\}]+)\}\}/g, '$1{{"$2"}}');
-
-                // If it doesn't start with a valid Mermaid keyword, prepend graph TD as a default
-                const firstWord = codeText.split(/\s+/)[0];
-                const validKeywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt', 'pie', 'gitGraph', 'journey', 'mindmap', 'timeline', 'quadrantChart', 'sankey-beta', 'xychart-beta', 'block-beta'];
-                if (!validKeywords.includes(firstWord)) {
-                    codeText = 'graph TD\n' + codeText;
-                }
-
-                const container = document.createElement('div');
-                container.className = 'mermaid';
-                
-                const id = 'mermaid-render-' + Math.floor(Math.random() * 1000000);
-                
-                try {
-                    // Render single node dynamically
-                    const { svg } = await mermaid.render(id, codeText);
-                    container.innerHTML = svg;
-                    preEl.replaceWith(container);
-                } catch (e) {
-                    console.error("Individual Mermaid rendering failed:", e);
-                    // Clear error elements generated by Mermaid from DOM
-                    const errEl = document.getElementById('d' + id);
-                    if (errEl) errEl.remove();
-                    const errEl2 = document.getElementById(id);
-                    if (errEl2) errEl2.remove();
+        if (codeElements.length > 0 && typeof mermaid !== 'undefined') {
+            for (let i = 0; i < codeElements.length; i++) {
+                const codeEl = codeElements[i];
+                const preEl = codeEl.parentElement;
+                if (preEl && preEl.tagName === 'PRE') {
+                    let codeText = codeEl.textContent;
+                    codeText = codeText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
                     
-                    // Fallback to formatted pre code block
-                    preEl.style.border = '1px dashed rgba(239, 68, 68, 0.4)';
-                    preEl.style.background = 'rgba(239, 68, 68, 0.05)';
-                    preEl.style.padding = '0.75rem';
-                    preEl.style.borderRadius = '6px';
+                    // Client-side automatic Mermaid syntax repair:
+                    codeText = codeText.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                    codeText = codeText.replace(/--\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                    codeText = codeText.replace(/->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                    codeText = codeText.replace(/([A-Za-z0-9_]+)\[([^"\]]+)\]/g, '$1["$2"]');
+                    codeText = codeText.replace(/([A-Za-z0-9_]+)\(([^"\/)]+)\)/g, '$1("$2")');
+                    codeText = codeText.replace(/([A-Za-z0-9_]+)\{\{([^"\}]+)\}\}/g, '$1{{"$2"}}');
+
+                    const firstWord = codeText.split(/\s+/)[0];
+                    const validKeywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt', 'pie', 'gitGraph', 'journey', 'mindmap', 'timeline', 'quadrantChart', 'sankey-beta', 'xychart-beta', 'block-beta'];
+                    if (!validKeywords.includes(firstWord)) {
+                        codeText = 'graph TD\n' + codeText;
+                    }
+
+                    const container = document.createElement('div');
+                    container.className = 'mermaid';
+                    const id = 'mermaid-render-' + Math.floor(Math.random() * 1000000);
+                    
+                    try {
+                        const { svg } = await mermaid.render(id, codeText);
+                        container.innerHTML = svg;
+                        preEl.replaceWith(container);
+                    } catch (e) {
+                        console.error("Individual Mermaid rendering failed:", e);
+                        const errEl = document.getElementById('d' + id);
+                        if (errEl) errEl.remove();
+                        const errEl2 = document.getElementById(id);
+                        if (errEl2) errEl2.remove();
+                        
+                        preEl.style.border = '1px dashed rgba(239, 68, 68, 0.4)';
+                        preEl.style.background = 'rgba(239, 68, 68, 0.05)';
+                        preEl.style.padding = '0.75rem';
+                        preEl.style.borderRadius = '6px';
+                    }
                 }
             }
         }
+
+        // 2. Enhance code blocks (Add wrapper, header, language name and copy button)
+        const allPreElements = document.querySelectorAll('.message-text pre');
+        allPreElements.forEach(pre => {
+            // Check if already enhanced or is a Mermaid block container
+            if (pre.parentElement.classList.contains('code-block-container') || pre.querySelector('code.language-mermaid') || pre.classList.contains('mermaid')) return;
+            
+            const code = pre.querySelector('code');
+            if (!code) return;
+            
+            let lang = 'CODE';
+            code.classList.forEach(cls => {
+                if (cls.startsWith('language-')) {
+                    lang = cls.replace('language-', '').toUpperCase();
+                }
+            });
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-block-container';
+            
+            const header = document.createElement('div');
+            header.className = 'code-block-header';
+            header.innerHTML = `
+                <span>${lang}</span>
+                <button class="code-block-copy-btn" onclick="copyCodeBlock(this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    Copy
+                </button>
+            `;
+            
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(header);
+            wrapper.appendChild(pre);
+        });
+    }
+
+    // Copy Code Block Utility Function
+    function copyCodeBlock(button) {
+        const container = button.closest('.code-block-container');
+        if (!container) return;
+        const pre = container.querySelector('pre');
+        if (!pre) return;
+        
+        const text = pre.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const originalHtml = button.innerHTML;
+            button.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #34d399;"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style="color: #34d399;">Copied!</span>
+            `;
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
     }
 
     function showCitation(markerEl, index) {
@@ -831,7 +1076,9 @@
             <div class="message-bubble">
                 <div class="message-text">${escapeHtml(query)}</div>
             </div>
-            <div class="message-avatar">👤</div>
+            <div class="avatar-wrapper user" title="You">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
         `;
         messagesBox.appendChild(userRow);
         scrollToBottom();
@@ -840,7 +1087,9 @@
         const assistantRow = document.createElement('div');
         assistantRow.className = 'message-row assistant';
         assistantRow.innerHTML = `
-            <div class="message-avatar">🤖</div>
+            <div class="avatar-wrapper assistant" title="AI Coach">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+            </div>
             <div class="message-bubble">
                 <div class="message-text" id="activeResponseText"><i>Thinking...</i></div>
                 <div id="activeNotFoundNotice" style="display: none; margin-top: 0.6rem; padding: 0.5rem 0.75rem; border-radius: 6px; background-color: rgba(239, 68, 68, 0.08); border: 1px dashed rgba(239, 68, 68, 0.25); color: #f87171; font-size: 0.8rem; align-items: center; gap: 0.4rem; width: fit-content;">
