@@ -48,13 +48,58 @@
     }
     .sp-modal-content {
         background: var(--ts-card-bg, #111625);
-        border: 1px solid var(--ts-border);
+        border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
         border-radius: 16px;
         max-width: 580px;
         width: 100%;
         padding: 1.75rem;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        color: var(--ts-text);
+        color: var(--ts-text, #f8fafc);
+    }
+    .sp-input, .sp-select, .sp-textarea {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
+        border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.15));
+        background: var(--ts-popover-bg, #1e293b);
+        color: var(--ts-text, #f8fafc);
+        font-size: 0.88rem;
+        transition: all 0.2s ease;
+    }
+    .sp-input:focus, .sp-select:focus, .sp-textarea:focus {
+        outline: none;
+        border-color: var(--ts-primary, #6366f1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    .sp-select option {
+        background: var(--ts-popover-bg, #1e293b);
+        color: var(--ts-text, #f8fafc);
+    }
+
+    /* Light Mode Theme Overrides */
+    body.ts-light-mode .sp-modal-content {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+        color: #0f172a !important;
+    }
+    body.ts-light-mode .sp-input,
+    body.ts-light-mode .sp-select,
+    body.ts-light-mode .sp-textarea {
+        background: #f8fafc !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+    }
+    body.ts-light-mode .sp-select option {
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
+    body.ts-light-mode .sp-modal-backdrop {
+        background: rgba(15, 23, 42, 0.45) !important;
+    }
+    body.ts-light-mode .sp-assign-all-box {
+        background: rgba(99, 102, 241, 0.05) !important;
+        border-color: rgba(99, 102, 241, 0.2) !important;
     }
 </style>
 {% endblock %}
@@ -166,7 +211,7 @@
                 </td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="flex: 1; max-width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden;">
+                        <div style="flex: 1; max-width: 100px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden;">
                             <div style="width: {{ row.sprint_progress }}%; height: 100%; background: var(--ts-primary);"></div>
                         </div>
                         <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text);">Day {{ row.current_day }}/6 ({{ row.sprint_progress|round(0)|int }}%)</span>
@@ -206,12 +251,12 @@
         <div style="display: flex; flex-direction: column; gap: 0.9rem; font-size: 0.85rem;">
             <div>
                 <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Study Plan Title:</label>
-                <input type="text" id="newPlanTitle" placeholder="e.g. Python & Data Science 6-Day Sprint" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+                <input type="text" id="newPlanTitle" placeholder="e.g. Python & Data Science 6-Day Sprint" class="sp-input">
             </div>
 
             <div>
                 <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Target Trainee Domain:</label>
-                <select id="newPlanDomain" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+                <select id="newPlanDomain" class="sp-select">
                     <option value="python">Python Engineering</option>
                     <option value="general">General</option>
                     <option value="metallurgy">Materials & Metallurgy</option>
@@ -221,7 +266,7 @@
 
             <div>
                 <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Reference PDF Documents (Hold Ctrl/Cmd to select multiple):</label>
-                <select id="newPlanDoc" multiple style="width: 100%; height: 110px; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+                <select id="newPlanDoc" multiple class="sp-select" style="height: 110px;">
                     {% for d in all_docs %}
                     <option value="{{ d }}">{{ d }}</option>
                     {% endfor %}
@@ -233,7 +278,7 @@
 
             <div>
                 <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Or Paste Custom Documentation Text:</label>
-                <textarea id="newPlanText" rows="3" placeholder="Paste documentation notes here for AI Phase 1 chunking..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);"></textarea>
+                <textarea id="newPlanText" rows="3" placeholder="Paste documentation notes here for AI Phase 1 chunking..." class="sp-textarea"></textarea>
             </div>
         </div>
 
@@ -268,7 +313,7 @@
 
         <input type="hidden" id="assignPlanId" value="">
 
-        <div style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); display: flex; align-items: center; justify-content: space-between;">
+        <div class="sp-assign-all-box" style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text);">🌐 Assign to ALL Trainees</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary);">Enroll all registered trainees in this study plan</div>
@@ -278,7 +323,7 @@
 
         <div style="margin-bottom: 1rem;">
             <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Or Select Specific Trainees (Hold Ctrl/Cmd for multi-select):</label>
-            <select id="assignTraineeId" multiple style="width: 100%; height: 130px; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+            <select id="assignTraineeId" multiple class="sp-select" style="height: 130px;">
                 {% for t in all_trainees %}
                 <option value="{{ t.employee_id }}">{{ t.full_name }} ({{ t.email }}) - {{ t.domain|capitalize }}</option>
                 {% endfor %}
@@ -357,7 +402,7 @@
             for (let i = 1; i <= 4; i++) {
                 const dayTasks = tasks['day' + i] || [];
                 const contentText = Array.isArray(dayTasks) ? dayTasks.join(', ') : dayTasks;
-                html += `<div style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.15);">
+                html += `<div style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background: var(--ts-card-bg);">
                     <div style="font-weight: 700; color: var(--ts-primary); margin-bottom: 0.2rem;">Day ${i} (Learning Module):</div>
                     <div style="color: var(--ts-text-secondary); font-size: 0.82rem;">${contentText || 'General study material'}</div>
                 </div>`;

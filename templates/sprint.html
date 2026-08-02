@@ -13,7 +13,7 @@
     }
     .s-day-card {
         background: var(--ts-card-bg, #111625);
-        border: 1px solid var(--ts-border);
+        border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
         border-radius: 12px;
         padding: 1rem;
         display: flex;
@@ -66,6 +66,46 @@
         padding: 1.5rem;
         color: #F8FAFC;
     }
+    .voice-modal-card {
+        background: var(--ts-card-bg, #111625);
+        border: 1px solid var(--ts-border);
+        border-radius: 20px;
+        max-width: 520px;
+        width: 100%;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+        color: var(--ts-text);
+    }
+
+    /* Light Mode Overrides for Trainee Sprint */
+    body.ts-light-mode .s-day-card {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    }
+    body.ts-light-mode .s-day-card.active-day {
+        background: rgba(99, 102, 241, 0.05) !important;
+        border-color: var(--ts-primary, #6366f1) !important;
+    }
+    body.ts-light-mode .s-day-card.completed-day {
+        background: rgba(16, 185, 129, 0.04) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+    body.ts-light-mode .s-day-card.locked-day {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        opacity: 0.6 !important;
+    }
+    body.ts-light-mode .voice-modal-backdrop {
+        background: rgba(15, 23, 42, 0.5) !important;
+    }
+    body.ts-light-mode .voice-modal-card {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        color: #0f172a !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+    }
 </style>
 {% endblock %}
 
@@ -88,7 +128,7 @@
         <div style="text-align: right; background: var(--ts-card-bg); border: 1px solid var(--ts-border); border-radius: 12px; padding: 0.75rem 1.25rem;">
             <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Sprint Progression</div>
             <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-primary);">Day {{ sprint.current_day }} of 6</div>
-            <div style="width: 120px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; margin-top: 0.3rem;">
+            <div style="width: 120px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; margin-top: 0.3rem;">
                 <div style="width: {{ sprint.sprint_progress }}%; height: 100%; background: var(--ts-primary);"></div>
             </div>
         </div>
@@ -250,7 +290,7 @@
 </div>
 
 <!-- WEEK 2 PREVIEW ROADMAP -->
-<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem; opacity: 0.6;">
+<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem; opacity: 0.65;">
     <div style="font-size: 0.9rem; font-weight: 700; color: var(--ts-text-secondary); display: flex; align-items: center; justify-content: space-between;">
         <span>🔒 Week 2 Advanced Architecture & Microservices Sprint (Preview)</span>
         <span style="font-size: 0.75rem;">Unlocks after Week 1 Completion</span>
@@ -266,11 +306,11 @@
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--ts-border);">
+        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border);">
             <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Technical Accuracy Score</div>
             <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin-top: 0.2rem;">{{ eval_report.technical_score|int if eval_report else 85 }}%</div>
         </div>
-        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--ts-border);">
+        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border);">
             <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Speech Executive Presence</div>
             <div style="font-size: 2rem; font-weight: 800; color: var(--ts-primary); margin-top: 0.2rem;">{{ eval_report.confidence_score|int if eval_report else 90 }}%</div>
         </div>
@@ -289,7 +329,7 @@
 
 <!-- Voice Interview Overlay Modal -->
 <div id="voiceOverlay" class="voice-modal-backdrop" style="display: none;">
-    <div style="background: var(--ts-card-bg, #111625); border: 1px solid var(--ts-border); border-radius: 20px; max-width: 520px; width: 100%; padding: 2rem; text-align: center; position: relative;">
+    <div class="voice-modal-card">
         <button onclick="closeVoiceOverlay()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--ts-text-secondary); font-size: 1.2rem; cursor: pointer;">✕</button>
         
         <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #10b981; margin-bottom: 0.4rem;">PHASE 3 VOICE MOCK INTERVIEW</div>
@@ -303,7 +343,7 @@
         
         <div id="voiceOverlayStatus" style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Click the microphone orb to record your voice answer</div>
 
-        <div id="liveVoiceTextContainer" style="display: none; margin-top: 1rem; padding: 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--ts-border); font-size: 0.82rem; text-align: left; color: var(--ts-text);">
+        <div id="liveVoiceTextContainer" style="display: none; margin-top: 1rem; padding: 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); font-size: 0.82rem; text-align: left; color: var(--ts-text);">
             🎙️ <span id="liveVoiceText">Listening...</span>
         </div>
     </div>
