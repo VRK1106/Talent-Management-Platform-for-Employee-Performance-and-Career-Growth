@@ -3770,12 +3770,24 @@ def study_plans_page():
     except Exception:
         all_docs = []
 
+    all_trainees = []
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT employee_id, full_name, email, domain FROM users WHERE role = 'trainee'")
+        all_trainees = [dict(r) for r in c.fetchall()]
+        conn.close()
+    except Exception:
+        all_trainees = []
+
     return render_template(
         'study_plans.html',
         active_page='study_plans',
         all_plans=all_plans,
         all_schedules=all_schedules,
-        all_docs=all_docs
+        all_docs=all_docs,
+        all_trainees=all_trainees
     )
 
 @app.route('/study_plans/delete', methods=['POST'])

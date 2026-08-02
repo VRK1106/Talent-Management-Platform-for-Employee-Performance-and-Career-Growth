@@ -115,9 +115,9 @@
                     <span class="sp-badge sp-badge-success">Active Enrolled</span>
                 </td>
                 <td style="text-align: right; white-space: nowrap;">
-                    <button onclick="previewSyllabus('{{ p.title|escape }}', '{{ p.tasks_json|escape }}')" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem;">👁️ Syllabus</button>
-                    <button onclick="openAssignModal('{{ p.plan_id }}', '{{ p.title|escape }}')" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem;">👤 Assign</button>
-                    <button onclick="deletePlan('{{ p.plan_id }}')" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Delete</button>
+                    <button data-title="{{ p.title }}" data-tasks='{{ p.tasks_json }}' onclick="previewSyllabusBtn(this)" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem;">👁️ Syllabus</button>
+                    <button data-planid="{{ p.plan_id }}" data-title="{{ p.title }}" onclick="openAssignModalBtn(this)" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem;">👤 Assign</button>
+                    <button data-planid="{{ p.plan_id }}" onclick="deletePlanBtn(this)" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Delete</button>
                 </td>
             </tr>
             {% endfor %}
@@ -184,7 +184,7 @@
                     {% endif %}
                 </td>
                 <td style="text-align: right;">
-                    <button onclick="advanceTrainee('{{ row.user_id }}')" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.3rem 0.7rem; font-size: 0.78rem;">
+                    <button data-userid="{{ row.user_id }}" onclick="advanceTraineeBtn(this)" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.3rem 0.7rem; font-size: 0.78rem;">
                         Next: Day {{ row.current_day + 1 if row.current_day < 6 else 6 }}
                     </button>
                 </td>
@@ -258,6 +258,31 @@
     </div>
 </div>
 
+<!-- Modal 3: Assign Study Plan to Trainee -->
+<div id="assignModal" class="sp-modal-backdrop" style="display: none;">
+    <div class="sp-modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; font-size: 1.05rem; color: var(--ts-primary);" id="assignModalTitle">Assign Study Plan</div>
+            <button onclick="closeAssignModal()" style="background: none; border: none; color: var(--ts-text-secondary); cursor: pointer; font-size: 1.2rem;">✕</button>
+        </div>
+
+        <input type="hidden" id="assignPlanId" value="">
+        <div style="margin-bottom: 1rem;">
+            <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Trainee User:</label>
+            <select id="assignTraineeId" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+                {% for t in all_trainees %}
+                <option value="{{ t.employee_id }}">{{ t.full_name }} ({{ t.email }}) - {{ t.domain|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.6rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
+            <button onclick="closeAssignModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Cancel</button>
+            <button onclick="submitAssignPlan()" class="btn-ts btn-ts-primary" style="width: auto;">👤 Assign Plan</button>
+        </div>
+    </div>
+</div>
+
 <script>
     function openCreateModal() {
         document.getElementById('createModal').style.display = 'flex';
@@ -309,45 +334,23 @@
         }
     }
 
-        btn.disabled = true;
-        btn.innerText = '⚡ Processing AI Phase 1 Chunking...';
-
-        try {
-            const res = await fetch('/sprint/chunk_document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ doc_name: docName, raw_text: rawText, domain: domain, week_number: 1 })
-            });
-            const data = await res.json();
-            btn.disabled = false;
-            btn.innerText = '⚡ Generate AI Plan';
-
-            if (data.status === 'success') {
-                alert('✓ AI Study Plan Created Successfully!');
-                window.location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to create plan'));
-            }
-        } catch (e) {
-            console.error(e);
-            btn.disabled = false;
-            btn.innerText = '⚡ Generate AI Plan';
-        }
-    }
-
-    function previewSyllabus(title, tasksJson) {
+    function previewSyllabusBtn(btn) {
+        const title = btn.getAttribute('data-title');
+        const tasksRaw = btn.getAttribute('data-tasks');
         document.getElementById('syllabusModalTitle').innerText = 'Syllabus: ' + title;
         const container = document.getElementById('syllabusContent');
         container.innerHTML = '';
 
         try {
-            const tasks = JSON.parse(tasksJson);
+            let tasks = typeof tasksRaw === 'string' ? JSON.parse(tasksRaw) : tasksRaw;
+            if (typeof tasks === 'string') tasks = JSON.parse(tasks);
             let html = '';
             for (let i = 1; i <= 4; i++) {
                 const dayTasks = tasks['day' + i] || [];
+                const contentText = Array.isArray(dayTasks) ? dayTasks.join(', ') : dayTasks;
                 html += `<div style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.15);">
                     <div style="font-weight: 700; color: var(--ts-primary); margin-bottom: 0.2rem;">Day ${i} (Learning Module):</div>
-                    <div style="color: var(--ts-text-secondary); font-size: 0.82rem;">${dayTasks.join(', ') || 'General study material'}</div>
+                    <div style="color: var(--ts-text-secondary); font-size: 0.82rem;">${contentText || 'General study material'}</div>
                 </div>`;
             }
             html += `<div style="padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(251,191,36,0.3); background: rgba(251,191,36,0.05);">
@@ -364,6 +367,7 @@
             </div>`;
             container.innerHTML = html;
         } catch (e) {
+            console.error(e);
             container.innerHTML = '<p style="color: var(--ts-text-secondary); font-style: italic;">Syllabus breakdown preview unavailable.</p>';
         }
 
@@ -374,7 +378,42 @@
         document.getElementById('syllabusModal').style.display = 'none';
     }
 
-    async function deletePlan(planId) {
+    function openAssignModalBtn(btn) {
+        const planId = btn.getAttribute('data-planid');
+        const title = btn.getAttribute('data-title');
+        document.getElementById('assignPlanId').value = planId;
+        document.getElementById('assignModalTitle').innerText = 'Assign: ' + title;
+        document.getElementById('assignModal').style.display = 'flex';
+    }
+
+    function closeAssignModal() {
+        document.getElementById('assignModal').style.display = 'none';
+    }
+
+    async function submitAssignPlan() {
+        const planId = document.getElementById('assignPlanId').value;
+        const userId = document.getElementById('assignTraineeId').value;
+        if (!planId || !userId) return;
+        try {
+            const res = await fetch('/study_plans/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_id: planId, user_id: userId })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert('✓ Study Plan assigned successfully!');
+                window.location.reload();
+            } else {
+                alert('Failed to assign study plan.');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function deletePlanBtn(btn) {
+        const planId = btn.getAttribute('data-planid');
         if (!confirm('Are you sure you want to delete this study plan?')) return;
         try {
             await fetch('/study_plans/delete', {
@@ -388,7 +427,8 @@
         }
     }
 
-    async function advanceTrainee(userId) {
+    async function advanceTraineeBtn(btn) {
+        const userId = btn.getAttribute('data-userid');
         try {
             await fetch('/sprint/advance_day', {
                 method: 'POST',
