@@ -592,54 +592,67 @@
     let activeModalDoc = '';
 
     function handleDayClick(dayNum) {
-        const data = SPRINT_DAYS_DATA[dayNum];
-        if (!data) return;
-
-        if (data.isLocked) {
-            alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
-            return;
-        }
-
-        activeModalDay = dayNum;
-
-        let docName = data.doc || '';
-        let taskText = '';
-        if (Array.isArray(data.tasks)) {
-            taskText = data.tasks.join('\n\n• ');
-        } else {
-            taskText = String(data.tasks || '');
-        }
-
-        if (!docName || String(docName).trim() === '') {
-            const match = taskText.match(/\[([^\]]+\.pdf)\]/i);
-            if (match) {
-                docName = match[1].trim();
+        console.log("handleDayClick called for day:", dayNum);
+        try {
+            const data = SPRINT_DAYS_DATA[dayNum] || {};
+            if (data.isLocked) {
+                alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
+                return;
             }
+
+            activeModalDay = dayNum;
+
+            let docName = data.doc || '';
+            let taskText = '';
+            if (Array.isArray(data.tasks)) {
+                taskText = data.tasks.join('\n\n• ');
+            } else {
+                taskText = String(data.tasks || '');
+            }
+
+            if (!docName || String(docName).trim() === '') {
+                const match = taskText.match(/\[([^\]]+\.pdf)\]/i);
+                if (match) {
+                    docName = match[1].trim();
+                }
+            }
+
+            activeModalDoc = docName;
+            
+            const titleEl = document.getElementById('dayModalTitle');
+            if (titleEl) titleEl.innerText = `Day ${dayNum}: ${data.title || ('Module ' + dayNum + ' Learning')}`;
+
+            let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
+            const contentEl = document.getElementById('dayModalContent');
+            if (contentEl) contentEl.innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
+
+            const docBox = document.getElementById('dayModalDocBox');
+            const docNameEl = document.getElementById('dayModalDocName');
+            const docLinkEl = document.getElementById('dayModalDocLink');
+
+            if (docBox && docNameEl && docLinkEl) {
+                docBox.style.display = 'block';
+                if (docName && String(docName).trim() !== '') {
+                    docNameEl.innerText = docName;
+                    docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
+                    docLinkEl.onclick = null;
+                } else {
+                    docNameEl.innerText = 'No PDF document linked for this day.';
+                    docLinkEl.href = '#';
+                    docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
+                }
+            }
+
+            const modal = document.getElementById('dayDetailModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log("Opened dayDetailModal for day", dayNum);
+            }
+        } catch (err) {
+            console.error("Error opening day modal:", err);
+            const modal = document.getElementById('dayDetailModal');
+            if (modal) modal.style.display = 'flex';
         }
-
-        activeModalDoc = docName;
-        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${data.title}`;
-
-        let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
-        document.getElementById('dayModalContent').innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
-
-        const docBox = document.getElementById('dayModalDocBox');
-        const docNameEl = document.getElementById('dayModalDocName');
-        const docLinkEl = document.getElementById('dayModalDocLink');
-
-        if (docName && String(docName).trim() !== '') {
-            docBox.style.display = 'block';
-            docNameEl.innerText = docName;
-            docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
-            docLinkEl.onclick = null;
-        } else {
-            docBox.style.display = 'block';
-            docNameEl.innerText = 'No PDF document linked for this day.';
-            docLinkEl.href = '#';
-            docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
-        }
-
-        document.getElementById('dayDetailModal').style.display = 'flex';
     }
 
     function closeDayModal() {
@@ -889,9 +902,6 @@
                         console.error(err);
                         statusEl.innerText = "Processing response... Click orb to continue.";
                         orbIcon.innerText = "🎙️";
-                        orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
-                    }
-                };
                         orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
                     }
                 };
