@@ -150,43 +150,62 @@ def generate_rag_answer(query: str, chunks: list[dict[str, Any]], model_name: st
 
 
 def generate_chat_answer(prompt: str, model_name: str, system_instruction: str | None = None) -> str:
-    """Generate a general model completion from a prompt via Groq API."""
+    """Generate a general model completion from a prompt via Groq API with rate limit fallbacks."""
     if not GROQ_API_KEY:
         return "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
 
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        
-        messages = []
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-        messages.append({"role": "user", "content": prompt})
-            
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "temperature": 0.7,
-            "max_tokens": 1024,
-            "top_p": 0.9,
-        }
+    candidate_models = [model_name, "llama-3.1-8b-instant", "gemma2-9b-it", "mixtral-8x7b-32768"]
+    models_to_try = []
+    for m in candidate_models:
+        if m and m not in models_to_try:
+            models_to_try.append(m)
 
-        req_headers = HEADERS.copy()
-        req_headers["Authorization"] = f"Bearer {GROQ_API_KEY}"
+    last_error = ""
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=req_headers,
-            method="POST",
-        )
+    for attempt_model in models_to_try:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            messages = []
+            if system_instruction:
+                messages.append({"role": "system", "content": system_instruction})
+            messages.append({"role": "user", "content": prompt})
+                
+            payload = {
+                "model": attempt_model,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 1024,
+                "top_p": 0.9,
+            }
 
-        with urllib.request.urlopen(req, timeout=180.0) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data["choices"][0]["message"]["content"].strip()
-    except urllib.error.URLError as e:
-        return f"Error connecting to Groq API: {e.reason}."
-    except Exception as e:
-        return f"An unexpected error occurred: {e}"
+            req_headers = HEADERS.copy()
+            req_headers["Authorization"] = f"Bearer {GROQ_API_KEY}"
+
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=req_headers,
+                method="POST",
+            )
+
+            with urllib.request.urlopen(req, timeout=180.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"].strip()
+        except urllib.error.HTTPError as e:
+            last_error = f"Error connecting to Groq API: {e.reason}."
+            if e.code == 429:
+                import time
+                time.sleep(0.5)
+                continue
+            return last_error
+        except urllib.error.URLError as e:
+            last_error = f"Error connecting to Groq API: {e.reason}."
+            continue
+        except Exception as e:
+            last_error = f"An unexpected error occurred: {e}"
+            continue
+
+    return last_error if last_error else "Error connecting to Groq API."
 
 
 def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_name: str):

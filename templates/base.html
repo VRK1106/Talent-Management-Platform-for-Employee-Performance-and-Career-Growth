@@ -490,10 +490,10 @@
             }
         });
 
-        // Set light/dark theme early on boot to prevent page flickering
+        // Set light/dark theme early on boot to prevent page flickering (Default: Light Theme)
         (function() {
             const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'light') {
+            if (savedTheme !== 'dark') {
                 document.documentElement.classList.add('ts-light-mode');
                 document.addEventListener('DOMContentLoaded', () => {
                     document.body.classList.add('ts-light-mode');
@@ -508,14 +508,14 @@
                 body.classList.remove('ts-light-mode');
                 document.documentElement.classList.remove('ts-light-mode');
                 localStorage.setItem('theme', 'dark');
-                document.getElementById('theme-btn-icon').innerText = '☀️';
-                document.getElementById('theme-btn-text').innerText = 'Switch to Light';
+                if (document.getElementById('theme-btn-icon')) document.getElementById('theme-btn-icon').innerText = '☀️';
+                if (document.getElementById('theme-btn-text')) document.getElementById('theme-btn-text').innerText = 'Switch to Light';
             } else {
                 body.classList.add('ts-light-mode');
                 document.documentElement.classList.add('ts-light-mode');
                 localStorage.setItem('theme', 'light');
-                document.getElementById('theme-btn-icon').innerText = '🌙';
-                document.getElementById('theme-btn-text').innerText = 'Switch to Dark';
+                if (document.getElementById('theme-btn-icon')) document.getElementById('theme-btn-icon').innerText = '🌙';
+                if (document.getElementById('theme-btn-text')) document.getElementById('theme-btn-text').innerText = 'Switch to Dark';
             }
         }
         
@@ -525,12 +525,12 @@
             const themeText = document.getElementById('theme-btn-text');
             const themeIcon = document.getElementById('theme-btn-icon');
             if (themeText && themeIcon) {
-                if (savedTheme === 'light') {
-                    themeIcon.innerText = '🌙';
-                    themeText.innerText = 'Switch to Dark';
-                } else {
+                if (savedTheme === 'dark') {
                     themeIcon.innerText = '☀️';
                     themeText.innerText = 'Switch to Light';
+                } else {
+                    themeIcon.innerText = '🌙';
+                    themeText.innerText = 'Switch to Dark';
                 }
             }
         });

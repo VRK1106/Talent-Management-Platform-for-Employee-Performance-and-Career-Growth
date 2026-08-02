@@ -39,6 +39,22 @@
         flex-shrink: 0 !important;
     }
     
+    body.ts-light-mode .voice-option-item {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    body.ts-light-mode .voice-option-item span {
+        color: #0f172a !important;
+    }
+    body.ts-light-mode #voiceAssistantSpeech {
+        color: #0f172a !important;
+    }
+    body.ts-light-mode #voiceSelectModeBadge {
+        color: #64748b !important;
+    }
+    
     .chat-messages {
         flex-grow: 1;
         padding: 1.5rem;
@@ -465,21 +481,22 @@
         list.innerHTML = '';
         items.forEach((item, idx) => {
             const itemRow = document.createElement('label');
+            itemRow.className = 'voice-option-item';
             itemRow.style.display = 'flex';
             itemRow.style.alignItems = 'center';
-            itemRow.style.gap = '0.5rem';
-            itemRow.style.padding = '0.4rem 0.6rem';
-            itemRow.style.background = 'rgba(30, 41, 59, 0.6)';
+            itemRow.style.gap = '0.6rem';
+            itemRow.style.padding = '0.5rem 0.75rem';
+            itemRow.style.background = 'var(--ts-inner-bg, rgba(255, 255, 255, 0.06))';
             itemRow.style.borderRadius = '8px';
-            itemRow.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            itemRow.style.border = '1px solid var(--ts-border, rgba(255, 255, 255, 0.15))';
             itemRow.style.cursor = 'pointer';
-            itemRow.style.fontSize = '0.82rem';
-            itemRow.style.color = '#F8FAFC';
+            itemRow.style.fontSize = '0.85rem';
+            itemRow.style.color = 'var(--ts-text, #F8FAFC)';
 
             const inputType = isMulti ? 'checkbox' : 'radio';
             itemRow.innerHTML = `
-                <input type="${inputType}" name="voice_select_choice" value="${escapeHtml(item)}" style="cursor: pointer;">
-                <span>${escapeHtml(item)}</span>
+                <input type="${inputType}" name="voice_select_choice" value="${escapeHtml(item)}" style="cursor: pointer; accent-color: var(--ts-primary);">
+                <span style="color: var(--ts-text, #F8FAFC); font-weight: 600;">${escapeHtml(item)}</span>
             `;
             list.appendChild(itemRow);
         });
