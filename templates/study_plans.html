@@ -267,9 +267,18 @@
         </div>
 
         <input type="hidden" id="assignPlanId" value="">
+
+        <div style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text);">🌐 Assign to ALL Trainees</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary);">Enroll all registered trainees in this study plan</div>
+            </div>
+            <input type="checkbox" id="assignAllCheckbox" onchange="toggleAssignAll(this)" style="width: 18px; height: 18px; cursor: pointer;">
+        </div>
+
         <div style="margin-bottom: 1rem;">
-            <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Trainee User:</label>
-            <select id="assignTraineeId" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
+            <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Or Select Specific Trainees (Hold Ctrl/Cmd for multi-select):</label>
+            <select id="assignTraineeId" multiple style="width: 100%; height: 130px; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
                 {% for t in all_trainees %}
                 <option value="{{ t.employee_id }}">{{ t.full_name }} ({{ t.email }}) - {{ t.domain|capitalize }}</option>
                 {% endfor %}
@@ -278,7 +287,7 @@
 
         <div style="display: flex; justify-content: flex-end; gap: 0.6rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
             <button onclick="closeAssignModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Cancel</button>
-            <button onclick="submitAssignPlan()" class="btn-ts btn-ts-primary" style="width: auto;">👤 Assign Plan</button>
+            <button onclick="submitAssignPlan()" class="btn-ts btn-ts-primary" style="width: auto;">👤 Confirm Assignment</button>
         </div>
     </div>
 </div>
@@ -378,11 +387,19 @@
         document.getElementById('syllabusModal').style.display = 'none';
     }
 
+    function toggleAssignAll(cb) {
+        const sel = document.getElementById('assignTraineeId');
+        sel.disabled = cb.checked;
+        sel.style.opacity = cb.checked ? '0.4' : '1.0';
+    }
+
     function openAssignModalBtn(btn) {
         const planId = btn.getAttribute('data-planid');
         const title = btn.getAttribute('data-title');
         document.getElementById('assignPlanId').value = planId;
         document.getElementById('assignModalTitle').innerText = 'Assign: ' + title;
+        document.getElementById('assignAllCheckbox').checked = false;
+        toggleAssignAll({ checked: false });
         document.getElementById('assignModal').style.display = 'flex';
     }
 
@@ -392,17 +409,25 @@
 
     async function submitAssignPlan() {
         const planId = document.getElementById('assignPlanId').value;
-        const userId = document.getElementById('assignTraineeId').value;
-        if (!planId || !userId) return;
+        const assignAll = document.getElementById('assignAllCheckbox').checked;
+        const selectEl = document.getElementById('assignTraineeId');
+        const selectedUserIds = Array.from(selectEl.selectedOptions).map(opt => opt.value);
+
+        if (!planId) return;
+        if (!assignAll && selectedUserIds.length === 0) {
+            alert('Please select at least one trainee or check "Assign to ALL Trainees".');
+            return;
+        }
+
         try {
             const res = await fetch('/study_plans/assign', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan_id: planId, user_id: userId })
+                body: JSON.stringify({ plan_id: planId, user_ids: selectedUserIds, assign_all: assignAll })
             });
             const data = await res.json();
             if (data.status === 'success') {
-                alert('✓ Study Plan assigned successfully!');
+                alert(`✓ Study Plan assigned successfully to ${data.assigned_count} trainee(s)!`);
                 window.location.reload();
             } else {
                 alert('Failed to assign study plan.');

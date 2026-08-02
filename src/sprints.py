@@ -407,7 +407,7 @@ def delete_study_plan(plan_id: str) -> bool:
         return False
 
 def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
-    """Assign a specific study plan to a trainee user."""
+    """Assign a specific study plan to a trainee user, creating schedule row if needed."""
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         cursor = conn.cursor()
@@ -416,14 +416,20 @@ def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
         if "assigned_plan_id" not in cols:
             cursor.execute("ALTER TABLE sprint_schedules ADD COLUMN assigned_plan_id TEXT")
         
-        cursor.execute(
-            "UPDATE sprint_schedules SET assigned_plan_id = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
-            (plan_id, user_id)
-        )
+        cursor.execute("SELECT user_id FROM sprint_schedules WHERE user_id = ?", (user_id,))
+        if cursor.fetchone():
+            cursor.execute(
+                "UPDATE sprint_schedules SET assigned_plan_id = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (plan_id, user_id)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, 1, 1, 0.0, ?)",
+                (str(uuid.uuid4()), user_id, plan_id)
+            )
         conn.commit()
         conn.close()
         return True
     except Exception as e:
         print(f"Error assigning study plan: {e}")
         return False
-

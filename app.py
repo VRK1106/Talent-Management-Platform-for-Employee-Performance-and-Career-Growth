@@ -3807,11 +3807,40 @@ def study_plans_assign():
     if session.get('user_role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json(silent=True) or {}
-    user_id = data.get('user_id', '')
     plan_id = data.get('plan_id', '')
+    user_ids = data.get('user_ids', [])
+    single_user = data.get('user_id', '')
+    assign_all = data.get('assign_all', False)
+    
+    if single_user and single_user not in user_ids:
+        if isinstance(user_ids, list):
+            user_ids.append(single_user)
+        else:
+            user_ids = [single_user]
+
     from src.sprints import assign_study_plan_to_user
-    assign_study_plan_to_user(user_id, plan_id)
-    return jsonify({'status': 'success'})
+    count = 0
+
+    if assign_all:
+        try:
+            conn = sqlite3.connect(str(_DB_PATH))
+            c = conn.cursor()
+            c.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
+            trainee_ids = [r[0] for r in c.fetchall()]
+            conn.close()
+            for u_id in trainee_ids:
+                if assign_study_plan_to_user(u_id, plan_id):
+                    count += 1
+        except Exception as e:
+            print(f"Error assigning all trainees: {e}")
+    else:
+        if isinstance(user_ids, str):
+            user_ids = [user_ids]
+        for u_id in user_ids:
+            if assign_study_plan_to_user(u_id, plan_id):
+                count += 1
+
+    return jsonify({'status': 'success', 'assigned_count': count})
 
 @app.route('/sprint', methods=['GET'])
 @login_required
