@@ -3871,6 +3871,87 @@ def sprint_advance_day():
     update_sprint_progress(emp_id, progress)
     return jsonify({'status': 'success', 'current_day': next_day, 'progress': progress})
 
+@app.route('/sprint/take_day5_exam', methods=['GET', 'POST'])
+@login_required
+def sprint_take_day5_exam():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    domain = user_info.get('domain', 'general')
+
+    from src.sprints import get_sprint, get_study_plan
+    from src.exams import get_all_exams, add_exam_and_get_id, assign_exam, get_assignments_for_trainee
+
+    sprint_data = get_sprint(emp_id)
+    week_num = sprint_data.get('current_week', 1)
+    study_plan = get_study_plan(domain, week_num)
+    
+    exam_id = study_plan.get('day5_exam_id')
+    
+    if not exam_id:
+        all_e = get_all_exams()
+        for e in all_e:
+            if f"Week {week_num}" in e.get("title", "") or domain.lower() in e.get("title", "").lower():
+                exam_id = e.get("exam_id")
+                break
+
+    if not exam_id:
+        from src.llm import generate_chat_answer, clean_json_response
+        prompt = (
+            f"Generate a Day 5 Gateway Assessment covering {domain} training materials for Week {week_num}.\n"
+            f"Create exactly 5 high-quality multiple choice questions (MCQs).\n"
+            f"You MUST return ONLY a valid JSON list of objects matching this exact structure:\n"
+            f"[\n"
+            f"  {{\n"
+            f"    \"question\": \"Question text here?\",\n"
+            f"    \"type\": \"mcq\",\n"
+            f"    \"marks\": 10,\n"
+            f"    \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n"
+            f"    \"correct_answer\": \"Option A\"\n"
+            f"  }}\n"
+            f"]"
+        )
+        try:
+            resp = generate_chat_answer(prompt=prompt, model_name="llama-3.3-70b-versatile", system_instruction="Output ONLY valid JSON array.")
+            cleaned = clean_json_response(resp)
+            q_list = json.loads(cleaned)
+        except Exception:
+            q_list = [
+                {
+                    "question": f"What is a fundamental concept in {domain.capitalize()} Week {week_num}?",
+                    "type": "mcq",
+                    "marks": 10,
+                    "options": ["Architecture Guidelines", "Random Guess", "None", "All of the above"],
+                    "correct_answer": "Architecture Guidelines"
+                }
+            ]
+
+        exam_title = f"{domain.capitalize()} Week {week_num} Gateway Exam"
+        exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam covering Week {week_num} study materials.", len(q_list) * 10, q_list)
+
+    trainee_assignments = get_assignments_for_trainee(emp_id)
+    target_assignment_id = None
+    if exam_id:
+        for a in trainee_assignments:
+            if a.get('exam_id') == int(exam_id) and a.get('status') == 'assigned':
+                target_assignment_id = a.get('assignment_id')
+                break
+
+    if not target_assignment_id and exam_id:
+        assign_exam(int(exam_id), emp_id, None)
+        trainee_assignments = get_assignments_for_trainee(emp_id)
+        for a in trainee_assignments:
+            if a.get('exam_id') == int(exam_id) and a.get('status') == 'assigned':
+                target_assignment_id = a.get('assignment_id')
+                break
+
+    if target_assignment_id:
+        session['taking_assignment_id'] = target_assignment_id
+        session['exam_started'] = False
+        return redirect(url_for('exams'))
+
+    flash("Could not initialize exam assignment. Please try again.")
+    return redirect(url_for('exams'))
+
 @app.route('/sprint/chunk_document', methods=['POST'])
 @login_required
 def sprint_chunk_document():
@@ -3878,51 +3959,136 @@ def sprint_chunk_document():
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.get_json(silent=True) or {}
-    doc_name = data.get('doc_name', '').strip()
+    doc_names = data.get('doc_names', [])
+    if isinstance(doc_names, str):
+        doc_names = [d.strip() for d in doc_names.split(',') if d.strip()]
+    
+    single_doc = data.get('doc_name', '').strip()
+    if single_doc and single_doc not in doc_names:
+        doc_names.append(single_doc)
+
     raw_text = data.get('raw_text', '').strip()
     domain = data.get('domain', 'general').lower()
     week_num = int(data.get('week_number', 1))
+    title_input = data.get('title', '').strip()
 
-    doc_content = raw_text
-    if doc_name and not doc_content:
-        try:
-            from src.vectorstore import get_collection
-            coll = get_collection()
-            res = coll.get(where={"source": doc_name}, include=["documents"])
-            docs_list = res.get("documents") or []
-            if docs_list:
-                doc_content = "\n\n".join(docs_list[:20])
-        except Exception as e:
-            print(f"Error reading vectorstore doc content: {e}")
-
-    if not doc_content:
-        return jsonify({'error': 'No document text found to process.'}), 400
-
+    from src.vectorstore import get_collection
     from src.sprints import run_sprint_orchestrator, save_study_plan
-    state_payload = {
-        "Current_State": {"phase": 1, "state": "Preparation & Chunking"},
-        "week_id": f"week_{week_num}",
-        "uploaded_documentation": doc_content[:4000]
-    }
+    from src.exams import add_exam_and_get_id, assign_exam_to_all_students
+
+    docs_contents = []
     
-    orchestrator_res = run_sprint_orchestrator(state_payload)
+    if doc_names:
+        try:
+            coll = get_collection()
+            for dn in doc_names:
+                res = coll.get(where={"source": dn}, include=["documents"])
+                d_list = res.get("documents") or []
+                c_text = "\n\n".join(d_list[:20]) if d_list else f"Reference Content for {dn}"
+                docs_contents.append({"source": dn, "text": c_text})
+        except Exception as e:
+            print(f"Error fetching vectorstore docs: {e}")
+
+    if not docs_contents and raw_text:
+        docs_contents.append({"source": "Custom Input", "text": raw_text})
+
+    if not docs_contents:
+        return jsonify({'error': 'No document text or files found to process.'}), 400
+
+    num_files = len(docs_contents)
+    tasks = {}
+
+    # REQUIREMENT: If exactly 4 documents found, assign each document to each day. Or else, split content equally to 4 days.
+    if num_files == 4:
+        tasks = {
+            "day1": [f"[{docs_contents[0]['source']}] {docs_contents[0]['text'][:400]}"],
+            "day2": [f"[{docs_contents[1]['source']}] {docs_contents[1]['text'][:400]}"],
+            "day3": [f"[{docs_contents[2]['source']}] {docs_contents[2]['text'][:400]}"],
+            "day4": [f"[{docs_contents[3]['source']}] {docs_contents[3]['text'][:400]}"]
+        }
+    else:
+        combined_text = "\n\n".join(d["text"] for d in docs_contents)
+        state_payload = {
+            "Current_State": {"phase": 1, "state": "Preparation & Chunking"},
+            "week_id": f"week_{week_num}",
+            "uploaded_documentation": combined_text[:4000]
+        }
+        orchestrator_res = run_sprint_orchestrator(state_payload)
+        tasks = {
+            "day1": [orchestrator_res.get('day_1_material', 'Module 1 Checkpoint')],
+            "day2": [orchestrator_res.get('day_2_material', 'Module 2 Checkpoint')],
+            "day3": [orchestrator_res.get('day_3_material', 'Module 3 Checkpoint')],
+            "day4": [orchestrator_res.get('day_4_material', 'Module 4 Checkpoint')]
+        }
+
+    # REQUIREMENT: Create exam automatically based on uploaded materials (3 questions per file uploaded).
+    target_q_count = max(3, num_files * 3)
+    from src.llm import generate_chat_answer, clean_json_response
     
-    day1 = orchestrator_res.get('day_1_material', 'Module 1 Study Checkpoint')
-    day2 = orchestrator_res.get('day_2_material', 'Module 2 Study Checkpoint')
-    day3 = orchestrator_res.get('day_3_material', 'Module 3 Study Checkpoint')
-    day4 = orchestrator_res.get('day_4_material', 'Module 4 Study Checkpoint')
+    exam_prompt = (
+        f"Generate an exam based on the following training materials for {domain.capitalize()} Week {week_num}.\n"
+        f"Generate EXACTLY {target_q_count} multiple-choice questions (3 questions per uploaded reference file).\n\n"
+        f"Materials Summary:\n"
+    )
+    for idx, d in enumerate(docs_contents):
+        exam_prompt += f"--- File {idx+1} ({d['source']}) ---\n{d['text'][:1500]}\n\n"
 
-    tasks = {
-        "day1": [day1],
-        "day2": [day2],
-        "day3": [day3],
-        "day4": [day4]
-    }
+    exam_prompt += (
+        f"You MUST return ONLY a valid JSON list of objects with no surrounding text. Structure:\n"
+        f"[\n"
+        f"  {{\n"
+        f"    \"question\": \"Detailed question text based on file contents?\",\n"
+        f"    \"type\": \"mcq\",\n"
+        f"    \"marks\": 10,\n"
+        f"    \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n"
+        f"    \"correct_answer\": \"Option A\"\n"
+        f"  }}\n"
+        f"]"
+    )
 
-    title = f"Week {week_num} ({domain.capitalize()}) AI Orchestrated Sprint"
-    save_study_plan(domain, week_num, title, json.dumps(tasks), "", f"Defend Week {week_num} concepts.")
+    questions_list = []
+    try:
+        resp = generate_chat_answer(prompt=exam_prompt, model_name="llama-3.3-70b-versatile", system_instruction="Output ONLY valid JSON array.")
+        cleaned = clean_json_response(resp)
+        questions_list = json.loads(cleaned)
+    except Exception as e:
+        print(f"Error generating exam questions: {e}")
+        questions_list = [
+            {
+                "question": f"Question {i+1} covering {domain.capitalize()} materials",
+                "type": "mcq",
+                "marks": 10,
+                "options": ["Correct Concept", "Incorrect Option B", "Incorrect Option C", "Incorrect Option D"],
+                "correct_answer": "Correct Concept"
+            } for i in range(target_q_count)
+        ]
 
-    return jsonify({'status': 'success', 'orchestrator_result': orchestrator_res, 'tasks': tasks})
+    plan_title = title_input or f"Week {week_num} ({domain.capitalize()}) AI Study Plan"
+    exam_title = f"Day 5 Gateway Exam: {plan_title}"
+    total_marks = len(questions_list) * 10
+    exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam for {plan_title} ({num_files} reference files).", total_marks, questions_list)
+    
+    if exam_id:
+        assign_exam_to_all_students(exam_id)
+
+    ref_files = [d['source'] for d in docs_contents]
+    save_study_plan(
+        domain=domain,
+        week_number=week_num,
+        title=plan_title,
+        tasks_json=json.dumps(tasks),
+        day5_exam_id=str(exam_id) if exam_id else "",
+        day6_interview_prompt=f"Defend the core architecture and key principles from {plan_title}.",
+        reference_files_json=json.dumps(ref_files)
+    )
+
+    return jsonify({
+        'status': 'success',
+        'plan_title': plan_title,
+        'exam_id': exam_id,
+        'questions_count': len(questions_list),
+        'tasks': tasks
+    })
 
 @app.route('/sprint/reset', methods=['POST'])
 @login_required

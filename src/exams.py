@@ -188,6 +188,11 @@ def get_exam_by_id(exam_id: int) -> dict[str, Any] | None:
 
 def add_exam(title: str, description: str, total_marks: int, questions: list[dict[str, Any]], settings: dict[str, Any] | None = None) -> bool:
     """Add a new exam containing a list of questions."""
+    res = add_exam_and_get_id(title, description, total_marks, questions, settings)
+    return res is not None
+
+def add_exam_and_get_id(title: str, description: str, total_marks: int, questions: list[dict[str, Any]], settings: dict[str, Any] | None = None) -> int | None:
+    """Add a new exam containing a list of questions and return its created exam_id."""
     init_exams_db()
     try:
         conn = sqlite3.connect(str(_DB_PATH))
@@ -199,12 +204,31 @@ def add_exam(title: str, description: str, total_marks: int, questions: list[dic
             """,
             (title.strip(), description.strip(), total_marks, json.dumps(questions), json.dumps(settings or {})),
         )
+        exam_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        return True
-    except Exception:
-        return False
+        return exam_id
+    except Exception as e:
+        print(f"Error adding exam: {e}")
+        return None
 
+def assign_exam_to_all_students(exam_id: int) -> int:
+    """Assign an exam to all trainee users in SQLite."""
+    init_exams_db()
+    count = 0
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
+        trainees = [r['employee_id'] for r in cursor.fetchall()]
+        conn.close()
+        for t_id in trainees:
+            if assign_exam(exam_id, t_id, None):
+                count += 1
+    except Exception as e:
+        print(f"Error assigning exam to all: {e}")
+    return count
 
 def delete_exam(exam_id: int) -> bool:
     """Delete an exam and cascade delete its assignments."""

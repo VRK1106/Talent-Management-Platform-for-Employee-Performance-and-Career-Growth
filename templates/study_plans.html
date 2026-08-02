@@ -220,13 +220,15 @@
             </div>
 
             <div>
-                <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Ingested PDF Reference File:</label>
-                <select id="newPlanDoc" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
-                    <option value="">-- Choose PDF Document --</option>
+                <label style="font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Reference PDF Documents (Hold Ctrl/Cmd to select multiple):</label>
+                <select id="newPlanDoc" multiple style="width: 100%; height: 110px; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--ts-border); background: rgba(0,0,0,0.2); color: var(--ts-text);">
                     {% for d in all_docs %}
                     <option value="{{ d }}">{{ d }}</option>
                     {% endfor %}
                 </select>
+                <div style="font-size: 0.72rem; color: var(--ts-text-secondary); margin-top: 0.2rem;">
+                    💡 Tip: Select exactly 4 files to assign 1 file per day (Day 1 - Day 4), or select any number of files for equal AI content division.
+                </div>
             </div>
 
             <div>
@@ -237,7 +239,7 @@
 
         <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
             <button onclick="closeCreateModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Cancel</button>
-            <button onclick="submitCreatePlan()" id="submitCreateBtn" class="btn-ts btn-ts-primary" style="width: auto;">⚡ Generate AI Plan</button>
+            <button onclick="submitCreatePlan()" id="submitCreateBtn" class="btn-ts btn-ts-primary" style="width: auto;">⚡ Generate AI Plan & Exam</button>
         </div>
     </div>
 </div>
@@ -267,7 +269,8 @@
     async function submitCreatePlan() {
         const title = document.getElementById('newPlanTitle').value;
         const domain = document.getElementById('newPlanDomain').value;
-        const docName = document.getElementById('newPlanDoc').value;
+        const selectEl = document.getElementById('newPlanDoc');
+        const selectedDocs = Array.from(selectEl.selectedOptions).map(opt => opt.value);
         const rawText = document.getElementById('newPlanText').value;
         const btn = document.getElementById('submitCreateBtn');
 
@@ -275,10 +278,36 @@
             alert('Please enter a Study Plan Title.');
             return;
         }
-        if (!docName && !rawText) {
-            alert('Please select a PDF document or paste documentation text.');
+        if (selectedDocs.length === 0 && !rawText) {
+            alert('Please select at least one PDF document or paste documentation text.');
             return;
         }
+
+        btn.disabled = true;
+        btn.innerText = '⚡ Generating AI 4-Day Plan & Exam...';
+
+        try {
+            const res = await fetch('/sprint/chunk_document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title, doc_names: selectedDocs, raw_text: rawText, domain: domain, week_number: 1 })
+            });
+            const data = await res.json();
+            btn.disabled = false;
+            btn.innerText = '⚡ Generate AI Plan & Exam';
+
+            if (data.status === 'success') {
+                alert(`✓ AI Study Plan & Day 5 Gateway Exam (${data.questions_count} Questions) Created Successfully!`);
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to create plan'));
+            }
+        } catch (e) {
+            console.error(e);
+            btn.disabled = false;
+            btn.innerText = '⚡ Generate AI Plan & Exam';
+        }
+    }
 
         btn.disabled = true;
         btn.innerText = '⚡ Processing AI Phase 1 Chunking...';
