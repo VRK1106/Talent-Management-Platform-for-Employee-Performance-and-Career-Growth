@@ -591,10 +591,12 @@
             <span class="sb-nav-icon">🤖</span>
             <span class="sb-nav-label">AI Assistant</span>
         </a>
+        {% if session.get('user_role') != 'admin' %}
         <a href="/sprint" class="sb-nav-link {% if active_page == 'sprint' %}active{% endif %}">
             <span class="sb-nav-icon">🏃</span>
             <span class="sb-nav-label">6-Day Sprint</span>
         </a>
+        {% endif %}
 
         <!-- Chat history sub-panel (only visible when expanded) -->
         {% if show_chat_history %}

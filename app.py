@@ -3804,6 +3804,9 @@ def study_plans_assign():
 @app.route('/sprint', methods=['GET'])
 @login_required
 def sprint_page():
+    if session.get('user_role') == 'admin':
+        return redirect(url_for('study_plans_page'))
+
     user_info = session.get('user_info', {}) or {}
     emp_id = user_info.get('employee_id', 'demo')
     user_role = session.get('user_role', 'trainee')
