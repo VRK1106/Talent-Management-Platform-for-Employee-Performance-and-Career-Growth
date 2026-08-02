@@ -433,7 +433,11 @@ def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
         cursor.execute("SELECT user_id FROM sprint_schedules WHERE user_id = ?", (user_id,))
         if cursor.fetchone():
             cursor.execute(
-                "UPDATE sprint_schedules SET assigned_plan_id = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
+                """
+                UPDATE sprint_schedules 
+                SET assigned_plan_id = ?, current_day = 1, sprint_progress = 0.0, last_updated = CURRENT_TIMESTAMP 
+                WHERE user_id = ?
+                """,
                 (plan_id, user_id)
             )
         else:
@@ -441,6 +445,10 @@ def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
                 "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, 1, 1, 0.0, ?)",
                 (str(uuid.uuid4()), user_id, plan_id)
             )
+        
+        # Clear prior QA errors and interview evaluations so trainee starts clean on new plan
+        cursor.execute("DELETE FROM qa_errors WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM interview_evaluations WHERE user_id = ?", (user_id,))
         conn.commit()
         conn.close()
         return True
