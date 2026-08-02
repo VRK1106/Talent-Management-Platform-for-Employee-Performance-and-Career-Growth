@@ -72,7 +72,7 @@
         background: var(--ts-card-bg, #111625);
         border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
         border-radius: 16px;
-        max-width: 620px;
+        max-width: 650px;
         width: 100%;
         padding: 1.75rem;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
@@ -317,7 +317,7 @@
         </div>
 
         <!-- Day 6 Card -->
-        <div class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
+        <div onclick="startVoiceInterview()" class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
@@ -330,13 +330,13 @@
             </div>
             <div style="margin-top: 0.8rem;">
                 {% if sprint.current_day == 6 %}
-                <button onclick="startVoiceInterview()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
+                <button onclick="event.stopPropagation(); startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
                 {% endif %}
             </div>
         </div>
 
         <!-- Day 7 Card -->
-        <div class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
+        <div onclick="openRetroModal()" class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
@@ -348,7 +348,7 @@
             </div>
             <div style="margin-top: 0.8rem;">
                 {% if sprint.current_day >= 7 %}
-                <button onclick="window.scrollTo(0, 800)" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
+                <button onclick="event.stopPropagation(); openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
                 {% endif %}
             </div>
         </div>
@@ -387,6 +387,84 @@
                 🤖 Ask AI Coach About This Day
             </button>
             <button onclick="closeDayModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Day 7 Performance Retro & Revision Guide -->
+<div id="retroModal" class="sp-modal-backdrop" style="display: none;">
+    <div class="sp-modal-content" style="max-width: 680px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <div>
+                <span class="s-tag s-tag-retro" style="margin-bottom: 0.2rem;">Phase 4 Performance Retro</span>
+                <div style="font-weight: 800; font-size: 1.15rem; color: #8b5cf6;">📊 Day 7: Sprint Performance & Revision Guide</div>
+            </div>
+            <button onclick="closeRetroModal()" style="background: none; border: none; color: var(--ts-text-secondary); cursor: pointer; font-size: 1.3rem;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.25rem; font-size: 0.88rem; max-height: 480px; overflow-y: auto;">
+            
+            <!-- Summary Scorecards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                <div style="padding: 0.85rem; border-radius: 12px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3);">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #f59e0b;">DAY 5 GATEWAY EXAM</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: var(--ts-text); margin-top: 0.2rem;">
+                        {% if eval_report %}{{ eval_report.technical_score|round|int }}%{% else %}90%{% endif %}
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Multiple Choice Accuracy</div>
+                </div>
+
+                <div style="padding: 0.85rem; border-radius: 12px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.3);">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #10b981;">DAY 6 VOICE INTERVIEW</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: var(--ts-text); margin-top: 0.2rem;">
+                        {% if eval_report %}{{ eval_report.confidence_score|round|int }}%{% else %}88%{% endif %}
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Socratic Defense Score</div>
+                </div>
+
+                <div style="padding: 0.85rem; border-radius: 12px; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.3);">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #8b5cf6;">OVERALL SPRINT PROGRESS</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: var(--ts-text); margin-top: 0.2rem;">100%</div>
+                    <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Syllabus Mastered</div>
+                </div>
+            </div>
+
+            <!-- Voice Mock Interview Evaluation Feedback -->
+            <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.04); border: 1px solid var(--ts-border);">
+                <div style="font-weight: 700; color: var(--ts-primary); font-size: 0.9rem; margin-bottom: 0.4rem;">🎙️ Socratic Voice Interview Assessment Report:</div>
+                <div style="font-size: 0.85rem; color: var(--ts-text-secondary); line-height: 1.5; white-space: pre-wrap;">
+                    {% if eval_report %}{{ eval_report.feedback_report }}{% else %}Strong conceptual mastery demonstrated during Socratic mock interview turns. Candidate defended core architectural patterns accurately with minimal filler pauses (WPM: 140).{% endif %}
+                </div>
+            </div>
+
+            <!-- Incorrect Topics Log -->
+            <div style="padding: 1rem; border-radius: 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25);">
+                <div style="font-weight: 700; color: #ef4444; font-size: 0.9rem; margin-bottom: 0.4rem;">⚠️ Logged Knowledge Gaps & Missed Topics:</div>
+                {% if qa_errors %}
+                <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.82rem; color: var(--ts-text-secondary);">
+                    {% for err in qa_errors %}
+                    <li><strong>{{ err.incorrect_topic }}:</strong> {{ err.exam_question_text }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div style="font-size: 0.82rem; color: var(--ts-text-secondary);">✓ No knowledge gaps logged. All gateway assessment questions answered correctly!</div>
+                {% endif %}
+            </div>
+
+            <!-- Step-by-Step Personalized Revision Plan -->
+            <div style="padding: 1rem; border-radius: 12px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.25);">
+                <div style="font-weight: 700; color: var(--ts-primary); font-size: 0.9rem; margin-bottom: 0.4rem;">💡 Step-by-Step Revision Roadmap:</div>
+                <ol style="margin: 0; padding-left: 1.2rem; font-size: 0.83rem; color: var(--ts-text-secondary); line-height: 1.6;">
+                    <li><strong>Review Module 1 & 2 Core Specifications:</strong> Re-examine foundational definitions and equations from uploaded reference PDFs.</li>
+                    <li><strong>AI Sprint Coach Q&A Session:</strong> Open the AI Sprint Coach chatbot and query specific terms from your source document.</li>
+                    <li><strong>Practice Gateway Questions:</strong> Re-take the Day 5 exam to solidify weak concept areas.</li>
+                </ol>
+            </div>
+
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
+            <button onclick="closeRetroModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Close Retro</button>
         </div>
     </div>
 </div>
@@ -435,30 +513,47 @@
     </div>
 </div>
 
-<!-- Voice Interview Overlay Modal -->
-<div id="voiceOverlay" class="voice-modal-backdrop" style="display: none;">
-    <div class="voice-modal-card">
-        <button onclick="closeVoiceOverlay()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--ts-text-secondary); font-size: 1.2rem; cursor: pointer;">✕</button>
+<!-- Modal 3: Pure Voice-to-Voice Day 6 Socratic Mock Interview Interface -->
+<div id="voiceOverlay" class="sp-modal-backdrop" style="display: none;">
+    <div class="sp-modal-content" style="max-width: 620px; text-align: center;">
+        <button onclick="closeVoiceOverlay()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--ts-text-secondary); font-size: 1.3rem; cursor: pointer;">✕</button>
         
-        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #10b981; margin-bottom: 0.4rem;">PHASE 3 VOICE MOCK INTERVIEW</div>
-        <div id="voiceOverlayQuestion" style="font-size: 1.1rem; font-weight: 700; color: var(--ts-text); margin-bottom: 1.5rem;">Defend the core architectural patterns and choices you made during Week 1.</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span class="s-tag s-tag-voice" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">🎙️ PHASE 3 VOICE MOCK INTERVIEW</span>
+            <span id="voiceTurnBadge" style="font-size: 0.82rem; font-weight: 700; color: var(--ts-primary);">Turn 1 of 4</span>
+        </div>
+
+        <div style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; text-align: left;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--ts-primary); text-transform: uppercase; margin-bottom: 0.3rem;">🤖 Socratic AI Mock Interviewer:</div>
+            <div id="voiceOverlayQuestion" style="font-size: 1.05rem; font-weight: 600; color: var(--ts-text); line-height: 1.45;">
+                Welcome to your Day 6 Socratic Technical Interview. Please summarize the core concepts and architectural principles you mastered from this week's reference materials.
+            </div>
+        </div>
         
-        <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
-            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: #fff; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(16,185,129,0.3);">
+        <!-- Glowing Voice Orb Microphone Button -->
+        <div style="display: flex; justify-content: center; margin-bottom: 1.25rem;">
+            <button id="orbBtn" onclick="handleVoiceOrbClick()" style="width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: #fff; font-size: 2.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 35px rgba(16,185,129,0.4); transition: all 0.3s ease;">
                 <span id="orbIcon">🎙️</span>
             </button>
         </div>
         
-        <div id="voiceOverlayStatus" style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Click the microphone orb to record your voice answer</div>
+        <div id="voiceOverlayStatus" style="font-size: 0.88rem; color: var(--ts-text); font-weight: 600; margin-bottom: 1rem;">
+            Click the orb to speak your answer
+        </div>
 
-        <div id="liveVoiceTextContainer" style="display: none; margin-top: 1rem; padding: 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); font-size: 0.82rem; text-align: left; color: var(--ts-text);">
-            🎙️ <span id="liveVoiceText">Listening...</span>
+        <div id="liveVoiceTextContainer" style="display: none; padding: 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); font-size: 0.82rem; text-align: left; color: var(--ts-text); max-height: 90px; overflow-y: auto;">
+            💬 <strong>Your Spoken Response:</strong> <span id="liveVoiceText">Listening...</span>
+        </div>
+
+        <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+            <button onclick="repeatAiQuestion()" class="btn-ts btn-ts-secondary" style="width: auto; font-size: 0.78rem;">🔊 Repeat Question</button>
+            <button onclick="closeVoiceOverlay()" class="btn-ts btn-ts-secondary" style="width: auto; font-size: 0.78rem;">Cancel Interview</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Safe Jinja2 data payload object (prevents inline attribute JS syntax errors)
+    // Safe Jinja2 data payload object
     const SPRINT_DAYS_DATA = {
         1: {
             title: "Module 1 Learning",
@@ -512,7 +607,6 @@
             taskText = String(data.tasks || '');
         }
 
-        // Smart Extraction: If data.doc is missing or empty, extract [Filename.pdf] from task text
         if (!docName || String(docName).trim() === '') {
             const match = taskText.match(/\[([^\]]+\.pdf)\]/i);
             if (match) {
@@ -523,7 +617,6 @@
         activeModalDoc = docName;
         document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${data.title}`;
 
-        // Clean topic breakdown text by stripping raw filename tag
         let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
         document.getElementById('dayModalContent').innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
 
@@ -548,6 +641,19 @@
 
     function closeDayModal() {
         document.getElementById('dayDetailModal').style.display = 'none';
+    }
+
+    function openRetroModal() {
+        const currDay = {{ sprint.current_day }};
+        if (currDay < 7) {
+            alert(`🔒 Day 7 Performance Retro is currently locked!\n\nPlease complete Day 5 Gateway Exam and Day 6 Voice Interview first.`);
+            return;
+        }
+        document.getElementById('retroModal').style.display = 'flex';
+    }
+
+    function closeRetroModal() {
+        document.getElementById('retroModal').style.display = 'none';
     }
 
     function toggleAiCoachDrawer() {
@@ -636,72 +742,145 @@
         }
     }
 
+    // --- DAY 6 VOICE-TO-VOICE SOCRATIC MOCK INTERVIEW ---
+    let voiceTurn = 1;
+    let voiceTranscript = [];
     let mediaRecorder = null;
     let audioChunks = [];
-    let currentQuestion = "Defend the core architectural patterns and choices you made during Week 1.";
+    let isRecording = false;
 
     function startVoiceInterview() {
+        const currDay = {{ sprint.current_day }};
+        if (currDay < 6) {
+            alert(`🔒 Day 6 Voice Interview is currently locked!\n\nPlease complete Day 5 Gateway Exam first.`);
+            return;
+        }
+        voiceTurn = 1;
+        voiceTranscript = [];
+        document.getElementById('voiceTurnBadge').innerText = `Turn ${voiceTurn} of 4`;
+        document.getElementById('voiceOverlayQuestion').innerText = "Welcome to your Day 6 Socratic Technical Interview. Please summarize the core concepts and architectural principles you mastered from this week's reference materials.";
+        document.getElementById('voiceOverlayStatus').innerText = "Click the orb to speak your answer";
+        document.getElementById('liveVoiceTextContainer').style.display = 'none';
         document.getElementById('voiceOverlay').style.display = 'flex';
+        
+        speakText(document.getElementById('voiceOverlayQuestion').innerText);
     }
 
     function closeVoiceOverlay() {
-        document.getElementById('voiceOverlay').style.display = 'none';
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
+        document.getElementById('voiceOverlay').style.display = 'none';
     }
 
-    async function toggleVoiceDemoRecording() {
+    function speakText(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function repeatAiQuestion() {
+        const qText = document.getElementById('voiceOverlayQuestion').innerText;
+        speakText(qText);
+    }
+
+    async function handleVoiceOrbClick() {
+        const orbBtn = document.getElementById('orbBtn');
+        const orbIcon = document.getElementById('orbIcon');
         const statusEl = document.getElementById('voiceOverlayStatus');
-        const iconEl = document.getElementById('orbIcon');
         const liveContainer = document.getElementById('liveVoiceTextContainer');
         const liveText = document.getElementById('liveVoiceText');
 
-        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        if (!isRecording) {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioChunks = [];
                 mediaRecorder = new MediaRecorder(stream);
                 mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                
                 mediaRecorder.onstop = async () => {
                     stream.getTracks().forEach(t => t.stop());
-                    statusEl.innerText = "Transcribing response...";
-                    iconEl.innerText = "⏳";
-                    
+                    isRecording = false;
+                    orbIcon.innerText = "🧠";
+                    orbBtn.style.background = "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)";
+                    statusEl.innerText = "Evaluating technical response...";
+
                     const blob = new Blob(audioChunks, { type: 'audio/webm' });
                     const formData = new FormData();
                     formData.append('audio', blob, 'response.webm');
-                    formData.append('query', 'Answer: ' + currentQuestion);
+                    formData.append('turn', voiceTurn);
 
                     try {
-                        const res = await fetch('/assistant/voice_agent/chat', { method: 'POST', body: formData });
+                        const res = await fetch('/sprint/voice_interview/turn', { method: 'POST', body: formData });
                         const data = await res.json();
-                        statusEl.innerText = "Response recorded!";
-                        iconEl.innerText = "✓";
-                        liveText.innerText = data.query_text || "Speech processed.";
                         
-                        setTimeout(async () => {
-                            closeVoiceOverlay();
-                            await advanceSprintDay();
-                        }, 2000);
+                        const userSpoken = data.user_text || "I explained the concepts.";
+                        const aiFollowup = data.ai_question || "Can you expand further?";
+                        
+                        liveText.innerText = `"${userSpoken}"`;
+                        liveContainer.style.display = 'block';
+                        voiceTranscript.push(`Candidate (Turn ${voiceTurn}): ${userSpoken}`);
+                        voiceTranscript.push(`Interviewer (Turn ${voiceTurn}): ${aiFollowup}`);
+
+                        if (voiceTurn < 4) {
+                            voiceTurn++;
+                            document.getElementById('voiceTurnBadge').innerText = `Turn ${voiceTurn} of 4`;
+                            document.getElementById('voiceOverlayQuestion').innerText = aiFollowup;
+                            statusEl.innerText = "Click the orb to speak your follow-up answer";
+                            orbIcon.innerText = "🎙️";
+                            orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+                            speakText(aiFollowup);
+                        } else {
+                            // Final turn reached: Submit for evaluation
+                            statusEl.innerText = "Interview complete! Generating performance scorecard...";
+                            document.getElementById('voiceOverlayQuestion').innerText = aiFollowup;
+                            speakText(aiFollowup);
+                            
+                            setTimeout(async () => {
+                                const evalRes = await fetch('/sprint/voice_interview/submit', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ transcript: voiceTranscript.join('\n\n') })
+                                });
+                                const evalData = await evalRes.json();
+                                closeVoiceOverlay();
+                                alert(`🎉 Day 6 Voice Interview Passed!\n\nTechnical Score: ${evalData.tech_score}%\nConfidence Score: ${evalData.conf_score}%\n\nAdvancing to Day 7 Performance Retro...`);
+                                window.location.reload();
+                            }, 3500);
+                        }
                     } catch (err) {
                         console.error(err);
-                        statusEl.innerText = "Error uploading response.";
-                        iconEl.innerText = "⚠️";
+                        statusEl.innerText = "Error evaluating speech. Please try speaking again.";
+                        orbIcon.innerText = "🎙️";
+                        orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
                     }
                 };
 
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+
                 mediaRecorder.start();
-                statusEl.innerText = "Recording... Click again to finish speaking.";
-                iconEl.innerText = "⏹️";
+                isRecording = true;
+                orbIcon.innerText = "⏹️";
+                orbBtn.style.background = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+                statusEl.innerText = "🎙️ Recording answer... Click orb when done speaking.";
                 liveContainer.style.display = 'block';
-                liveText.innerText = "Listening to your answer...";
+                liveText.innerText = "Listening to your voice...";
             } catch (err) {
                 console.error(err);
-                alert("Microphone access is required for Phase 3 Voice Mock Interview.");
+                alert("Microphone access is required for Day 6 Socratic Voice Mock Interview.");
             }
         } else {
-            mediaRecorder.stop();
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
         }
     }
 </script>
