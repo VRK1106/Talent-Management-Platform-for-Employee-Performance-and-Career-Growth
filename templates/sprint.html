@@ -94,13 +94,11 @@
         display: flex;
         flex-direction: column;
         opacity: 0;
-        pointer-events: none;
         transform: translateY(20px) scale(0.95);
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .ai-coach-drawer.open {
         opacity: 1 !important;
-        pointer-events: auto !important;
         transform: translateY(0) scale(1) !important;
     }
     .ai-coach-toggle-btn {
@@ -202,7 +200,7 @@
     <div class="s-days-grid">
         
         <!-- Day 1 Card -->
-        <div onclick="openDayModal(1, 'Module 1 Learning', '{{ d1_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d1_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 1 else 'false' }}, false)" 
+        <div onclick="handleDayClick(1)" 
              class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -226,7 +224,7 @@
         </div>
 
         <!-- Day 2 Card -->
-        <div onclick="openDayModal(2, 'Module 2 Learning', '{{ d2_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d2_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 2 else 'false' }}, {{ 'true' if sprint.current_day < 2 else 'false' }})" 
+        <div onclick="handleDayClick(2)" 
              class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -250,7 +248,7 @@
         </div>
 
         <!-- Day 3 Card -->
-        <div onclick="openDayModal(3, 'Module 3 Learning', '{{ d3_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d3_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 3 else 'false' }}, {{ 'true' if sprint.current_day < 3 else 'false' }})" 
+        <div onclick="handleDayClick(3)" 
              class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -274,7 +272,7 @@
         </div>
 
         <!-- Day 4 Card -->
-        <div onclick="openDayModal(4, 'Module 4 Learning', '{{ d4_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d4_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 4 else 'false' }}, {{ 'true' if sprint.current_day < 4 else 'false' }})" 
+        <div onclick="handleDayClick(4)" 
              class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -345,7 +343,7 @@
                     {% if sprint.current_day >= 7 %}<span class="s-tag s-tag-retro">Retro Ready</span>
                     {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
                 </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
             </div>
             <div style="margin-top: 0.8rem;">
@@ -372,7 +370,7 @@
         <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.88rem;">
             <div>
                 <div style="font-weight: 700; color: var(--ts-text); margin-bottom: 0.3rem;">📌 Topic Breakdown & Learning Goals:</div>
-                <div id="dayModalContent" style="padding: 0.85rem; border-radius: 8px; background: rgba(0,0,0,0.04); border: 1px solid var(--ts-border); color: var(--ts-text-secondary); line-height: 1.5; max-height: 200px; overflow-y: auto; white-space: pre-line;"></div>
+                <div id="dayModalContent" style="padding: 0.85rem; border-radius: 8px; background: rgba(0,0,0,0.04); border: 1px solid var(--ts-border); color: var(--ts-text-secondary); line-height: 1.5; max-height: 220px; overflow-y: auto; white-space: pre-line;"></div>
             </div>
 
             <div id="dayModalDocBox" style="padding: 0.85rem; border-radius: 10px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.25);">
@@ -393,13 +391,13 @@
     </div>
 </div>
 
-<!-- FLOATING COLLAPSIBLE AI SPRINT COACH SIDEBAR CHATBOT -->
+<!-- FLOATING COLLAPSIBLE AI SPRINT COACH SIDEBAR CHATBOT WIDGET -->
 <button onclick="toggleAiCoachDrawer()" class="ai-coach-toggle-btn" id="aiCoachToggleBtn">
     <span style="font-size: 1.2rem;">🤖</span>
     <span>AI Sprint Coach</span>
 </button>
 
-<div id="aiCoachDrawer" class="ai-coach-drawer">
+<div id="aiCoachDrawer" class="ai-coach-drawer" style="display: none;">
     <!-- Header -->
     <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--ts-border); display: flex; align-items: center; justify-content: space-between; background: rgba(99,102,241,0.06); border-top-left-radius: 16px; border-top-right-radius: 16px;">
         <div>
@@ -424,7 +422,7 @@
 
     <!-- Quick Suggestion Chips -->
     <div style="padding: 0.5rem 0.85rem; display: flex; gap: 0.4rem; overflow-x: auto; border-top: 1px solid var(--ts-border); background: rgba(0,0,0,0.02);">
-        <button onclick="sendQuickQuery('Summarize today's core concepts')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">💡 Core concepts</button>
+        <button onclick="sendQuickQuery('Summarize today core concepts')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">💡 Core concepts</button>
         <button onclick="sendQuickQuery('Explain key terms from source PDF')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">📄 PDF Terms</button>
         <button onclick="sendQuickQuery('Give me 2 practice quiz questions')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">❓ Quick Quiz</button>
     </div>
@@ -460,38 +458,79 @@
 </div>
 
 <script>
+    // Safe Jinja2 data payload object (prevents inline attribute JS syntax errors)
+    const SPRINT_DAYS_DATA = {
+        1: {
+            title: "Module 1 Learning",
+            tasks: {{ d1_tasks|tojson }},
+            doc: {{ d1_doc|tojson }},
+            isLocked: false,
+            isActive: {{ 'true' if sprint.current_day == 1 else 'false' }}
+        },
+        2: {
+            title: "Module 2 Learning",
+            tasks: {{ d2_tasks|tojson }},
+            doc: {{ d2_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 2 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 2 else 'false' }}
+        },
+        3: {
+            title: "Module 3 Learning",
+            tasks: {{ d3_tasks|tojson }},
+            doc: {{ d3_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 3 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 3 else 'false' }}
+        },
+        4: {
+            title: "Module 4 Learning",
+            tasks: {{ d4_tasks|tojson }},
+            doc: {{ d4_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 4 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 4 else 'false' }}
+        }
+    };
+
     let activeModalDay = 1;
     let activeModalDoc = '';
 
-    function openDayModal(dayNum, title, content, docName, isActive, isLocked) {
-        if (isLocked) {
-            alert(`🔒 Day ${dayNum} is currently locked!
+    function handleDayClick(dayNum) {
+        const data = SPRINT_DAYS_DATA[dayNum];
+        if (!data) return;
 
-Please complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
+        if (data.isLocked) {
+            alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
             return;
         }
 
         activeModalDay = dayNum;
-        activeModalDoc = docName;
-        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${title}`;
-        document.getElementById('dayModalContent').innerText = content.split(' | ').join('
-• ');
+        activeModalDoc = data.doc || '';
+
+        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${data.title}`;
         
+        let taskText = '';
+        if (Array.isArray(data.tasks)) {
+            taskText = data.tasks.join('\n\n• ');
+        } else {
+            taskText = String(data.tasks || '');
+        }
+        document.getElementById('dayModalContent').innerText = taskText ? '• ' + taskText : 'No topics available.';
+
         const docBox = document.getElementById('dayModalDocBox');
         const docNameEl = document.getElementById('dayModalDocName');
         const docLinkEl = document.getElementById('dayModalDocLink');
-        
-        if (docName && docName.trim() !== '') {
+
+        if (data.doc && String(data.doc).trim() !== '') {
             docBox.style.display = 'block';
-            docNameEl.innerText = docName;
-            docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
+            docNameEl.innerText = data.doc;
+            docLinkEl.href = '/documents/view/' + encodeURIComponent(data.doc);
+            docLinkEl.onclick = null;
         } else {
             docBox.style.display = 'block';
             docNameEl.innerText = 'No PDF document linked for this day.';
             docLinkEl.href = '#';
             docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
         }
-        
+
         document.getElementById('dayDetailModal').style.display = 'flex';
     }
 
@@ -501,15 +540,31 @@ Please complete Day ${dayNum - 1} study materials and checkpoints first to unloc
 
     function toggleAiCoachDrawer() {
         const drawer = document.getElementById('aiCoachDrawer');
-        drawer.classList.toggle('open');
+        if (!drawer) return;
+        
+        if (drawer.style.display === 'none' || !drawer.classList.contains('open')) {
+            drawer.style.display = 'flex';
+            setTimeout(() => {
+                drawer.classList.add('open');
+            }, 10);
+        } else {
+            drawer.classList.remove('open');
+            setTimeout(() => {
+                drawer.style.display = 'none';
+            }, 250);
+        }
     }
 
     function openCoachFromModal() {
         closeDayModal();
         document.getElementById('coachContextText').innerText = `Context: Day ${activeModalDay} (${activeModalDoc || 'Study Plan'})`;
         document.getElementById('coachDayNumLabel').innerText = activeModalDay;
+        
         const drawer = document.getElementById('aiCoachDrawer');
-        drawer.classList.add('open');
+        drawer.style.display = 'flex';
+        setTimeout(() => {
+            drawer.classList.add('open');
+        }, 10);
     }
 
     function sendQuickQuery(text) {
@@ -521,22 +576,22 @@ Please complete Day ${dayNum - 1} study materials and checkpoints first to unloc
         const input = document.getElementById('coachInput');
         const query = input.value.trim();
         if (!query) return;
-        
+
         const container = document.getElementById('coachMessages');
         const userDiv = document.createElement('div');
         userDiv.style.cssText = "align-self: flex-end; padding: 0.6rem 0.85rem; border-radius: 10px; background: var(--ts-primary); color: #fff; max-width: 85%; line-height: 1.4;";
         userDiv.innerText = query;
         container.appendChild(userDiv);
-        
+
         input.value = '';
         container.scrollTop = container.scrollHeight;
-        
+
         const loadingDiv = document.createElement('div');
         loadingDiv.style.cssText = "align-self: flex-start; padding: 0.6rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text-secondary); max-width: 85%;";
         loadingDiv.innerText = "⏳ AI Coach analyzing document...";
         container.appendChild(loadingDiv);
         container.scrollTop = container.scrollHeight;
-        
+
         try {
             const res = await fetch('/sprint/ask_ai_coach', {
                 method: 'POST',
@@ -545,7 +600,7 @@ Please complete Day ${dayNum - 1} study materials and checkpoints first to unloc
             });
             const data = await res.json();
             container.removeChild(loadingDiv);
-            
+
             const aiDiv = document.createElement('div');
             aiDiv.style.cssText = "align-self: flex-start; padding: 0.65rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text); max-width: 90%; line-height: 1.4; white-space: pre-wrap;";
             aiDiv.innerText = data.answer || data.error || "No response received.";
