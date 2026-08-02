@@ -3961,22 +3961,24 @@ def sprint_ask_ai_coach():
         return jsonify({'error': 'Please enter a question.'}), 400
         
     try:
-        from src.vectorstore import search_similar
+        from src.embeddings import embed_query
+        from src.vectorstore import search
         from src.llm import generate_chat_answer
         
         context_text = ""
         try:
-            results = search_similar(query=question, top_k=4)
-            if results and "documents" in results and results["documents"]:
-                docs = results["documents"][0] if isinstance(results["documents"][0], list) else results["documents"]
-                context_text = "\n\n".join(docs)
+            q_emb = embed_query(question)
+            filters = [doc_name] if doc_name else None
+            hits = search(query_embedding=q_emb, top_k=4, source_filters=filters)
+            if hits:
+                context_text = "\n\n".join([f"Excerpt ({h['source']}): {h['text']}" for h in hits])
         except Exception as ve:
             print(f"Vector search note: {ve}")
             
         system_instruction = (
             f"You are an expert Socratic AI Learning Coach helping a trainee studying Day {day_number} material.\n"
             f"Reference Document: {doc_name if doc_name else 'Study Plan Reference'}\n"
-            f"Relevant Excerpts:\n{context_text if context_text else 'No specific vector excerpts found.'}\n\n"
+            f"Relevant Document Excerpts:\n{context_text if context_text else 'No specific vector excerpts found.'}\n\n"
             f"Answer the trainee's question concisely, clearly, and insightfully. Use markdown formatting and bullet points where appropriate."
         )
         

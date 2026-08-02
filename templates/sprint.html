@@ -39,6 +39,7 @@
     .s-day-card.locked-day {
         opacity: 0.45;
         border-style: dashed;
+        cursor: not-allowed;
     }
     .s-tag {
         font-size: 0.68rem;
@@ -181,7 +182,7 @@
 <div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
     <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
         <span>📅 Week 1 Training Schedule & Learning Outcomes</span>
-        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click any Day card to view topic breakdown & source files</span>
+        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click unlocked Day cards to view topics & source PDF files</span>
     </div>
 
     {% set d1_tasks = tasks.get('day1', []) %}
@@ -197,7 +198,7 @@
     <div class="s-days-grid">
         
         <!-- Day 1 Card -->
-        <div onclick="openDayModal(1, 'Module 1 Learning', '{{ d1_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d1_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 1 else 'false' }})" 
+        <div onclick="openDayModal(1, 'Module 1 Learning', '{{ d1_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d1_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 1 else 'false' }}, false)" 
              class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -220,7 +221,7 @@
         </div>
 
         <!-- Day 2 Card -->
-        <div onclick="openDayModal(2, 'Module 2 Learning', '{{ d2_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d2_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 2 else 'false' }})" 
+        <div onclick="openDayModal(2, 'Module 2 Learning', '{{ d2_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d2_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 2 else 'false' }}, {{ 'true' if sprint.current_day < 2 else 'false' }})" 
              class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -235,7 +236,7 @@
                 </div>
             </div>
             <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
+                <span style="font-size: 0.7rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 2 %}🔒 Locked{% else %}🔍 View Details{% endif %}</span>
                 {% if sprint.current_day == 2 %}
                 <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
@@ -243,7 +244,7 @@
         </div>
 
         <!-- Day 3 Card -->
-        <div onclick="openDayModal(3, 'Module 3 Learning', '{{ d3_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d3_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 3 else 'false' }})" 
+        <div onclick="openDayModal(3, 'Module 3 Learning', '{{ d3_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d3_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 3 else 'false' }}, {{ 'true' if sprint.current_day < 3 else 'false' }})" 
              class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -258,7 +259,7 @@
                 </div>
             </div>
             <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
+                <span style="font-size: 0.7rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 3 %}🔒 Locked{% else %}🔍 View Details{% endif %}</span>
                 {% if sprint.current_day == 3 %}
                 <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
@@ -266,7 +267,7 @@
         </div>
 
         <!-- Day 4 Card -->
-        <div onclick="openDayModal(4, 'Module 4 Learning', '{{ d4_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d4_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 4 else 'false' }})" 
+        <div onclick="openDayModal(4, 'Module 4 Learning', '{{ d4_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d4_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 4 else 'false' }}, {{ 'true' if sprint.current_day < 4 else 'false' }})" 
              class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -281,7 +282,7 @@
                 </div>
             </div>
             <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
+                <span style="font-size: 0.7rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 4 %}🔒 Locked{% else %}🔍 View Details{% endif %}</span>
                 {% if sprint.current_day == 4 %}
                 <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
@@ -454,11 +455,19 @@
     let activeModalDay = 1;
     let activeModalDoc = '';
 
-    function openDayModal(dayNum, title, content, docName, isActive) {
+    function openDayModal(dayNum, title, content, docName, isActive, isLocked) {
+        if (isLocked) {
+            alert(`🔒 Day ${dayNum} is currently locked!
+
+Please complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
+            return;
+        }
+
         activeModalDay = dayNum;
         activeModalDoc = docName;
         document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${title}`;
-        document.getElementById('dayModalContent').innerText = content.split(' | ').join('\n• ');
+        document.getElementById('dayModalContent').innerText = content.split(' | ').join('
+• ');
         
         const docBox = document.getElementById('dayModalDocBox');
         const docNameEl = document.getElementById('dayModalDocName');

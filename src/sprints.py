@@ -407,15 +407,17 @@ def run_sprint_orchestrator(state_payload: dict, model_name: str = "llama-3.3-70
         return {"error": f"Failed to execute orchestrator: {str(e)}"}
 
 def delete_study_plan(plan_id: str) -> bool:
-    """Delete a study plan by ID."""
+    """Delete a study plan by ID and wipe all associated trainee sprint schedules so it is deleted on user side too."""
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("DELETE FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        cursor.execute("DELETE FROM sprint_schedules WHERE assigned_plan_id = ?", (plan_id,))
         conn.commit()
         conn.close()
         return True
-    except Exception:
+    except Exception as e:
+        print(f"Error deleting study plan: {e}")
         return False
 
 def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
