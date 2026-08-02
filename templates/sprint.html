@@ -1,288 +1,309 @@
 {% extends "base.html" %}
 
-{% block title %}Agile Study Plan Syllabus{% endblock %}
+{% block title %}Agile Study Plan Syllabus - Talent Sphere Elevate{% endblock %}
 
 {% block head %}
 <style>
-    .day-card {
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .s-days-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.85rem;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+    }
+    .s-day-card {
+        background: var(--ts-card-bg, #111625);
+        border: 1px solid var(--ts-border);
         border-radius: 12px;
-        padding: 1.25rem;
-        transition: all 0.2s ease;
+        padding: 1rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 160px;
+        min-height: 175px;
+        transition: all 0.2s ease;
     }
-    .day-card.active-day {
-        border-color: #60A5FA;
-        background: rgba(96, 165, 250, 0.08);
-        box-shadow: 0 0 20px rgba(96, 165, 250, 0.15);
+    .s-day-card:hover {
+        border-color: var(--ts-primary, #6366f1);
+        transform: translateY(-2px);
     }
-    .day-card.locked-day {
-        opacity: 0.6;
-        background: rgba(15, 23, 42, 0.6);
+    .s-day-card.active-day {
+        border: 2px solid var(--ts-primary, #6366f1);
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .s-day-card.completed-day {
+        border: 1px solid rgba(52, 211, 153, 0.4);
+        background: rgba(52, 211, 153, 0.04);
+    }
+    .s-day-card.locked-day {
+        opacity: 0.45;
         border-style: dashed;
+    }
+    .s-tag {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    .s-tag-learning { background: rgba(99, 102, 241, 0.15); color: var(--ts-primary, #6366f1); }
+    .s-tag-exam { background: rgba(251, 191, 36, 0.15); color: #f59e0b; }
+    .s-tag-voice { background: rgba(52, 211, 153, 0.15); color: #10b981; }
+    .s-tag-retro { background: rgba(167, 139, 250, 0.15); color: #8b5cf6; }
+
+    .voice-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(7, 10, 19, 0.95);
+        backdrop-filter: blur(12px);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        color: #F8FAFC;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-8">
-    
-    <!-- Top Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+<!-- Hero Header -->
+<div class="ts-hero" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="text-xs uppercase font-bold tracking-wider text-blue-400">Study Plan Syllabus</span>
-                <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-mono">Agile 6-Day Sprint</span>
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; color: var(--ts-primary);">
+                Study Plan Syllabus &middot; Agile 6-Day Sprint
             </div>
-            <h2 class="text-2xl font-bold tracking-tight text-slate-100 mt-0.5">{{ study_plan.title if study_plan else 'Python Engineering Sprint' }}</h2>
-            <p class="text-xs text-slate-400 mt-1">Master sequential day-by-day learning modules, pass Day 5 Gateway Exam, and defend your architecture in Day 6 Voice Interview.</p>
-        </div>
-
-        <div class="flex items-center gap-4">
-            <div class="text-right">
-                <span class="text-xs text-slate-400">Sprint Day:</span>
-                <div class="text-lg font-bold text-blue-400">Day {{ sprint.current_day }} of 6</div>
+            <div class="ts-hero-title" style="margin-top: 0.2rem;">
+                {{ study_plan.title if study_plan else 'Python Engineering Sprint' }}
             </div>
-            <div class="w-28 bg-slate-800 h-3 rounded-full overflow-hidden border border-white/10">
-                <div class="bg-blue-500 h-full transition-all duration-500" style="width: {{ sprint.sprint_progress }}%;"></div>
+            <div class="ts-hero-subtitle">
+                Master sequential day-by-day learning modules, pass Day 5 Gateway Exam, and defend your architecture in Day 6 Voice Interview.
             </div>
         </div>
-    </div>
 
-    <!-- WEEK 1 SYLLABUS GRID -->
-    <div class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-400">calendar_view_week</span>
-                <span>Week 1 Training Outcomes & Schedule</span>
-            </h3>
-            <span class="text-xs text-slate-400">4 Study Checkpoints &middot; 1 Exam &middot; 1 Voice Interview &middot; 1 Retro</span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            
-            <!-- Day 1 -->
-            <div class="day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}bg-slate-900/80 border-emerald-500/30{% else %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold {% if sprint.current_day > 1 %}text-emerald-400{% else %}text-blue-400{% endif %}">Day 1</span>
-                        {% if sprint.current_day > 1 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Completed</span>
-                        {% elif sprint.current_day == 1 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">Active</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Module 1 Learning</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">
-                        {% set d1 = tasks.get('day1', []) %}{{ d1[0] if d1 else 'Crystal structures & Python data fundamentals' }}
-                    </p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 1 %}
-                    <button onclick="advanceSprintDay()" class="w-full btn-ts btn-ts-primary text-[11px] py-1">✓ Complete Day 1</button>
-                    {% endif %}
-                </div>
+        <div style="text-align: right; background: var(--ts-card-bg); border: 1px solid var(--ts-border); border-radius: 12px; padding: 0.75rem 1.25rem;">
+            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Sprint Progression</div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-primary);">Day {{ sprint.current_day }} of 6</div>
+            <div style="width: 120px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; margin-top: 0.3rem;">
+                <div style="width: {{ sprint.sprint_progress }}%; height: 100%; background: var(--ts-primary);"></div>
             </div>
-
-            <!-- Day 2 -->
-            <div class="day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}bg-slate-900/80 border-emerald-500/30{% elif sprint.current_day < 2 %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold {% if sprint.current_day > 2 %}text-emerald-400{% else %}text-blue-400{% endif %}">Day 2</span>
-                        {% if sprint.current_day > 2 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Completed</span>
-                        {% elif sprint.current_day == 2 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">Active</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Module 2 Learning</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">
-                        {% set d2 = tasks.get('day2', []) %}{{ d2[0] if d2 else 'Phase diagrams & Async IO concurrency' }}
-                    </p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 2 %}
-                    <button onclick="advanceSprintDay()" class="w-full btn-ts btn-ts-primary text-[11px] py-1">✓ Complete Day 2</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 3 -->
-            <div class="day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}bg-slate-900/80 border-emerald-500/30{% elif sprint.current_day < 3 %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold {% if sprint.current_day > 3 %}text-emerald-400{% else %}text-blue-400{% endif %}">Day 3</span>
-                        {% if sprint.current_day > 3 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Completed</span>
-                        {% elif sprint.current_day == 3 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">Active</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Module 3 Learning</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">
-                        {% set d3 = tasks.get('day3', []) %}{{ d3[0] if d3 else 'Heat treatment & Web REST framework APIs' }}
-                    </p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 3 %}
-                    <button onclick="advanceSprintDay()" class="w-full btn-ts btn-ts-primary text-[11px] py-1">✓ Complete Day 3</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 4 -->
-            <div class="day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}bg-slate-900/80 border-emerald-500/30{% elif sprint.current_day < 4 %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold {% if sprint.current_day > 4 %}text-emerald-400{% else %}text-blue-400{% endif %}">Day 4</span>
-                        {% if sprint.current_day > 4 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Completed</span>
-                        {% elif sprint.current_day == 4 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">Active</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Module 4 Learning</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">
-                        {% set d4 = tasks.get('day4', []) %}{{ d4[0] if d4 else 'Mechanical testing & Database ORM' }}
-                    </p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 4 %}
-                    <button onclick="advanceSprintDay()" class="w-full btn-ts btn-ts-primary text-[11px] py-1">✓ Complete Day 4</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 5 -->
-            <div class="day-card {% if sprint.current_day == 5 %}active-day border-yellow-500/50 bg-yellow-500/10{% elif sprint.current_day > 5 %}bg-slate-900/80 border-emerald-500/30{% else %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold text-yellow-400">Day 5</span>
-                        {% if sprint.current_day > 5 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Passed</span>
-                        {% elif sprint.current_day == 5 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-semibold">Exam Ready</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Phase 2 Gateway Exam</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">Gated multiple-choice & short answer exam covering Days 1-4.</p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 5 %}
-                    <form action="/exams" method="GET">
-                        <button type="submit" class="w-full px-2 py-1 rounded bg-yellow-400 text-slate-950 font-bold text-[11px]">🚀 Start Exam</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 6 -->
-            <div class="day-card {% if sprint.current_day == 6 %}active-day border-emerald-500/50 bg-emerald-500/10{% elif sprint.current_day > 6 %}bg-slate-900/80 border-emerald-500/30{% else %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold text-emerald-400">Day 6</span>
-                        {% if sprint.current_day > 6 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">✓ Complete</span>
-                        {% elif sprint.current_day == 6 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Interview</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Phase 3 Voice Interview</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">Socratic voice technical interview targeting Day 5 weak areas.</p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day == 6 %}
-                    <button onclick="startVoiceInterview()" class="w-full px-2 py-1 rounded bg-emerald-400 text-slate-950 font-bold text-[11px]">🎙️ Start Interview</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 7 -->
-            <div class="day-card {% if sprint.current_day >= 7 %}active-day border-purple-500/50 bg-purple-500/10{% else %}locked-day{% endif %}">
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-bold text-purple-400">Day 7</span>
-                        {% if sprint.current_day >= 7 %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">Retro Ready</span>
-                        {% else %}<span class="text-[10px] text-slate-500">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div class="text-xs font-semibold text-slate-200 mb-1">Phase 4 Performance Retro</div>
-                    <p class="text-[11px] text-slate-400 leading-tight">Analytical performance score, strengths, and revision plan.</p>
-                </div>
-                <div class="mt-3">
-                    {% if sprint.current_day >= 7 %}
-                    <button onclick="window.scrollTo(0, 800)" class="w-full px-2 py-1 rounded bg-purple-400 text-slate-950 font-bold text-[11px]">📊 View Retro</button>
-                    {% endif %}
-                </div>
-            </div>
-
         </div>
     </div>
-
-    <!-- WEEK 2 PREVIEW (ROADMAP) -->
-    <div class="space-y-4 pt-4 border-t border-white/10">
-        <div class="flex items-center justify-between text-slate-400 text-xs">
-            <h3 class="font-bold text-slate-300 flex items-center gap-2">
-                <span class="material-symbols-outlined text-slate-500">lock</span>
-                <span>Week 2 Advanced Architecture & Microservices Sprint (Preview)</span>
-            </h3>
-            <span>Unlocks after Week 1 Completion</span>
-        </div>
-        <div class="grid grid-cols-7 gap-3 opacity-40">
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 1</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 2</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 3</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 4</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 5 Exam</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 6 Voice</div>
-            <div class="p-3 rounded-lg bg-slate-900 border border-white/10 text-center text-xs">Day 7 Retro</div>
-        </div>
-    </div>
-
-    {% if sprint.current_day >= 7 %}
-    <!-- PHASE 4: PERFORMANCE REPORT DISPLAY -->
-    <div class="p-6 rounded-xl bg-slate-900/80 border border-purple-500/30 space-y-6">
-        <div class="text-center space-y-2">
-            <span class="material-symbols-outlined text-[64px] text-purple-400">analytics</span>
-            <h3 class="text-xl font-bold text-slate-100">Phase 4: Sprint Performance Analytical Report</h3>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="p-5 rounded-lg bg-slate-950 border border-white/10">
-                <span class="text-xs text-slate-400 font-semibold">Technical Score</span>
-                <div class="text-3xl font-bold text-emerald-400 mt-1">{{ eval_report.technical_score|int if eval_report else 85 }}%</div>
-            </div>
-            <div class="p-5 rounded-lg bg-slate-950 border border-white/10">
-                <span class="text-xs text-slate-400 font-semibold">Speech Executive Presence</span>
-                <div class="text-3xl font-bold text-blue-400 mt-1">{{ eval_report.confidence_score|int if eval_report else 90 }}%</div>
-            </div>
-        </div>
-
-        <div class="p-4 rounded-lg bg-slate-950 border border-purple-500/30 space-y-2">
-            <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Actionable Step-by-Step Revision Plan:</h4>
-            <p class="text-xs text-slate-200 leading-relaxed">{{ eval_report.feedback_report if eval_report else 'Great job completing Week 1! Revise Days 1-4 concepts to prepare for Week 2.' }}</p>
-        </div>
-
-        <div class="flex justify-center">
-            <button onclick="resetSprint()" class="btn-ts btn-ts-secondary px-6 py-2 text-xs" style="width: auto;">↺ Reset & Repeat Sprint</button>
-        </div>
-    </div>
-    {% endif %}
-
 </div>
 
-<!-- Voice Interview Overlay Modal -->
-<div id="voiceOverlay" class="hidden fixed inset-0 bg-[#070A13]/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 transition-all duration-300">
-    <div class="absolute top-6 right-6">
-        <button onclick="closeVoiceOverlay()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors">✕</button>
+<!-- WEEK 1 SYLLABUS GRID -->
+<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
+    <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between;">
+        <span>📅 Week 1 Training Schedule & Learning Outcomes</span>
+        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">4 Checkpoints &middot; 1 Exam &middot; 1 Voice Interview &middot; 1 Retro</span>
     </div>
-    
-    <div class="text-center space-y-8 max-w-lg w-full">
-        <div id="voiceOverlayTaskTitle" class="text-xs font-bold text-emerald-400 tracking-widest uppercase">PHASE 3 VOICE MOCK INTERVIEW</div>
-        <div id="voiceOverlayQuestion" class="text-xl font-semibold text-[#F8FAFC] leading-relaxed">Defend the core architectural patterns and choices you made during Week 1.</div>
+
+    <div class="s-days-grid">
         
-        <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
-            <div id="orbRing" class="absolute inset-0 rounded-full border border-emerald-400/30 voice-ring"></div>
-            <div class="absolute inset-4 rounded-full bg-emerald-400/10 border border-emerald-400/20 orb-glow"></div>
-            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-600 hover:from-emerald-300 hover:to-teal-500 flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-950 font-bold">
-                <span id="orbIcon" class="material-symbols-outlined text-[36px] text-slate-950">mic</span>
+        <!-- Day 1 -->
+        <div class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
+                    {% if sprint.current_day > 1 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 1 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 1 Learning</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
+                    {% set d1 = tasks.get('day1', []) %}{{ d1[0] if d1 else 'Crystal structures & Python data fundamentals' }}
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 1 %}
+                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 1</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 2 -->
+        <div class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
+                    {% if sprint.current_day > 2 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 2 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 2 Learning</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
+                    {% set d2 = tasks.get('day2', []) %}{{ d2[0] if d2 else 'Phase diagrams & Async IO concurrency' }}
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 2 %}
+                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 2</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 3 -->
+        <div class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
+                    {% if sprint.current_day > 3 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 3 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 3 Learning</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
+                    {% set d3 = tasks.get('day3', []) %}{{ d3[0] if d3 else 'Heat treatment & Web REST framework APIs' }}
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 3 %}
+                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 3</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 4 -->
+        <div class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
+                    {% if sprint.current_day > 4 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 4 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 4 Learning</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
+                    {% set d4 = tasks.get('day4', []) %}{{ d4[0] if d4 else 'Mechanical testing & Database ORM' }}
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 4 %}
+                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 4</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 5 -->
+        <div class="s-day-card {% if sprint.current_day == 5 %}active-day{% elif sprint.current_day > 5 %}completed-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #f59e0b;">Day 5</span>
+                    {% if sprint.current_day > 5 %}<span class="s-tag s-tag-voice">✓ Passed</span>
+                    {% elif sprint.current_day == 5 %}<span class="s-tag s-tag-exam">Exam Ready</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 2 Gateway Exam</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Gated exam covering Days 1-4.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 5 %}
+                <form action="/exams" method="GET">
+                    <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 6 -->
+        <div class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
+                    {% if sprint.current_day > 6 %}<span class="s-tag s-tag-voice">✓ Complete</span>
+                    {% elif sprint.current_day == 6 %}<span class="s-tag s-tag-voice">Voice Mode</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 3 Voice Interview</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Socratic voice technical mock interview.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 6 %}
+                <button onclick="startVoiceInterview()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 7 -->
+        <div class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
+                    {% if sprint.current_day >= 7 %}<span class="s-tag s-tag-retro">Retro Ready</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day >= 7 %}
+                <button onclick="window.scrollTo(0, 800)" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- WEEK 2 PREVIEW ROADMAP -->
+<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem; opacity: 0.6;">
+    <div style="font-size: 0.9rem; font-weight: 700; color: var(--ts-text-secondary); display: flex; align-items: center; justify-content: space-between;">
+        <span>🔒 Week 2 Advanced Architecture & Microservices Sprint (Preview)</span>
+        <span style="font-size: 0.75rem;">Unlocks after Week 1 Completion</span>
+    </div>
+</div>
+
+{% if sprint.current_day >= 7 %}
+<!-- PHASE 4: PERFORMANCE REPORT DISPLAY -->
+<div class="ts-card" style="padding: 1.5rem; border-color: rgba(139,92,246,0.4); margin-bottom: 2rem;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+        <span style="font-size: 2.5rem;">📊</span>
+        <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-text); margin-top: 0.3rem;">Phase 4: Sprint Performance Analytical Report</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--ts-border);">
+            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Technical Accuracy Score</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin-top: 0.2rem;">{{ eval_report.technical_score|int if eval_report else 85 }}%</div>
+        </div>
+        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--ts-border);">
+            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Speech Executive Presence</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--ts-primary); margin-top: 0.2rem;">{{ eval_report.confidence_score|int if eval_report else 90 }}%</div>
+        </div>
+    </div>
+
+    <div style="padding: 1rem; border-radius: 12px; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.25); margin-bottom: 1.5rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #8b5cf6; margin-bottom: 0.4rem;">🎯 Actionable Step-by-Step Revision Plan:</div>
+        <div style="font-size: 0.85rem; color: var(--ts-text); line-height: 1.5;">{{ eval_report.feedback_report if eval_report else 'Great job completing Week 1! Revise Days 1-4 concepts to prepare for Week 2.' }}</div>
+    </div>
+
+    <div style="display: flex; justify-content: center;">
+        <button onclick="resetSprint()" class="btn-ts btn-ts-secondary" style="width: auto;">↺ Reset & Repeat Sprint</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Voice Interview Overlay Modal -->
+<div id="voiceOverlay" class="voice-modal-backdrop" style="display: none;">
+    <div style="background: var(--ts-card-bg, #111625); border: 1px solid var(--ts-border); border-radius: 20px; max-width: 520px; width: 100%; padding: 2rem; text-align: center; position: relative;">
+        <button onclick="closeVoiceOverlay()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--ts-text-secondary); font-size: 1.2rem; cursor: pointer;">✕</button>
+        
+        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #10b981; margin-bottom: 0.4rem;">PHASE 3 VOICE MOCK INTERVIEW</div>
+        <div id="voiceOverlayQuestion" style="font-size: 1.1rem; font-weight: 700; color: var(--ts-text); margin-bottom: 1.5rem;">Defend the core architectural patterns and choices you made during Week 1.</div>
+        
+        <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: #fff; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(16,185,129,0.3);">
+                <span id="orbIcon">🎙️</span>
             </button>
         </div>
         
-        <div id="voiceOverlayStatus" class="text-sm text-slate-400 font-medium tracking-wide">Click the mic to speak your response</div>
+        <div id="voiceOverlayStatus" style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Click the microphone orb to record your voice answer</div>
 
-        <div id="liveVoiceTextContainer" class="hidden p-4 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-300 italic min-h-[60px] text-left">
+        <div id="liveVoiceTextContainer" style="display: none; margin-top: 1rem; padding: 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--ts-border); font-size: 0.82rem; text-align: left; color: var(--ts-text);">
             🎙️ <span id="liveVoiceText">Listening...</span>
         </div>
     </div>
@@ -316,11 +337,11 @@
     let currentQuestion = "Defend the core architectural patterns and choices you made during Week 1.";
 
     function startVoiceInterview() {
-        document.getElementById('voiceOverlay').classList.remove('hidden');
+        document.getElementById('voiceOverlay').style.display = 'flex';
     }
 
     function closeVoiceOverlay() {
-        document.getElementById('voiceOverlay').classList.add('hidden');
+        document.getElementById('voiceOverlay').style.display = 'none';
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
@@ -341,7 +362,7 @@
                 mediaRecorder.onstop = async () => {
                     stream.getTracks().forEach(t => t.stop());
                     statusEl.innerText = "Transcribing response...";
-                    iconEl.innerText = "hourglass_empty";
+                    iconEl.innerText = "⏳";
                     
                     const blob = new Blob(audioChunks, { type: 'audio/webm' });
                     const formData = new FormData();
@@ -352,7 +373,7 @@
                         const res = await fetch('/assistant/voice_agent/chat', { method: 'POST', body: formData });
                         const data = await res.json();
                         statusEl.innerText = "Response recorded!";
-                        iconEl.innerText = "check";
+                        iconEl.innerText = "✓";
                         liveText.innerText = data.query_text || "Speech processed.";
                         
                         setTimeout(async () => {
@@ -362,14 +383,14 @@
                     } catch (err) {
                         console.error(err);
                         statusEl.innerText = "Error uploading response.";
-                        iconEl.innerText = "error";
+                        iconEl.innerText = "⚠️";
                     }
                 };
 
                 mediaRecorder.start();
                 statusEl.innerText = "Recording... Click again to finish speaking.";
-                iconEl.innerText = "stop";
-                liveContainer.classList.remove('hidden');
+                iconEl.innerText = "⏹️";
+                liveContainer.style.display = 'block';
                 liveText.innerText = "Listening to your answer...";
             } catch (err) {
                 console.error(err);
