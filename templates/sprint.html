@@ -19,12 +19,14 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 175px;
+        min-height: 185px;
         transition: all 0.2s ease;
+        cursor: pointer;
     }
     .s-day-card:hover {
         border-color: var(--ts-primary, #6366f1);
-        transform: translateY(-2px);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
     }
     .s-day-card.active-day {
         border: 2px solid var(--ts-primary, #6366f1);
@@ -50,35 +52,77 @@
     .s-tag-voice { background: rgba(52, 211, 153, 0.15); color: #10b981; }
     .s-tag-retro { background: rgba(167, 139, 250, 0.15); color: #8b5cf6; }
 
-    .voice-modal-backdrop {
+    /* Modals */
+    .sp-modal-backdrop {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(7, 10, 19, 0.95);
-        backdrop-filter: blur(12px);
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(6px);
         z-index: 10000;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 1.5rem;
-        color: #F8FAFC;
+        padding: 1rem;
     }
-    .voice-modal-card {
+    .sp-modal-content {
         background: var(--ts-card-bg, #111625);
-        border: 1px solid var(--ts-border);
-        border-radius: 20px;
-        max-width: 520px;
+        border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
+        border-radius: 16px;
+        max-width: 620px;
         width: 100%;
-        padding: 2rem;
-        text-align: center;
-        position: relative;
-        color: var(--ts-text);
+        padding: 1.75rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        color: var(--ts-text, #f8fafc);
     }
 
-    /* Light Mode Overrides for Trainee Sprint */
+    /* Collapsible AI Coach Sidebar Drawer */
+    .ai-coach-drawer {
+        position: fixed;
+        top: 70px;
+        right: -420px;
+        width: 400px;
+        height: calc(100vh - 85px);
+        background: var(--ts-card-bg, #111625);
+        border-left: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+    .ai-coach-drawer.open {
+        right: 0;
+    }
+    .ai-coach-toggle-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 9998;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 30px;
+        padding: 0.75rem 1.4rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .ai-coach-toggle-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(99, 102, 241, 0.5);
+    }
+
+    /* Light Mode Theme Overrides */
     body.ts-light-mode .s-day-card {
         background: #ffffff !important;
         border-color: #e2e8f0 !important;
@@ -97,14 +141,12 @@
         border-color: #cbd5e1 !important;
         opacity: 0.6 !important;
     }
-    body.ts-light-mode .voice-modal-backdrop {
-        background: rgba(15, 23, 42, 0.5) !important;
-    }
-    body.ts-light-mode .voice-modal-card {
+    body.ts-light-mode .sp-modal-content,
+    body.ts-light-mode .ai-coach-drawer {
         background: #ffffff !important;
         border-color: #e2e8f0 !important;
         color: #0f172a !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1) !important;
     }
 </style>
 {% endblock %}
@@ -137,15 +179,26 @@
 
 <!-- WEEK 1 SYLLABUS GRID -->
 <div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
-    <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between;">
+    <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
         <span>📅 Week 1 Training Schedule & Learning Outcomes</span>
-        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">4 Checkpoints &middot; 1 Exam &middot; 1 Voice Interview &middot; 1 Retro</span>
+        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click any Day card to view topic breakdown & source files</span>
     </div>
+
+    {% set d1_tasks = tasks.get('day1', []) %}
+    {% set d2_tasks = tasks.get('day2', []) %}
+    {% set d3_tasks = tasks.get('day3', []) %}
+    {% set d4_tasks = tasks.get('day4', []) %}
+
+    {% set d1_doc = ref_files[0] if ref_files|length > 0 else '' %}
+    {% set d2_doc = ref_files[1] if ref_files|length > 1 else (ref_files[0] if ref_files|length > 0 else '') %}
+    {% set d3_doc = ref_files[2] if ref_files|length > 2 else (ref_files[0] if ref_files|length > 0 else '') %}
+    {% set d4_doc = ref_files[3] if ref_files|length > 3 else (ref_files[0] if ref_files|length > 0 else '') %}
 
     <div class="s-days-grid">
         
-        <!-- Day 1 -->
-        <div class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
+        <!-- Day 1 Card -->
+        <div onclick="openDayModal(1, 'Module 1 Learning', '{{ d1_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d1_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 1 else 'false' }})" 
+             class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
@@ -155,18 +208,20 @@
                 </div>
                 <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 1 Learning</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
-                    {% set d1 = tasks.get('day1', []) %}{{ d1[0] if d1 else 'Crystal structures & Python data fundamentals' }}
+                    {{ d1_tasks[0] if d1_tasks else 'Introduction to core concepts' }}
                 </div>
             </div>
-            <div style="margin-top: 0.8rem;">
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
                 {% if sprint.current_day == 1 %}
-                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 1</button>
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Day 2 -->
-        <div class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
+        <!-- Day 2 Card -->
+        <div onclick="openDayModal(2, 'Module 2 Learning', '{{ d2_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d2_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 2 else 'false' }})" 
+             class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
@@ -176,18 +231,20 @@
                 </div>
                 <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 2 Learning</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
-                    {% set d2 = tasks.get('day2', []) %}{{ d2[0] if d2 else 'Phase diagrams & Async IO concurrency' }}
+                    {{ d2_tasks[0] if d2_tasks else 'Advanced theory and laws' }}
                 </div>
             </div>
-            <div style="margin-top: 0.8rem;">
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
                 {% if sprint.current_day == 2 %}
-                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 2</button>
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Day 3 -->
-        <div class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
+        <!-- Day 3 Card -->
+        <div onclick="openDayModal(3, 'Module 3 Learning', '{{ d3_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d3_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 3 else 'false' }})" 
+             class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
@@ -197,18 +254,20 @@
                 </div>
                 <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 3 Learning</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
-                    {% set d3 = tasks.get('day3', []) %}{{ d3[0] if d3 else 'Heat treatment & Web REST framework APIs' }}
+                    {{ d3_tasks[0] if d3_tasks else 'Energy spectrum & mathematical formulations' }}
                 </div>
             </div>
-            <div style="margin-top: 0.8rem;">
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
                 {% if sprint.current_day == 3 %}
-                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 3</button>
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Day 4 -->
-        <div class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
+        <!-- Day 4 Card -->
+        <div onclick="openDayModal(4, 'Module 4 Learning', '{{ d4_tasks|join(' | ')|replace("'", "\\'") }}', '{{ d4_doc|replace("'", "\\'") }}', {{ 'true' if sprint.current_day == 4 else 'false' }})" 
+             class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                     <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
@@ -218,17 +277,18 @@
                 </div>
                 <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Module 4 Learning</div>
                 <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">
-                    {% set d4 = tasks.get('day4', []) %}{{ d4[0] if d4 else 'Mechanical testing & Database ORM' }}
+                    {{ d4_tasks[0] if d4_tasks else 'Applications & advanced verification' }}
                 </div>
             </div>
-            <div style="margin-top: 0.8rem;">
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.7rem; color: var(--ts-primary); font-weight: 600;">🔍 View Details</span>
                 {% if sprint.current_day == 4 %}
-                <button onclick="advanceSprintDay()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">✓ Complete Day 4</button>
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Day 5 -->
+        <!-- Day 5 Card -->
         <div class="s-day-card {% if sprint.current_day == 5 %}active-day{% elif sprint.current_day > 5 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -243,13 +303,13 @@
             <div style="margin-top: 0.8rem;">
                 {% if sprint.current_day == 5 %}
                 <form action="/sprint/take_day5_exam" method="GET">
-                    <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Day 5 Gateway Exam</button>
+                    <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
                 </form>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Day 6 -->
+        <!-- Day 6 Card -->
         <div class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -268,7 +328,7 @@
             </div>
         </div>
 
-        <!-- Day 7 -->
+        <!-- Day 7 Card -->
         <div class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -289,43 +349,84 @@
     </div>
 </div>
 
-<!-- WEEK 2 PREVIEW ROADMAP -->
-<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem; opacity: 0.65;">
-    <div style="font-size: 0.9rem; font-weight: 700; color: var(--ts-text-secondary); display: flex; align-items: center; justify-content: space-between;">
-        <span>🔒 Week 2 Advanced Architecture & Microservices Sprint (Preview)</span>
-        <span style="font-size: 0.75rem;">Unlocks after Week 1 Completion</span>
+<!-- Modal 1: Day Details & Source Document Modal -->
+<div id="dayDetailModal" class="sp-modal-backdrop" style="display: none;">
+    <div class="sp-modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <div>
+                <span id="dayModalTag" class="s-tag s-tag-learning" style="margin-bottom: 0.2rem;">Day Details</span>
+                <div style="font-weight: 800; font-size: 1.1rem; color: var(--ts-primary);" id="dayModalTitle">Day 1: Module 1 Learning</div>
+            </div>
+            <button onclick="closeDayModal()" style="background: none; border: none; color: var(--ts-text-secondary); cursor: pointer; font-size: 1.3rem;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.88rem;">
+            <div>
+                <div style="font-weight: 700; color: var(--ts-text); margin-bottom: 0.3rem;">📌 Topic Breakdown & Learning Goals:</div>
+                <div id="dayModalContent" style="padding: 0.85rem; border-radius: 8px; background: rgba(0,0,0,0.04); border: 1px solid var(--ts-border); color: var(--ts-text-secondary); line-height: 1.5; white-space: pre-line;"></div>
+            </div>
+
+            <div id="dayModalDocBox" style="padding: 0.85rem; border-radius: 10px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.25);">
+                <div style="font-weight: 700; color: var(--ts-primary); font-size: 0.85rem; margin-bottom: 0.3rem;">📄 Reference Source Document:</div>
+                <div id="dayModalDocName" style="font-size: 0.85rem; font-weight: 600; color: var(--ts-text); margin-bottom: 0.6rem;">None</div>
+                <a id="dayModalDocLink" href="#" target="_blank" class="btn-ts btn-ts-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none; width: auto;">
+                    📄 Open & Read Source File
+                </a>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
+            <button onclick="openCoachFromModal()" class="btn-ts btn-ts-secondary" style="width: auto; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+                🤖 Ask AI Coach About This Day
+            </button>
+            <button onclick="closeDayModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Close</button>
+        </div>
     </div>
 </div>
 
-{% if sprint.current_day >= 7 %}
-<!-- PHASE 4: PERFORMANCE REPORT DISPLAY -->
-<div class="ts-card" style="padding: 1.5rem; border-color: rgba(139,92,246,0.4); margin-bottom: 2rem;">
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-        <span style="font-size: 2.5rem;">📊</span>
-        <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-text); margin-top: 0.3rem;">Phase 4: Sprint Performance Analytical Report</div>
-    </div>
+<!-- FLOATING COLLAPSIBLE AI SPRINT COACH SIDEBAR -->
+<button onclick="toggleAiCoachDrawer()" class="ai-coach-toggle-btn">
+    <span style="font-size: 1.2rem;">🤖</span>
+    <span>AI Sprint Coach</span>
+</button>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border);">
-            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Technical Accuracy Score</div>
-            <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin-top: 0.2rem;">{{ eval_report.technical_score|int if eval_report else 85 }}%</div>
+<div id="aiCoachDrawer" class="ai-coach-drawer">
+    <!-- Header -->
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--ts-border); display: flex; align-items: center; justify-content: space-between; background: rgba(99,102,241,0.06);">
+        <div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--ts-primary); display: flex; align-items: center; gap: 0.4rem;">
+                <span>🤖 AI Sprint Coach</span>
+                <span style="font-size: 0.65rem; background: rgba(52,211,153,0.15); color: #10b981; padding: 2px 6px; border-radius: 10px; font-weight: 700;">LIVE</span>
+            </div>
+            <div id="coachContextText" style="font-size: 0.72rem; color: var(--ts-text-secondary); margin-top: 0.1rem;">
+                Context: Day {{ sprint.current_day }} Learning Material
+            </div>
         </div>
-        <div style="padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border);">
-            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Speech Executive Presence</div>
-            <div style="font-size: 2rem; font-weight: 800; color: var(--ts-primary); margin-top: 0.2rem;">{{ eval_report.confidence_score|int if eval_report else 90 }}%</div>
+        <button onclick="toggleAiCoachDrawer()" style="background: none; border: none; color: var(--ts-text-secondary); cursor: pointer; font-size: 1.2rem;">✕</button>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <div id="coachMessages" style="flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.82rem;">
+        <div style="padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.04); border: 1px solid var(--ts-border); color: var(--ts-text);">
+            👋 <strong>Hi! I am your AI Sprint Coach.</strong><br>
+            Ask me any questions, definitions, or code explanations related to your source files and study topics for <strong>Day <span id="coachDayNumLabel">{{ sprint.current_day }}</span></strong>!
         </div>
     </div>
 
-    <div style="padding: 1rem; border-radius: 12px; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.25); margin-bottom: 1.5rem;">
-        <div style="font-size: 0.82rem; font-weight: 700; color: #8b5cf6; margin-bottom: 0.4rem;">🎯 Actionable Step-by-Step Revision Plan:</div>
-        <div style="font-size: 0.85rem; color: var(--ts-text); line-height: 1.5;">{{ eval_report.feedback_report if eval_report else 'Great job completing Week 1! Revise Days 1-4 concepts to prepare for Week 2.' }}</div>
+    <!-- Quick Suggestion Chips -->
+    <div style="padding: 0.5rem 0.85rem; display: flex; gap: 0.4rem; overflow-x: auto; border-top: 1px solid var(--ts-border); background: rgba(0,0,0,0.02);">
+        <button onclick="sendQuickQuery('Summarize today's core concepts')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">💡 Core concepts</button>
+        <button onclick="sendQuickQuery('Explain key terms from source PDF')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">📄 PDF Terms</button>
+        <button onclick="sendQuickQuery('Give me 2 practice quiz questions')" class="btn-ts btn-ts-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; white-space: nowrap; width: auto;">❓ Quick Quiz</button>
     </div>
 
-    <div style="display: flex; justify-content: center;">
-        <button onclick="resetSprint()" class="btn-ts btn-ts-secondary" style="width: auto;">↺ Reset & Repeat Sprint</button>
+    <!-- Input Bar -->
+    <div style="padding: 0.75rem; border-top: 1px solid var(--ts-border); display: flex; gap: 0.5rem;">
+        <input type="text" id="coachInput" placeholder="Ask AI Coach a question..." onkeydown="if(event.key==='Enter') submitCoachQuery()"
+               style="flex: 1; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background: var(--ts-input-bg); color: var(--ts-text); font-size: 0.82rem; outline: none;">
+        <button onclick="submitCoachQuery()" id="coachSendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.55rem 0.9rem; font-size: 0.82rem;">Send</button>
     </div>
 </div>
-{% endif %}
 
 <!-- Voice Interview Overlay Modal -->
 <div id="voiceOverlay" class="voice-modal-backdrop" style="display: none;">
@@ -350,6 +451,97 @@
 </div>
 
 <script>
+    let activeModalDay = 1;
+    let activeModalDoc = '';
+
+    function openDayModal(dayNum, title, content, docName, isActive) {
+        activeModalDay = dayNum;
+        activeModalDoc = docName;
+        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${title}`;
+        document.getElementById('dayModalContent').innerText = content.split(' | ').join('\n• ');
+        
+        const docBox = document.getElementById('dayModalDocBox');
+        const docNameEl = document.getElementById('dayModalDocName');
+        const docLinkEl = document.getElementById('dayModalDocLink');
+        
+        if (docName && docName.trim() !== '') {
+            docBox.style.display = 'block';
+            docNameEl.innerText = docName;
+            docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
+        } else {
+            docBox.style.display = 'block';
+            docNameEl.innerText = 'No PDF document linked for this day.';
+            docLinkEl.href = '#';
+            docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
+        }
+        
+        document.getElementById('dayDetailModal').style.display = 'flex';
+    }
+
+    function closeDayModal() {
+        document.getElementById('dayDetailModal').style.display = 'none';
+    }
+
+    function toggleAiCoachDrawer() {
+        const drawer = document.getElementById('aiCoachDrawer');
+        drawer.classList.toggle('open');
+    }
+
+    function openCoachFromModal() {
+        closeDayModal();
+        document.getElementById('coachContextText').innerText = `Context: Day ${activeModalDay} (${activeModalDoc || 'Study Plan'})`;
+        document.getElementById('coachDayNumLabel').innerText = activeModalDay;
+        const drawer = document.getElementById('aiCoachDrawer');
+        if (!drawer.classList.contains('open')) {
+            drawer.classList.add('open');
+        }
+    }
+
+    function sendQuickQuery(text) {
+        document.getElementById('coachInput').value = text;
+        submitCoachQuery();
+    }
+
+    async function submitCoachQuery() {
+        const input = document.getElementById('coachInput');
+        const query = input.value.trim();
+        if (!query) return;
+        
+        const container = document.getElementById('coachMessages');
+        const userDiv = document.createElement('div');
+        userDiv.style.cssText = "align-self: flex-end; padding: 0.6rem 0.85rem; border-radius: 10px; background: var(--ts-primary); color: #fff; max-width: 85%; line-height: 1.4;";
+        userDiv.innerText = query;
+        container.appendChild(userDiv);
+        
+        input.value = '';
+        container.scrollTop = container.scrollHeight;
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.style.cssText = "align-self: flex-start; padding: 0.6rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text-secondary); max-width: 85%;";
+        loadingDiv.innerText = "⏳ AI Coach analyzing document...";
+        container.appendChild(loadingDiv);
+        container.scrollTop = container.scrollHeight;
+        
+        try {
+            const res = await fetch('/sprint/ask_ai_coach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: query, day_number: activeModalDay, doc_name: activeModalDoc })
+            });
+            const data = await res.json();
+            container.removeChild(loadingDiv);
+            
+            const aiDiv = document.createElement('div');
+            aiDiv.style.cssText = "align-self: flex-start; padding: 0.65rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text); max-width: 90%; line-height: 1.4; white-space: pre-wrap;";
+            aiDiv.innerText = data.answer || data.error || "No response received.";
+            container.appendChild(aiDiv);
+            container.scrollTop = container.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            container.removeChild(loadingDiv);
+        }
+    }
+
     async function advanceSprintDay() {
         try {
             const res = await fetch('/sprint/advance_day', { method: 'POST' });
@@ -357,16 +549,6 @@
             if (data.status === 'success') {
                 window.location.reload();
             }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async function resetSprint() {
-        if (!confirm('Are you sure you want to restart this sprint?')) return;
-        try {
-            await fetch('/sprint/reset', { method: 'POST' });
-            window.location.reload();
         } catch (e) {
             console.error(e);
         }

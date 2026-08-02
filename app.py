@@ -3919,12 +3919,20 @@ def sprint_page():
     except Exception:
         all_docs = []
 
+    ref_files = []
+    try:
+        ref_files_raw = study_plan.get('reference_files_json', '[]')
+        ref_files = json.loads(ref_files_raw) if isinstance(ref_files_raw, str) else ref_files_raw
+    except Exception:
+        ref_files = []
+
     return render_template(
         'sprint.html',
         active_page='sprint',
         sprint=user_sprint,
         study_plan=study_plan,
         tasks=tasks,
+        ref_files=ref_files,
         qa_errors=qa_errors,
         eval_report=eval_report,
         all_schedules=all_schedules,
@@ -3932,6 +3940,56 @@ def sprint_page():
         all_docs=all_docs,
         user_role=user_role
     )
+
+@app.route('/documents/view/<path:filename>')
+@login_required
+def view_document_pdf(filename):
+    from src.config import DOCUMENTS_DIR
+    doc_dir = Path(DOCUMENTS_DIR).resolve()
+    return send_from_directory(doc_dir, filename, as_attachment=False)
+
+
+@app.route('/sprint/ask_ai_coach', methods=['POST'])
+@login_required
+def sprint_ask_ai_coach():
+    data = request.get_json(silent=True) or {}
+    question = data.get('question', '').strip()
+    day_number = data.get('day_number', 1)
+    doc_name = data.get('doc_name', '')
+    
+    if not question:
+        return jsonify({'error': 'Please enter a question.'}), 400
+        
+    try:
+        from src.vectorstore import search_similar
+        from src.llm import generate_chat_answer
+        
+        context_text = ""
+        try:
+            results = search_similar(query=question, top_k=4)
+            if results and "documents" in results and results["documents"]:
+                docs = results["documents"][0] if isinstance(results["documents"][0], list) else results["documents"]
+                context_text = "\n\n".join(docs)
+        except Exception as ve:
+            print(f"Vector search note: {ve}")
+            
+        system_instruction = (
+            f"You are an expert Socratic AI Learning Coach helping a trainee studying Day {day_number} material.\n"
+            f"Reference Document: {doc_name if doc_name else 'Study Plan Reference'}\n"
+            f"Relevant Excerpts:\n{context_text if context_text else 'No specific vector excerpts found.'}\n\n"
+            f"Answer the trainee's question concisely, clearly, and insightfully. Use markdown formatting and bullet points where appropriate."
+        )
+        
+        response_text = generate_chat_answer(
+            prompt=question,
+            model_name="llama-3.3-70b-versatile",
+            system_instruction=system_instruction
+        )
+        
+        return jsonify({'status': 'success', 'answer': response_text})
+    except Exception as e:
+        print(f"Error in ask_ai_coach: {e}")
+        return jsonify({'status': 'error', 'error': f'Failed to process query: {str(e)}'}), 500
 
 @app.route('/sprint/advance_day', methods=['POST'])
 @login_required
