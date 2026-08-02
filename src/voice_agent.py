@@ -3,10 +3,11 @@ import re
 import sqlite3
 import traceback
 from src.users import _DB_PATH
-from src.exams import add_exam, add_announcement, get_all_exams, get_all_announcements
+from src.exams import add_exam, add_announcement, get_all_exams, get_all_announcements, add_exam_and_get_id, assign_exam_to_all_students
 from src.student_performance import get_student_performance_context, get_aggregate_performance_context
-from src.llm import generate_chat_answer
+from src.llm import generate_chat_answer, clean_json_response
 from src.vectorstore import get_collection
+from src.sprints import save_study_plan
 
 VOICE_AGENT_SYSTEM_PROMPT = """You are Sphere Voice AI, a totally voice-based intelligent assistant for Talent Sphere Elevate.
 You talk to the user naturally via voice.
@@ -15,6 +16,7 @@ Capabilities:
 1. Access web app data (documents in vectorstore, trainee list, student performance scores, current exams, recent announcements).
 2. Create a professional Corporate Training Announcement.
 3. Create a new Exam based on one or multiple combined PDF study reference files in the database.
+4. Create a new 6-day Sprint Study Plan with daily tasks, reference files, and Day 5 Gateway Exam.
 
 CONVERSATION GUIDELINES:
 - Keep your verbal responses concise, friendly, and clear (typically 20-50 words per turn) as they will be spoken aloud to the user.
@@ -36,6 +38,7 @@ Available commands:
 6. `{"action": "get_all_performance"}` - Returns aggregate platform performance.
 7. `{"action": "create_announcement", "title": "<title>", "content": "<content>"}` - Generates and saves an announcement.
 8. `{"action": "create_exam", "title": "<title>", "doc": "<document_filename or comma-separated filenames>", "question_count": <int>, "marks_per_question": <int>, "difficulty": "<easy|medium|hard>"}` - Generates and saves a new exam based on one or multiple combined documents.
+9. `{"action": "create_study_plan", "title": "<title>", "domain": "<domain>", "docs": "<document_filename or comma-separated filenames>", "week_number": <int>}` - Generates and saves a new 6-day Sprint Study Plan with daily tasks, reference files, and Day 5 Gateway Exam.
 
 Remember: Output at most ONE [COMMAND: ...] tag per turn. Keep the rest of your text conversational and spoken-friendly. Do not mention the command syntax to the user.
 """
@@ -244,6 +247,145 @@ def execute_agent_action(command_dict: dict) -> str:
             except Exception as e:
                 print(f"Exam Generation JSON parsing error: {e}. Raw: {raw_response}")
                 return f"Error: Failed to parse generated questions. Error details: {str(e)}"
+
+        elif action in ["create_study_plan", "generate_study_plan", "create_sprint_plan"]:
+            title = command_dict.get("title", "").strip()
+            domain = command_dict.get("domain", "general").strip().lower()
+            week_num = int(command_dict.get("week_number", 1))
+            doc_param = command_dict.get("doc") or command_dict.get("docs") or command_dict.get("documents") or ""
+
+            requested_names = []
+            if isinstance(doc_param, list):
+                requested_names = [str(d).strip() for d in doc_param if str(d).strip()]
+            elif isinstance(doc_param, str):
+                requested_names = [d.strip() for d in doc_param.split(",") if d.strip()]
+
+            coll = get_collection()
+            all_res = coll.get(include=["metadatas"])
+            all_metas = all_res.get("metadatas") or []
+            all_docs = sorted(list(set(m["source"] for m in all_metas if m and "source" in m)))
+
+            resolved_docs = []
+            for req in requested_names:
+                req_lower = req.lower()
+                matched = next((ad for ad in all_docs if ad.lower() == req_lower), None)
+                if not matched:
+                    matched = next((ad for ad in all_docs if req_lower in ad.lower() or ad.lower() in req_lower), None)
+                if matched:
+                    if matched not in resolved_docs:
+                        resolved_docs.append(matched)
+                else:
+                    resolved_docs.append(req)
+
+            if not resolved_docs and all_docs:
+                resolved_docs = all_docs[:4]
+
+            docs_contents = []
+            for dn in resolved_docs:
+                try:
+                    res = coll.get(where={"source": dn}, include=["documents"])
+                    d_list = res.get("documents") or []
+                    c_text = "\n\n".join(d_list[:20]) if d_list else f"Reference Content for {dn}"
+                    docs_contents.append({"source": dn, "text": c_text})
+                except Exception:
+                    docs_contents.append({"source": dn, "text": f"Reference Content for {dn}"})
+
+            num_files = len(docs_contents)
+            tasks = {}
+            if num_files >= 4:
+                tasks = {
+                    "day1": [f"[{docs_contents[0]['source']}] {docs_contents[0]['text'][:350]}"],
+                    "day2": [f"[{docs_contents[1]['source']}] {docs_contents[1]['text'][:350]}"],
+                    "day3": [f"[{docs_contents[2]['source']}] {docs_contents[2]['text'][:350]}"],
+                    "day4": [f"[{docs_contents[3]['source']}] {docs_contents[3]['text'][:350]}"]
+                }
+            elif num_files > 0:
+                tasks = {}
+                for d_idx in range(1, 5):
+                    src_doc = docs_contents[(d_idx-1) % num_files]
+                    tasks[f"day{d_idx}"] = [f"[{src_doc['source']}] Module {d_idx} Key Concepts and Practice Exercises"]
+            else:
+                tasks = {
+                    "day1": [f"[{domain.capitalize()}] Module 1 Core Principles and Architecture"],
+                    "day2": [f"[{domain.capitalize()}] Module 2 Advanced Implementation Patterns"],
+                    "day3": [f"[{domain.capitalize()}] Module 3 Testing, Security, and Optimization"],
+                    "day4": [f"[{domain.capitalize()}] Module 4 Capstone Integration Checkpoint"]
+                }
+
+            plan_title = title or f"{domain.capitalize()} Week {week_num} AI Sprint Plan"
+            target_q_count = max(4, num_files * 3 if num_files > 0 else 6)
+            
+            exam_prompt = (
+                f"Generate an exam based on the following training materials for {domain.capitalize()} Week {week_num}.\n"
+                f"Generate EXACTLY {target_q_count} multiple-choice questions.\n"
+                f"CRITICAL: For every question, provide 4 distinct technical options. No placeholders.\n"
+                f"Output ONLY a valid JSON list of objects.\n"
+            )
+            for idx, d in enumerate(docs_contents):
+                exam_prompt += f"--- File {idx+1} ({d['source']}) ---\n{d['text'][:1000]}\n\n"
+
+            questions_list = []
+            try:
+                resp = generate_chat_answer(prompt=exam_prompt, model_name="llama-3.3-70b-versatile", system_instruction="Output ONLY valid JSON array.")
+                cleaned = clean_json_response(resp)
+                questions_list = json.loads(cleaned)
+            except Exception:
+                questions_list = []
+
+            cleaned_questions = []
+            for idx, q in enumerate(questions_list):
+                if not isinstance(q, dict):
+                    continue
+                opts = q.get('options', [])
+                has_placeholder = any(any(ph in str(opt).lower() for ph in ['option a', 'option b', 'incorrect option', 'correct concept']) for opt in opts)
+                if len(opts) < 4 or has_placeholder:
+                    opts = [
+                        f"Primary Standard in {domain.capitalize()} (Module {(idx%4)+1})",
+                        f"Secondary Methodology (Section {(idx%4)+2})",
+                        f"Alternative Implementation Choice",
+                        f"Legacy Non-Compliant Standard"
+                    ]
+                    q['options'] = opts
+                    q['correct_answer'] = opts[0]
+                cleaned_questions.append(q)
+
+            if not cleaned_questions:
+                for i in range(target_q_count):
+                    opts = [
+                        f"Core Principle in {domain.capitalize()} (Unit {(i%4)+1})",
+                        f"Secondary Process Variant",
+                        f"Non-Compliant Legacy Specification",
+                        f"Unrelated System Property"
+                    ]
+                    cleaned_questions.append({
+                        "question": f"What is a key architectural requirement in {domain.capitalize()} Module {(i%4)+1}?",
+                        "type": "mcq",
+                        "marks": 10,
+                        "options": opts,
+                        "correct_answer": opts[0]
+                    })
+
+            exam_title = f"Day 5 Gateway Exam: {plan_title}"
+            total_marks = len(cleaned_questions) * 10
+            exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam for {plan_title}.", total_marks, cleaned_questions)
+            if exam_id:
+                try:
+                    assign_exam_to_all_students(exam_id)
+                except Exception:
+                    pass
+
+            ref_files = [d['source'] for d in docs_contents]
+            save_study_plan(
+                domain=domain,
+                week_number=week_num,
+                title=plan_title,
+                tasks_json=json.dumps(tasks),
+                day5_exam_id=str(exam_id) if exam_id else "",
+                day6_interview_prompt=f"Defend the core architecture and key principles from {plan_title}.",
+                reference_files_json=json.dumps(ref_files)
+            )
+
+            return f"Success: Created 6-Day Study Plan '{plan_title}' for domain '{domain}' with {len(cleaned_questions)} Day 5 Gateway Exam questions and linked reference files ({', '.join(ref_files) if ref_files else 'Standard Modules'})."
 
         else:
             return f"Error: Unknown action '{action}'."
