@@ -503,26 +503,38 @@
         }
 
         activeModalDay = dayNum;
-        activeModalDoc = data.doc || '';
 
-        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${data.title}`;
-        
+        let docName = data.doc || '';
         let taskText = '';
         if (Array.isArray(data.tasks)) {
             taskText = data.tasks.join('\n\n• ');
         } else {
             taskText = String(data.tasks || '');
         }
-        document.getElementById('dayModalContent').innerText = taskText ? '• ' + taskText : 'No topics available.';
+
+        // Smart Extraction: If data.doc is missing or empty, extract [Filename.pdf] from task text
+        if (!docName || String(docName).trim() === '') {
+            const match = taskText.match(/\[([^\]]+\.pdf)\]/i);
+            if (match) {
+                docName = match[1].trim();
+            }
+        }
+
+        activeModalDoc = docName;
+        document.getElementById('dayModalTitle').innerText = `Day ${dayNum}: ${data.title}`;
+
+        // Clean topic breakdown text by stripping raw filename tag
+        let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
+        document.getElementById('dayModalContent').innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
 
         const docBox = document.getElementById('dayModalDocBox');
         const docNameEl = document.getElementById('dayModalDocName');
         const docLinkEl = document.getElementById('dayModalDocLink');
 
-        if (data.doc && String(data.doc).trim() !== '') {
+        if (docName && String(docName).trim() !== '') {
             docBox.style.display = 'block';
-            docNameEl.innerText = data.doc;
-            docLinkEl.href = '/documents/view/' + encodeURIComponent(data.doc);
+            docNameEl.innerText = docName;
+            docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
             docLinkEl.onclick = null;
         } else {
             docBox.style.display = 'block';
