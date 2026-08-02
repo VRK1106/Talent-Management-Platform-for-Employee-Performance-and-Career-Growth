@@ -3750,6 +3750,140 @@ def admin_kill_overall():
     return redirect(url_for('admin_maintenance'))
 
 
+@app.route('/sprint', methods=['GET'])
+@login_required
+def sprint_page():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    user_role = session.get('user_role', 'trainee')
+    domain = user_info.get('domain', 'general')
+
+    from src.sprints import (
+        get_sprint, get_study_plan, get_qa_errors, 
+        get_interview_evaluation, get_all_sprint_schedules, get_all_study_plans
+    )
+    
+    user_sprint = get_sprint(emp_id)
+    week_num = user_sprint.get('current_week', 1)
+    study_plan = get_study_plan(domain, week_num)
+    
+    tasks = {}
+    try:
+        tasks = json.loads(study_plan.get('tasks_json', '{}'))
+    except Exception:
+        tasks = {}
+
+    qa_errors = get_qa_errors(emp_id, week_num)
+    eval_report = get_interview_evaluation(emp_id, week_num)
+    
+    all_schedules = get_all_sprint_schedules() if user_role == 'admin' else []
+    all_plans = get_all_study_plans() if user_role == 'admin' else []
+
+    all_docs = []
+    try:
+        from src.vectorstore import get_collection
+        coll = get_collection()
+        res = coll.get(include=["metadatas"])
+        metadatas = res.get("metadatas") or []
+        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+    except Exception:
+        all_docs = []
+
+    return render_template(
+        'sprint.html',
+        active_page='sprint',
+        sprint=user_sprint,
+        study_plan=study_plan,
+        tasks=tasks,
+        qa_errors=qa_errors,
+        eval_report=eval_report,
+        all_schedules=all_schedules,
+        all_plans=all_plans,
+        all_docs=all_docs,
+        user_role=user_role
+    )
+
+@app.route('/sprint/advance_day', methods=['POST'])
+@login_required
+def sprint_advance_day():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    from src.sprints import get_sprint, update_sprint_day, update_sprint_progress
+    user_sprint = get_sprint(emp_id)
+    curr_day = user_sprint.get('current_day', 1)
+    next_day = min(curr_day + 1, 7)
+    update_sprint_day(emp_id, next_day)
+    progress = round((next_day / 6.0) * 100.0, 1) if next_day <= 6 else 100.0
+    update_sprint_progress(emp_id, progress)
+    return jsonify({'status': 'success', 'current_day': next_day, 'progress': progress})
+
+@app.route('/sprint/chunk_document', methods=['POST'])
+@login_required
+def sprint_chunk_document():
+    if session.get('user_role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json(silent=True) or {}
+    doc_name = data.get('doc_name', '').strip()
+    raw_text = data.get('raw_text', '').strip()
+    domain = data.get('domain', 'general').lower()
+    week_num = int(data.get('week_number', 1))
+
+    doc_content = raw_text
+    if doc_name and not doc_content:
+        try:
+            from src.vectorstore import get_collection
+            coll = get_collection()
+            res = coll.get(where={"source": doc_name}, include=["documents"])
+            docs_list = res.get("documents") or []
+            if docs_list:
+                doc_content = "\n\n".join(docs_list[:20])
+        except Exception as e:
+            print(f"Error reading vectorstore doc content: {e}")
+
+    if not doc_content:
+        return jsonify({'error': 'No document text found to process.'}), 400
+
+    from src.sprints import run_sprint_orchestrator, save_study_plan
+    state_payload = {
+        "Current_State": {"phase": 1, "state": "Preparation & Chunking"},
+        "week_id": f"week_{week_num}",
+        "uploaded_documentation": doc_content[:4000]
+    }
+    
+    orchestrator_res = run_sprint_orchestrator(state_payload)
+    
+    day1 = orchestrator_res.get('day_1_material', 'Module 1 Study Checkpoint')
+    day2 = orchestrator_res.get('day_2_material', 'Module 2 Study Checkpoint')
+    day3 = orchestrator_res.get('day_3_material', 'Module 3 Study Checkpoint')
+    day4 = orchestrator_res.get('day_4_material', 'Module 4 Study Checkpoint')
+
+    tasks = {
+        "day1": [day1],
+        "day2": [day2],
+        "day3": [day3],
+        "day4": [day4]
+    }
+
+    title = f"Week {week_num} ({domain.capitalize()}) AI Orchestrated Sprint"
+    save_study_plan(domain, week_num, title, json.dumps(tasks), "", f"Defend Week {week_num} concepts.")
+
+    return jsonify({'status': 'success', 'orchestrator_result': orchestrator_res, 'tasks': tasks})
+
+@app.route('/sprint/reset', methods=['POST'])
+@login_required
+def sprint_reset():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    from src.sprints import update_sprint_day, update_sprint_progress, clear_qa_errors, clear_interview_evaluations, get_sprint
+    sprint_data = get_sprint(emp_id)
+    week_num = sprint_data.get('current_week', 1)
+    update_sprint_day(emp_id, 1)
+    update_sprint_progress(emp_id, 0.0)
+    clear_qa_errors(emp_id, week_num)
+    clear_interview_evaluations(emp_id, week_num)
+    return jsonify({'status': 'success'})
+
 @app.route('/sprint/orchestrate', methods=['POST'])
 @login_required
 def sprint_orchestrate():

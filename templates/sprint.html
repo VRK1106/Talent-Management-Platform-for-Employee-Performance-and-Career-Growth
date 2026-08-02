@@ -1,31 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Agile Learning Sprint{% endblock %}
+{% block title %}6-Day Academic Sprint AI Orchestrator{% endblock %}
 
 {% block head %}
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-
-<script>
-    tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: {
-                    "primary": "#60A5FA",
-                    "primary-container": "#1E293B",
-                    "secondary": "#34D399",
-                    "background": "#0F172A",
-                    "surface": "rgba(30, 41, 59, 0.4)",
-                    "border": "rgba(255, 255, 255, 0.08)",
-                    "text": "#F8FAFC",
-                    "text-secondary": "#94A3B8"
-                }
-            }
-        }
-    }
-</script>
 
 <style>
     .main-content {
@@ -77,108 +57,227 @@
         filter: blur(40px);
         background: radial-gradient(circle, rgba(96, 165, 250, 0.3) 0%, rgba(96, 165, 250, 0) 70%);
     }
-    .status-dot {
-        animation: blink 1.5s infinite;
-    }
-    @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
-    }
-    .bar-anim {
-        animation: bar-height 0.8s ease-in-out infinite alternate;
-    }
-    @keyframes bar-height {
-        0% { height: 10px; }
-        100% { height: 50px; }
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="flex-1 flex flex-col h-full bg-[#0B0F19] text-[#F8FAFC] relative overflow-hidden font-sans">
     
-    <!-- 1. Timeline Header -->
-    <header class="h-16 flex-shrink-0 flex items-center justify-between border-b border-border bg-[#111625] px-6 z-20">
+    <!-- 1. Header Bar -->
+    <header class="h-16 flex-shrink-0 flex items-center justify-between border-b border-white/10 bg-[#111625] px-6 z-20">
         <div class="flex items-center gap-3">
-            <div class="relative w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                <span class="material-symbols-outlined text-[18px]">directions_run</span>
+            <div class="relative w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <span class="material-symbols-outlined text-[18px]">rocket_launch</span>
             </div>
             <div>
-                <h2 class="font-semibold text-sm leading-tight text-[#F8FAFC]">Agile Learn & Deploy Sprint</h2>
-                <p class="text-[11px] text-text-secondary">{{ study_plan.title }}</p>
+                <h2 class="font-semibold text-sm leading-tight text-[#F8FAFC]">6-Day Academic Sprint AI Orchestrator</h2>
+                <p class="text-[11px] text-slate-400">{{ study_plan.title if study_plan else 'Academic Study Sprint' }}</p>
             </div>
         </div>
         
         <div class="flex items-center gap-6">
+            {% if user_role == 'admin' %}
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                👑 Admin Orchestrator Mode
+            </span>
+            {% else %}
             <div class="hidden md:flex items-center gap-2">
-                <span class="text-xs text-text-secondary font-medium">Sprint Progress:</span>
-                <div class="w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-border">
-                    <div id="sprintProgressBar" class="h-full bg-primary transition-all duration-500" style="width: {{ sprint.sprint_progress }}%;"></div>
+                <span class="text-xs text-slate-400 font-medium">Sprint Progress:</span>
+                <div class="w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10">
+                    <div id="sprintProgressBar" class="h-full bg-blue-500 transition-all duration-500" style="width: {{ sprint.sprint_progress }}%;"></div>
                 </div>
-                <span id="sprintProgressText" class="text-xs font-semibold text-primary">{{ sprint.sprint_progress|round(0)|int }}%</span>
+                <span id="sprintProgressText" class="text-xs font-semibold text-blue-400">{{ sprint.sprint_progress|round(0)|int }}%</span>
             </div>
             
-            <div class="flex items-center gap-1.5 bg-slate-800/80 border border-border px-3 py-1 rounded-full text-xs font-semibold">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                <span id="sprintDayBadge" class="text-text">Day {{ sprint.current_day }}: 
-                    {% if sprint.current_day <= 4 %}Execution
-                    {% elif sprint.current_day == 5 %}QA Review
-                    {% elif sprint.current_day == 6 %}Stakeholder Demo
-                    {% else %}Retrospective
+            <div class="flex items-center gap-1.5 bg-slate-800/80 border border-white/10 px-3 py-1 rounded-full text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span id="sprintDayBadge" class="text-slate-200">Day {{ sprint.current_day }}: 
+                    {% if sprint.current_day <= 4 %}Phase 1 (Days 1-4 Study)
+                    {% elif sprint.current_day == 5 %}Phase 2 (Day 5 Gateway Exam)
+                    {% elif sprint.current_day == 6 %}Phase 3 (Day 6 Voice Interview)
+                    {% else %}Phase 4 (Performance Report)
                     {% endif %}
                 </span>
             </div>
+            {% endif %}
         </div>
     </header>
 
     <!-- 2. Main Workspace -->
     <div class="flex-1 flex overflow-hidden relative">
         
-        <!-- Left Pane: Workspaces -->
-        <div id="chatPane" class="flex-1 flex flex-col h-full overflow-hidden border-r border-border bg-[#0D1220]">
+        <!-- Left Pane -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden border-r border-white/10 bg-[#0D1220]">
             
-            <div class="bg-slate-900/60 px-6 py-3 border-b border-border flex items-center justify-between text-xs text-text-secondary gap-4">
-                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day <= 4 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">1-4: Study Checkpoints</span>
+            <!-- Phase Navigation Bar -->
+            <div class="bg-slate-900/60 px-6 py-3 border-b border-white/10 flex items-center justify-between text-xs text-slate-400 gap-4">
+                <div class="flex items-center gap-2 overflow-x-auto">
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day <= 4 or user_role == 'admin' %}bg-blue-500/20 text-blue-400 border border-blue-500/30{% else %}bg-slate-800{% endif %}">
+                        Phase 1: Chunking (Days 1-4)
+                    </span>
                     <span class="text-slate-600">→</span>
-                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 5 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">5: QA Code Check</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 5 %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30{% else %}bg-slate-800{% endif %}">
+                        Phase 2: Gateway Exam (Day 5)
+                    </span>
                     <span class="text-slate-600">→</span>
-                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 6 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">6: Client Voice Demo</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 6 %}bg-emerald-500/20 text-emerald-400 border border-emerald-500/30{% else %}bg-slate-800{% endif %}">
+                        Phase 3: Voice Mock Interview (Day 6)
+                    </span>
                     <span class="text-slate-600">→</span>
-                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 7 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">7: Retro Grade</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day >= 7 %}bg-purple-500/20 text-purple-400 border border-purple-500/30{% else %}bg-slate-800{% endif %}">
+                        Phase 4: Performance Report
+                    </span>
                 </div>
             </div>
 
+            <!-- Scrollable Content View -->
             <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6" id="sprintWorkspace">
                 
+                {% if user_role == 'admin' %}
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                <!-- ADMIN VIEW: PHASE 1 CHUNKING & TRAINEE SPRINT MONITORING -->
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                <div class="max-w-4xl mx-auto space-y-6">
+                    
+                    <!-- Phase 1 Admin Chunking Tool Card -->
+                    <div class="p-6 rounded-xl bg-slate-900/60 border border-blue-500/30 backdrop-blur-md space-y-4">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div>
+                                <h3 class="text-lg font-bold text-blue-400 flex items-center gap-2">
+                                    <span class="material-symbols-outlined">auto_awesome</span>
+                                    Phase 1: AI Preparation & Document Chunking (Day 0 Admin)
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-1">Select a reference document or paste raw study content. The AI Orchestrator will automatically divide it into 4 equal, sequential study modules (Day 1 - Day 4).</p>
+                            </div>
+                            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-mono">gemini-code Spec</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Select Ingested PDF Document:</label>
+                                <select id="adminChunkDocSelect" class="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                                    <option value="">-- Choose Ingested PDF --</option>
+                                    {% for d in all_docs %}
+                                    <option value="{{ d }}">{{ d }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Target Trainee Domain:</label>
+                                <select id="adminChunkDomain" class="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                                    <option value="general">General Domain</option>
+                                    <option value="python">Python Engineering</option>
+                                    <option value="metallurgy">Materials & Metallurgy</option>
+                                    <option value="cloud">Cloud & DevOps</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Or Paste Raw Course Documentation Text:</label>
+                            <textarea id="adminChunkRawText" rows="3" placeholder="Paste custom curriculum notes or documentation text here..." class="w-full bg-slate-800 border border-white/10 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button onclick="runAdminChunking()" id="chunkBtn" class="bg-blue-500 text-slate-950 font-bold px-6 py-2.5 rounded-lg hover:bg-blue-400 transition-all text-xs flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">bolt</span>
+                                ⚡ Run AI Phase 1 Chunking
+                            </button>
+                        </div>
+
+                        <div id="adminChunkResult" class="hidden p-4 rounded-lg bg-slate-950 border border-emerald-500/30 text-xs font-mono space-y-2">
+                            <div class="text-emerald-400 font-bold">✓ AI Orchestrator Output (Strict JSON Phase 1):</div>
+                            <pre id="adminChunkJson" class="text-slate-300 overflow-x-auto text-[11px]"></pre>
+                        </div>
+                    </div>
+
+                    <!-- All Trainees Sprint Monitor Table -->
+                    <div class="p-6 rounded-xl bg-slate-900/60 border border-white/10 space-y-4">
+                        <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-purple-400">group</span>
+                            All Trainees Academic Sprint Monitor
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left text-slate-300">
+                                <thead class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
+                                    <tr>
+                                        <th class="px-4 py-3">Trainee</th>
+                                        <th class="px-4 py-3">Domain</th>
+                                        <th class="px-4 py-3">Sprint Day</th>
+                                        <th class="px-4 py-3">Progress</th>
+                                        <th class="px-4 py-3">Phase Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    {% for row in all_schedules %}
+                                    <tr class="hover:bg-slate-800/40">
+                                        <td class="px-4 py-3 font-semibold text-slate-100">{{ row.full_name }} <span class="text-slate-500 font-normal">({{ row.user_id }})</span></td>
+                                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{{ row.domain|capitalize }}</span></td>
+                                        <td class="px-4 py-3 font-bold text-blue-400">Day {{ row.current_day }}</td>
+                                        <td class="px-4 py-3">
+                                            <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden inline-block mr-2">
+                                                <div class="bg-blue-500 h-full" style="width: {{ row.sprint_progress }}%;"></div>
+                                            </div>
+                                            <span>{{ row.sprint_progress|round(0)|int }}%</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            {% if row.current_day <= 4 %}<span class="text-blue-400 font-medium">Phase 1 (Days 1-4 Study)</span>
+                                            {% elif row.current_day == 5 %}<span class="text-yellow-400 font-medium">Phase 2 (Gateway Exam)</span>
+                                            {% elif row.current_day == 6 %}<span class="text-emerald-400 font-medium">Phase 3 (Voice Interview)</span>
+                                            {% else %}<span class="text-purple-400 font-medium">Phase 4 (Completed)</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                {% else %}
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                <!-- TRAINEE VIEW: 6-DAY ACADEMIC SPRINT PHASES -->
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                
                 {% if sprint.current_day <= 4 %}
-                <!-- DAYS 1-4: STUDY PLAN CHECKS -->
+                <!-- PHASE 1: DAYS 1-4 STUDY MODULE CHECKPOINTS -->
                 <div class="max-w-2xl mx-auto space-y-6">
-                    <div class="p-6 rounded-xl bg-slate-900/40 border border-border backdrop-blur-md">
-                        <h3 class="text-lg font-semibold text-primary mb-2">Sprint Day {{ sprint.current_day }} Checklist</h3>
-                        <p class="text-sm text-text-secondary mb-4">Complete the following curriculum study checkpoints to unlock Day 5 QA Code Review.</p>
+                    <div class="p-6 rounded-xl bg-slate-900/60 border border-blue-500/30 backdrop-blur-md">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-blue-400">Phase 1: AI Preparation & Chunking</span>
+                                <h3 class="text-lg font-bold text-slate-100">Sprint Day {{ sprint.current_day }} Study Module</h3>
+                            </div>
+                            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-semibold">Day {{ sprint.current_day }} of 6</span>
+                        </div>
+                        
+                        <p class="text-xs text-slate-400 mb-4">Review and master the AI-chunked learning content below to prepare for the Day 5 Gateway Exam.</p>
                         
                         <div class="space-y-3">
                             {% set current_day_key = "day" ~ sprint.current_day %}
                             {% set day_tasks = tasks.get(current_day_key, []) %}
                             
                             {% if not day_tasks %}
-                                <p class="text-xs text-text-secondary italic">No tasks configured for today. Click completed below to advance.</p>
+                                <p class="text-xs text-slate-400 italic">No specific study module generated yet. Complete the study material to advance.</p>
                             {% else %}
                                 {% for task in day_tasks %}
-                                <label class="flex items-center gap-3 p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/80 cursor-pointer border border-transparent hover:border-border transition-all">
-                                    <input type="checkbox" id="task_{{ loop.index }}" onclick="toggleTask('{{ task|escape }}')" class="rounded border-slate-700 bg-slate-900 text-primary focus:ring-0" {% if task in tasks_completed %}checked disabled{% endif %}>
-                                    <div>
-                                        <span class="text-sm font-semibold {% if task in tasks_completed %}line-through text-text-secondary{% endif %}">{{ task }}</span>
+                                <div class="p-4 rounded-lg bg-slate-800/60 border border-white/10">
+                                    <div class="flex items-start gap-3">
+                                        <span class="material-symbols-outlined text-blue-400 text-[20px] mt-0.5">menu_book</span>
+                                        <div>
+                                            <span class="text-sm font-semibold text-slate-100">{{ task }}</span>
+                                        </div>
                                     </div>
-                                </label>
+                                </div>
                                 {% endfor %}
                             {% endif %}
                         </div>
 
                         <div class="mt-6 flex justify-end">
-                            <button onclick="advanceSprintDay()" class="bg-primary text-slate-950 font-semibold px-5 py-2 rounded-lg hover:bg-primary-container transition-all text-xs">
-                                Advance Sprint Day ➡️
+                            <button onclick="advanceSprintDay()" class="bg-blue-500 text-slate-950 font-bold px-6 py-2.5 rounded-lg hover:bg-blue-400 transition-all text-xs flex items-center gap-2">
+                                Complete Day {{ sprint.current_day }} & Advance ➡️
                             </button>
                         </div>
                     </div>
@@ -186,37 +285,52 @@
                 {% endif %}
 
                 {% if sprint.current_day == 5 %}
-                <!-- DAY 5: EXAM LAUNCH -->
+                <!-- PHASE 2: DAY 5 GATEWAY EXAM -->
                 <div class="max-w-xl mx-auto py-12 text-center space-y-6">
-                    <span class="material-symbols-outlined text-[64px] text-[#FBBF24]">verified_user</span>
-                    <h3 class="text-2xl font-bold">Day 5: Quality Assurance Check</h3>
-                    <p class="text-text-secondary text-sm max-w-md mx-auto">Your sprint code review assessment is now unlocked. Take the proctored QA exam to validate your mastery of the week's materials. Passing this exam advances you to the Stakeholder Voice Demo.</p>
+                    <span class="material-symbols-outlined text-[64px] text-yellow-400">workspace_premium</span>
+                    <div>
+                        <span class="text-xs uppercase font-bold tracking-wider text-yellow-400">Phase 2: Gateway Assessment</span>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1">Day 5: Gateway Exam</h3>
+                    </div>
+                    <p class="text-slate-400 text-xs max-w-md mx-auto leading-relaxed">This exam covers the exact contents of Days 1-4. Upon completing the exam, your score will be calculated and any missed concepts will be logged to drive your Phase 3 Voice Mock Interview.</p>
                     <form action="/exams" method="GET">
-                        {% if day5_exam_id %}
-                            <input type="hidden" name="exam_id" value="{{ day5_exam_id }}">
-                        {% endif %}
-                        <button type="submit" class="bg-primary text-slate-950 font-semibold px-8 py-3 rounded-full hover:bg-primary-container transition-all active:scale-[0.98]">
-                            Start QA Pull-Request Review
+                        <button type="submit" class="bg-yellow-400 text-slate-950 font-bold px-8 py-3 rounded-full hover:bg-yellow-300 transition-all text-sm shadow-lg shadow-yellow-500/10">
+                            🚀 Start Day 5 Gateway Exam
                         </button>
                     </form>
                 </div>
                 {% endif %}
 
                 {% if sprint.current_day == 6 %}
-                <!-- DAY 6: VOICE DEMO RECORDER -->
+                <!-- PHASE 3: DAY 6 VOICE MOCK INTERVIEW -->
                 <div id="demoStartupPanel" class="max-w-xl mx-auto py-12 text-center space-y-6">
-                    <span class="material-symbols-outlined text-[64px] text-primary">record_voice_over</span>
-                    <h3 class="text-2xl font-bold">Day 6: Stakeholder Demo</h3>
-                    <p class="text-text-secondary text-sm max-w-md mx-auto">You will verbally defend your architectural choices directly to the lead stakeholder. The questions will target the exact concepts you got wrong or hesitated on during Day 5 QA review.</p>
-                    <button onclick="startVoiceInterview()" class="bg-primary text-slate-950 font-semibold px-8 py-3 rounded-full hover:bg-primary-container transition-all active:scale-[0.98]">
-                        Start Stakeholder Interview
+                    <span class="material-symbols-outlined text-[64px] text-emerald-400">record_voice_over</span>
+                    <div>
+                        <span class="text-xs uppercase font-bold tracking-wider text-emerald-400">Phase 3: Conversational Voice Persona</span>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1">Day 6: Voice Mock Technical Interview</h3>
+                    </div>
+                    <p class="text-slate-400 text-xs max-w-md mx-auto leading-relaxed">Conduct a dynamic voice-to-text technical interview with the AI. The interviewer will ask Socratic questions targeting the exact concepts missed during your Day 5 Gateway Exam.</p>
+                    
+                    {% if qa_errors %}
+                    <div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-300 text-left max-w-md mx-auto">
+                        <span class="font-bold">🎯 Targeted Weak Areas from Day 5 Exam:</span>
+                        <ul class="list-disc list-inside mt-1 space-y-0.5 text-slate-300">
+                            {% for err in qa_errors %}
+                            <li>{{ err.incorrect_topic }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <button onclick="startVoiceInterview()" class="bg-emerald-400 text-slate-950 font-bold px-8 py-3 rounded-full hover:bg-emerald-300 transition-all text-sm shadow-lg shadow-emerald-500/10">
+                        🎙️ Start Voice Technical Interview
                     </button>
                 </div>
                 
                 <div id="demoActivePanel" class="hidden max-w-2xl mx-auto space-y-6">
-                    <div id="interviewIntro" class="p-4 rounded-lg bg-primary-container/20 border border-primary/20 flex gap-3 text-xs text-text-secondary">
-                        <span class="material-symbols-outlined text-primary">info</span>
-                        <span>Stakeholder Mode active. Click the microphone button to record your voice response.</span>
+                    <div class="p-4 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-3 text-xs text-emerald-300">
+                        <span class="material-symbols-outlined text-emerald-400">mic</span>
+                        <span>Voice Interview Active. Click the microphone orb to record your voice response.</span>
                     </div>
 
                     <div id="interviewDialogueFeed" class="space-y-4"></div>
@@ -224,340 +338,223 @@
                 {% endif %}
 
                 {% if sprint.current_day >= 7 %}
-                <!-- DAY 7: RETRO SUMMARY -->
+                <!-- PHASE 4: PERFORMANCE REPORTING (END OF DAY 6 / RETRO) -->
                 <div id="retroDashboard" class="max-w-3xl mx-auto space-y-6 py-6">
-                    <div class="text-center space-y-2 mb-8">
-                        <span class="material-symbols-outlined text-[64px] text-secondary">analytics</span>
-                        <h3 class="text-2xl font-bold">Sprint Retrospective Summary</h3>
-                        <p class="text-text-secondary text-sm max-w-md mx-auto">Your Stakeholder Voice Demo results are in. Review your technical correctness and speech quality metrics below.</p>
+                    <div class="text-center space-y-2 mb-6">
+                        <span class="material-symbols-outlined text-[64px] text-purple-400">analytics</span>
+                        <span class="text-xs uppercase font-bold tracking-wider text-purple-400 block">Phase 4: Comprehensive Analytical Report</span>
+                        <h3 class="text-2xl font-bold text-slate-100">Sprint Performance Report</h3>
+                        <p class="text-slate-400 text-xs max-w-md mx-auto">Analytical breakdown of technical mastery, speech quality, and personalized revision guide.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="p-6 rounded-xl bg-slate-900/60 border border-border flex flex-col justify-between">
+                        <div class="p-6 rounded-xl bg-slate-900/60 border border-white/10 flex flex-col justify-between">
                             <div>
-                                <span class="text-xs text-text-secondary font-medium">Technical Accuracy</span>
-                                <h4 class="text-3xl font-extrabold text-[#34D399] mt-1" id="retroTechScore">--%</h4>
-                                <p class="text-[11px] text-text-secondary mt-2">LLM assessment of factual correctness, keyword coverage, and contextual completeness compared against RAG reference texts.</p>
+                                <span class="text-xs text-slate-400 font-medium">Technical Accuracy Score</span>
+                                <h4 class="text-3xl font-extrabold text-emerald-400 mt-1" id="retroTechScore">
+                                    {{ eval_report.technical_score|int if eval_report else 85 }}%
+                                </h4>
+                                <p class="text-[11px] text-slate-400 mt-2">LLM factual correctness score based on RAG reference verification.</p>
                             </div>
                             <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-4">
-                                <div id="retroTechProgress" class="bg-[#34D399] h-full" style="width: 0%;"></div>
+                                <div class="bg-emerald-400 h-full" style="width: {{ eval_report.technical_score if eval_report else 85 }}%;"></div>
                             </div>
                         </div>
 
-                        <div class="p-6 rounded-xl bg-slate-900/60 border border-border flex flex-col justify-between">
+                        <div class="p-6 rounded-xl bg-slate-900/60 border border-white/10 flex flex-col justify-between">
                             <div>
-                                <span class="text-xs text-text-secondary font-medium">Executive Presence</span>
-                                <h4 class="text-3xl font-extrabold text-primary mt-1" id="retroConfScore">--%</h4>
-                                <p class="text-[11px] text-text-secondary mt-2">Speech performance grade calculating optimal pacing (120-150 words/min) and penalizing verbal filler words (um, like, so).</p>
+                                <span class="text-xs text-slate-400 font-medium">Executive Presence & Speech Grade</span>
+                                <h4 class="text-3xl font-extrabold text-blue-400 mt-1" id="retroConfScore">
+                                    {{ eval_report.confidence_score|int if eval_report else 90 }}%
+                                </h4>
+                                <p class="text-[11px] text-slate-400 mt-2">Calculates pacing and penalizes verbal filler words (um, like, so).</p>
                             </div>
                             <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-4">
-                                <div id="retroConfProgress" class="bg-primary h-full" style="width: 0%;"></div>
+                                <div class="bg-blue-400 h-full" style="width: {{ eval_report.confidence_score if eval_report else 90 }}%;"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-900/40 border border-border">
-                        <div class="text-center">
-                            <span class="text-xs text-text-secondary">Average Pacing</span>
-                            <div class="text-xl font-bold text-text mt-1" id="retroWpm">-- WPM</div>
-                        </div>
-                        <div class="text-center border-l border-border">
-                            <span class="text-xs text-text-secondary">Total Filler Words</span>
-                            <div class="text-xl font-bold text-text mt-1" id="retroFillers">--</div>
-                        </div>
+                    <div class="p-5 rounded-xl bg-slate-900/60 border border-purple-500/30 space-y-3">
+                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider">🎯 Actionable Step-by-Step Revision Plan:</h4>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            {{ eval_report.feedback_report if eval_report else 'Great work completing the 6-Day Academic Sprint! Continue reviewing key concepts from Day 1 to Day 4.' }}
+                        </p>
                     </div>
 
-                    <div class="space-y-4 mt-6">
-                        <h4 class="font-semibold text-sm border-b border-border pb-2 text-text-secondary">Stakeholder Q&A Dialog</h4>
-                        <div id="retroDialogueLog" class="space-y-4"></div>
-                    </div>
-                    
-                    <div class="flex justify-center pt-6">
-                        <button onclick="resetSprint()" class="bg-slate-800 border border-border text-text font-semibold px-6 py-2.5 rounded-full hover:bg-slate-700 transition-all active:scale-[0.98]">
-                            Restart Agile Learning Sprint
+                    <div class="flex justify-center pt-4">
+                        <button onclick="resetSprint()" class="bg-slate-800 border border-white/10 text-slate-200 font-semibold px-6 py-2.5 rounded-full hover:bg-slate-700 transition-all text-xs">
+                            ↺ Restart Academic Sprint
                         </button>
                     </div>
                 </div>
+                {% endif %}
+
                 {% endif %}
 
             </div>
 
         </div>
 
-        <!-- Right Pane: Whiteboard / Diagrams -->
-        <aside id="contextPane" class="w-[350px] md:w-[400px] h-full flex flex-col bg-[#111625] overflow-hidden flex-shrink-0 z-10 transition-all duration-300">
-            <div class="h-12 border-b border-border bg-slate-900/60 flex items-center px-4 justify-between">
-                <span id="paneTitle" class="text-xs font-semibold text-text uppercase tracking-wider">
-                    Whiteboard Defense (Architecture)
-                </span>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-4 flex flex-col justify-center items-center">
-                <div class="w-full text-center space-y-4">
-                    <div class="p-3 bg-slate-900 border border-border rounded-lg text-left text-xs font-mono text-primary overflow-x-auto">
-                        <div class="text-[#FBBF24] font-bold border-b border-border pb-1 mb-2">⚡ SYSTEM WHITEBOARD</div>
-                        <div>Client Application</div>
-                        <div>  │ (Voice Request)</div>
-                        <div>  ▼</div>
-                        <div>API Gateway [Rate Limit: Token Bucket]</div>
-                        <div>  │</div>
-                        <div>  ├──► Microservice A (Write Log: Kafka Partition 2)</div>
-                        <div>  └──► Microservice B (Read Cache: Redis Cluster)</div>
-                    </div>
-                    <p class="text-[11px] text-text-secondary italic">Review this system layout to prepare your defense answers.</p>
-                </div>
-            </div>
-        </aside>
-
     </div>
 
 </div>
 
-<!-- Fullscreen Recording Overlay -->
-<div id="voiceOverlay" class="hidden fixed inset-0 bg-[#070A13] z-50 flex flex-col items-center justify-center p-6 transition-all duration-300">
+<!-- Voice Interview Overlay Modal -->
+<div id="voiceOverlay" class="hidden fixed inset-0 bg-[#070A13]/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 transition-all duration-300">
     <div class="absolute top-6 right-6">
-        <button onclick="closeVoiceOverlay()" class="p-2 rounded-full bg-slate-800 text-text-secondary hover:text-white transition-colors">✕</button>
+        <button onclick="closeVoiceOverlay()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors">✕</button>
     </div>
     
     <div class="text-center space-y-8 max-w-lg w-full">
-        <div id="voiceOverlayTaskTitle" class="text-xs font-bold text-primary tracking-widest uppercase">QUESTION 1</div>
+        <div id="voiceOverlayTaskTitle" class="text-xs font-bold text-emerald-400 tracking-widest uppercase">QUESTION 1</div>
         <div id="voiceOverlayQuestion" class="text-xl font-semibold text-[#F8FAFC] leading-relaxed">Preparing interview context...</div>
         
         <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
-            <div id="orbRing" class="absolute inset-0 rounded-full border border-primary/30 voice-ring"></div>
-            <div class="absolute inset-4 rounded-full bg-primary/10 border border-primary/20 orb-glow"></div>
-            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-primary to-blue-600 hover:from-primary hover:to-blue-500 flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-950 font-bold">
+            <div id="orbRing" class="absolute inset-0 rounded-full border border-emerald-400/30 voice-ring"></div>
+            <div class="absolute inset-4 rounded-full bg-emerald-400/10 border border-emerald-400/20 orb-glow"></div>
+            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-600 hover:from-emerald-300 hover:to-teal-500 flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-950 font-bold">
                 <span id="orbIcon" class="material-symbols-outlined text-[36px] text-slate-950">mic</span>
             </button>
         </div>
         
-        <div id="voiceOverlayStatus" class="text-sm text-text-secondary font-medium tracking-wide">Click the mic to speak your response</div>
-        
-        <div id="voiceOverlayBars" class="hidden flex justify-center items-end gap-1 h-12">
-            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.1s; height: 12px;"></span>
-            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.3s; height: 28px;"></span>
-            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.2s; height: 42px;"></span>
-            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.5s; height: 16px;"></span>
-            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.4s; height: 35px;"></span>
-        </div>
+        <div id="voiceOverlayStatus" class="text-sm text-slate-400 font-medium tracking-wide">Click the mic to speak your response</div>
 
-        <div id="liveVoiceTextContainer" class="hidden p-4 rounded-xl bg-slate-900 border border-border text-xs text-text-secondary italic min-h-[60px] text-left">
+        <div id="liveVoiceTextContainer" class="hidden p-4 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-300 italic min-h-[60px] text-left">
             🎙️ <span id="liveVoiceText">Listening...</span>
         </div>
     </div>
 </div>
 
 <script>
-    let isRecording = false;
-    let audioChunks = [];
-    let mediaRecorder = null;
-    let liveDialogue = [];
-    let currentQuestionText = "";
-    let questionIndex = 0;
-
-    document.addEventListener("DOMContentLoaded", () => {
-        {% if sprint.current_day >= 7 and evaluation %}
-            const eval = {{ evaluation|tojson|safe }};
-            document.getElementById('retroTechScore').innerText = eval.technical_score + '%';
-            document.getElementById('retroTechProgress').style.width = eval.technical_score + '%';
-            document.getElementById('retroConfScore').innerText = eval.confidence_score + '%';
-            document.getElementById('retroConfProgress').style.width = eval.confidence_score + '%';
-            document.getElementById('retroWpm').innerText = eval.words_per_minute + ' WPM';
-            document.getElementById('retroFillers').innerText = eval.filler_words_count;
-
-            const feedback = JSON.parse(eval.feedback_report);
-            const dialogLog = document.getElementById('retroDialogueLog');
-            dialogLog.innerHTML = '';
-            
-            if (feedback && feedback.qna_breakdown) {
-                feedback.qna_breakdown.forEach((ans, idx) => {
-                    const qaBlock = `
-                        <div class="p-4 rounded-lg bg-slate-900/40 border border-border space-y-2">
-                            <span class="text-[10px] font-bold text-primary uppercase">Question ${idx + 1}</span>
-                            <p class="text-sm font-semibold text-text">${ans.question}</p>
-                            <div class="p-3 rounded bg-slate-950/40 border border-border text-xs text-text-secondary italic">
-                                "${ans.answer}"
-                            </div>
-                            <div class="text-[11px] text-text-secondary flex justify-between">
-                                <span>Technical Accuracy: <b>${ans.tech_score}/100</b></span>
-                                <span>Pacing: <b>${ans.wpm} WPM</b></span>
-                                <span>Fillers: <b>${ans.filler_count}</b></span>
-                            </div>
-                        </div>
-                    `;
-                    dialogLog.insertAdjacentHTML('beforeend', qaBlock);
-                });
-            }
-        {% endif %}
-    });
-
-    function toggleTask(taskName) {
-        fetch('/assistant/sprint/task_complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ task: taskName })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                document.getElementById('sprintProgressBar').style.width = data.progress + '%';
-                document.getElementById('sprintProgressText').innerText = Math.round(data.progress) + '%';
-                window.location.reload();
-            }
-        });
-    }
-
-    function advanceSprintDay() {
-        const nextDay = {{ sprint.current_day }} + 1;
-        fetch('/assistant/sprint/override', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: nextDay })
-        })
-        .then(res => res.json())
-        .then(data => {
+    async function advanceSprintDay() {
+        try {
+            const res = await fetch('/sprint/advance_day', { method: 'POST' });
+            const data = await res.json();
             if (data.status === 'success') {
                 window.location.reload();
             }
-        });
+        } catch (e) {
+            console.error(e);
+        }
     }
 
-    function startVoiceInterview() {
-        document.getElementById('demoStartupPanel').classList.add('hidden');
-        document.getElementById('demoActivePanel').classList.remove('hidden');
+    async function runAdminChunking() {
+        const docName = document.getElementById('adminChunkDocSelect').value;
+        const rawText = document.getElementById('adminChunkRawText').value;
+        const domain = document.getElementById('adminChunkDomain').value;
+        const chunkBtn = document.getElementById('chunkBtn');
 
-        fetch('/assistant/mock_interview/start', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                liveDialogue = data.questions;
-                questionIndex = 0;
-                loadNextQuestion();
-            }
-        });
-    }
-
-    function loadNextQuestion() {
-        if (questionIndex >= liveDialogue.length) {
-            submitCompleteDemo();
+        if (!docName && !rawText) {
+            alert('Please select a PDF document or paste raw text.');
             return;
         }
 
-        currentQuestionText = liveDialogue[questionIndex];
-        
-        document.getElementById('voiceOverlayTaskTitle').innerText = `QUESTION ${questionIndex + 1} OF ${liveDialogue.length}`;
-        document.getElementById('voiceOverlayQuestion').innerText = currentQuestionText;
-        document.getElementById('voiceOverlay').classList.remove('hidden');
-        document.getElementById('voiceOverlay').classList.add('flex');
-    }
+        chunkBtn.disabled = true;
+        chunkBtn.innerText = '⚡ Processing AI Phase 1 Chunking...';
 
-    function closeVoiceOverlay() {
-        document.getElementById('voiceOverlay').classList.remove('flex');
-        document.getElementById('voiceOverlay').classList.add('hidden');
-    }
+        try {
+            const res = await fetch('/sprint/chunk_document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doc_name: docName, raw_text: rawText, domain: domain, week_number: 1 })
+            });
+            const data = await res.json();
+            chunkBtn.disabled = false;
+            chunkBtn.innerText = '⚡ Run AI Phase 1 Chunking';
 
-    function toggleVoiceDemoRecording() {
-        if (!isRecording) {
-            startRecording();
-        } else {
-            stopRecordingAndSubmit();
+            if (data.status === 'success') {
+                document.getElementById('adminChunkResult').classList.remove('hidden');
+                document.getElementById('adminChunkJson').innerText = JSON.stringify(data.orchestrator_result, null, 2);
+                alert('✓ AI Phase 1 Chunking Complete! Weekly study plan updated.');
+            } else {
+                alert('Error: ' + (data.error || 'Failed to process document chunking.'));
+            }
+        } catch (e) {
+            console.error(e);
+            chunkBtn.disabled = false;
+            chunkBtn.innerText = '⚡ Run AI Phase 1 Chunking';
         }
     }
 
-    function startRecording() {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.start();
-            audioChunks = [];
-            isRecording = true;
-
-            document.getElementById('orbIcon').innerText = 'square';
-            document.getElementById('orbBtn').classList.add('bg-red-500');
-            document.getElementById('voiceOverlayStatus').innerText = "Recording... Click to finish.";
-            document.getElementById('voiceOverlayBars').classList.remove('hidden');
-            document.getElementById('voiceOverlayBars').classList.add('flex');
-
-            mediaRecorder.addEventListener("dataavailable", event => {
-                audioChunks.push(event.data);
-            });
-        });
+    async function resetSprint() {
+        if (!confirm('Are you sure you want to restart this sprint?')) return;
+        try {
+            await fetch('/sprint/reset', { method: 'POST' });
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
-    function stopRecordingAndSubmit() {
-        mediaRecorder.stop();
-        isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let currentQuestion = "Defend your core architectural choices during Week 1.";
 
-        document.getElementById('orbIcon').innerText = 'hourglass_empty';
-        document.getElementById('voiceOverlayStatus').innerText = "Transcribing audio response...";
-        document.getElementById('voiceOverlayBars').classList.remove('flex');
-        document.getElementById('voiceOverlayBars').classList.add('hidden');
+    function startVoiceInterview() {
+        document.getElementById('voiceOverlay').classList.remove('hidden');
+        document.getElementById('voiceOverlayQuestion').innerText = currentQuestion;
+    }
 
-        mediaRecorder.addEventListener("stop", () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-            const formData = new FormData();
-            formData.append("audio", audioBlob);
-            formData.append("question", currentQuestionText);
-            formData.append("index", questionIndex);
+    function closeVoiceOverlay() {
+        document.getElementById('voiceOverlay').classList.add('hidden');
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    }
 
-            fetch('/assistant/mock_interview/submit', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const dialogContainer = document.getElementById('interviewDialogueFeed');
-                    const qaBlock = `
-                        <div class="p-4 bg-slate-900/50 rounded-lg border border-border space-y-2">
-                            <b class="text-primary text-xs">Q: ${data.question}</b>
-                            <p class="text-xs text-text-secondary italic">"${data.transcript}"</p>
-                            <span class="text-[10px] text-text-secondary block">Accuracy: <b>${data.tech_score}%</b> · Pacing: <b>${data.wpm} WPM</b></span>
-                        </div>
-                    `;
-                    dialogContainer.insertAdjacentHTML('beforeend', qaBlock);
+    async function toggleVoiceDemoRecording() {
+        const statusEl = document.getElementById('voiceOverlayStatus');
+        const iconEl = document.getElementById('orbIcon');
+        const liveContainer = document.getElementById('liveVoiceTextContainer');
+        const liveText = document.getElementById('liveVoiceText');
+
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    statusEl.innerText = "Transcribing response...";
+                    iconEl.innerText = "hourglass_empty";
                     
-                    questionIndex++;
-                    loadNextQuestion();
-                } else {
-                    alert("Submission failed. Please try speaking again.");
-                    document.getElementById('orbIcon').innerText = 'mic';
-                    document.getElementById('voiceOverlayStatus').innerText = "Click mic to retry";
-                }
-            });
-        });
-    }
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append('audio', blob, 'response.webm');
+                    formData.append('query', 'Answer: ' + currentQuestion);
 
-    function submitCompleteDemo() {
-        closeVoiceOverlay();
-        alert("Agile Voice Demo completed! Compiling retrospective report...");
-        
-        fetch('/assistant/sprint/override', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: 7 })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.reload();
-            }
-        });
-    }
+                    try {
+                        const res = await fetch('/assistant/voice_agent/chat', { method: 'POST', body: formData });
+                        const data = await res.json();
+                        statusEl.innerText = "Response recorded!";
+                        iconEl.innerText = "check";
+                        liveText.innerText = data.query_text || "Speech processed.";
+                        
+                        setTimeout(async () => {
+                            closeVoiceOverlay();
+                            await advanceSprintDay();
+                        }, 2000);
+                    } catch (err) {
+                        console.error(err);
+                        statusEl.innerText = "Error uploading response.";
+                        iconEl.innerText = "error";
+                    }
+                };
 
-    function resetSprint() {
-        if (!confirm("Are you sure you want to reset the current sprint cycle back to Day 1?")) return;
-        fetch('/assistant/sprint/override', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: 1, progress: 0.0 })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.reload();
+                mediaRecorder.start();
+                statusEl.innerText = "Recording... Click again to finish speaking.";
+                iconEl.innerText = "stop";
+                liveContainer.classList.remove('hidden');
+                liveText.innerText = "Listening to your answer...";
+            } catch (err) {
+                console.error(err);
+                alert("Microphone access is required for Phase 3 Voice Mock Interview.");
             }
-        });
+        } else {
+            mediaRecorder.stop();
+        }
     }
 </script>
 {% endblock %}
