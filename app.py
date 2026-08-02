@@ -3750,6 +3750,16 @@ def admin_kill_overall():
     return redirect(url_for('admin_maintenance'))
 
 
+@app.route('/sprint/orchestrate', methods=['POST'])
+@login_required
+def sprint_orchestrate():
+    payload = request.get_json(silent=True) or {}
+    model_name = payload.pop("model", "llama-3.3-70b-versatile")
+    from src.sprints import run_sprint_orchestrator
+    result = run_sprint_orchestrator(payload, model_name=model_name)
+    return jsonify(result)
+
+
 if __name__ == '__main__':
     import threading
     def preload_model_bg():

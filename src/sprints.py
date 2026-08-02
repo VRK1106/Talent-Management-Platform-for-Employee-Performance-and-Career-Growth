@@ -357,3 +357,41 @@ def get_all_study_plans() -> list[dict]:
     res = [dict(r) for r in rows]
     conn.close()
     return res
+
+def run_sprint_orchestrator(state_payload: dict, model_name: str = "llama-3.3-70b-versatile") -> dict:
+    """Executes the AI Learning Orchestrator specification from gemini-code-1785693472882.md.
+    
+    Accepts state_payload dict containing Current_State (phase 1, 2, 3, or 4) and associated materials/answers.
+    Returns structured JSON output dictionary.
+    """
+    import json
+    import re
+    from pathlib import Path
+    from src.llm import generate_chat_answer, clean_json_response
+
+    prompt_path = Path(__file__).resolve().parent.parent / "gemini-code-1785693472882.md"
+    if not prompt_path.exists():
+        return {"error": "gemini-code-1785693472882.md prompt specification file missing."}
+
+    system_instruction = prompt_path.read_text(encoding="utf-8")
+    user_prompt = json.dumps(state_payload, indent=2)
+
+    try:
+        raw_resp = generate_chat_answer(
+            prompt=user_prompt,
+            model_name=model_name,
+            system_instruction=system_instruction
+        )
+
+        cleaned = clean_json_response(raw_resp)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            # Fallback regex JSON extraction
+            match = re.search(r'(\{[\s\S]*\})', cleaned)
+            if match:
+                return json.loads(match.group(1))
+            return {"raw_response": raw_resp}
+    except Exception as e:
+        return {"error": f"Failed to execute orchestrator: {str(e)}"}
+

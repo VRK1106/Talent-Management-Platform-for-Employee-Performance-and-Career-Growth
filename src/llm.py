@@ -7,10 +7,35 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from typing import Any
 from dotenv import load_dotenv
+
+def clean_json_response(raw_resp: str) -> str:
+    """Strip markdown backticks and extract JSON string content."""
+    resp = raw_resp.strip()
+    if resp.startswith("```"):
+        match = re.match(r"^```(?:json)?\s*", resp)
+        if match:
+            resp = resp[match.end():]
+        if resp.endswith("```"):
+            resp = resp[:-3]
+    resp = resp.strip()
+    start_obj = resp.find('{')
+    start_arr = resp.find('[')
+    
+    if start_obj != -1 and (start_arr == -1 or start_obj < start_arr):
+        end_obj = resp.rfind('}')
+        if end_obj > start_obj:
+            return resp[start_obj:end_obj+1].strip()
+    elif start_arr != -1:
+        end_arr = resp.rfind(']')
+        if end_arr > start_arr:
+            return resp[start_arr:end_arr+1].strip()
+            
+    return resp
 
 # Load environment variables
 load_dotenv()
