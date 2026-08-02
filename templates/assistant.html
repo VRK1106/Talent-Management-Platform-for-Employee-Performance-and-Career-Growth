@@ -39,20 +39,98 @@
         flex-shrink: 0 !important;
     }
     
-    body.ts-light-mode .voice-option-item {
-        background: #ffffff !important;
-        border-color: #cbd5e1 !important;
-        color: #0f172a !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    /* Voice Overlay Dark Mode (Default) */
+    .voice-agent-overlay-box {
+        background: rgba(9, 13, 26, 0.96) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: #F8FAFC !important;
     }
-    body.ts-light-mode .voice-option-item span {
-        color: #0f172a !important;
+    .voice-exit-btn {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        padding: 0.6rem 1rem;
+        border-radius: 9999px;
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+    .voice-overlay-title {
+        color: #F8FAFC !important;
+        -webkit-text-fill-color: #F8FAFC !important;
+    }
+    .voice-overlay-sub {
+        color: #94A3B8 !important;
+        -webkit-text-fill-color: #94A3B8 !important;
+    }
+    .voice-transcript-card {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+    }
+    #voiceUserTranscript {
+        color: #CBD5E1 !important;
+        -webkit-text-fill-color: #CBD5E1 !important;
+    }
+    #voiceAssistantSpeech {
+        color: #F8FAFC !important;
+        -webkit-text-fill-color: #F8FAFC !important;
+    }
+    #voiceSelectModeBadge {
+        color: #94A3B8 !important;
+        -webkit-text-fill-color: #94A3B8 !important;
+    }
+
+    /* Voice Overlay Light Mode */
+    body.ts-light-mode .voice-agent-overlay-box {
+        background: rgba(248, 250, 252, 0.97) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: #0F172A !important;
+    }
+    body.ts-light-mode .voice-exit-btn {
+        background: #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
+    }
+    body.ts-light-mode .voice-overlay-title {
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
+    }
+    body.ts-light-mode .voice-overlay-sub {
+        color: #475569 !important;
+        -webkit-text-fill-color: #475569 !important;
+    }
+    body.ts-light-mode .voice-transcript-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+    }
+    body.ts-light-mode #voiceUserTranscript {
+        color: #334155 !important;
+        -webkit-text-fill-color: #334155 !important;
     }
     body.ts-light-mode #voiceAssistantSpeech {
-        color: #0f172a !important;
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
     }
     body.ts-light-mode #voiceSelectModeBadge {
         color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+    }
+    body.ts-light-mode .voice-option-item {
+        background: #F1F5F9 !important;
+        border-color: #CBD5E1 !important;
+        color: #0F172A !important;
+    }
+    body.ts-light-mode .voice-option-item span {
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
     }
     
     .chat-messages {
@@ -936,8 +1014,8 @@
 </div>
 
 <!-- Totally Voice Assistant Overlay -->
-<div id="voiceAgentOverlay" style="display:none; position: fixed; inset: 0; z-index: 10000; background: rgba(9, 13, 26, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F8FAFC;">
-    <button onclick="stopTotallyVoiceChat()" style="position: absolute; top: 1.5rem; right: 1.5rem; padding: 0.6rem 1rem; border-radius: 9999px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 1.1rem;" title="Exit Voice Assistant">
+<div id="voiceAgentOverlay" class="voice-agent-overlay-box" style="display:none; position: fixed; inset: 0; z-index: 10000;">
+    <button onclick="stopTotallyVoiceChat()" class="voice-exit-btn" title="Exit Voice Assistant">
         ✕ Exit Voice
     </button>
     
@@ -945,24 +1023,24 @@
         <div style="display: flex; flex-direction: column; gap: 0.4rem; align-items: center;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="width: 10px; height: 10px; background: #60A5FA; border-radius: 50%; display: inline-block;"></span>
-                <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #F8FAFC;">Sphere Voice Assistant</h3>
+                <h3 class="voice-overlay-title" style="margin: 0; font-size: 1.3rem; font-weight: 700;">Sphere Voice Assistant</h3>
             </div>
-            <p style="margin: 0; font-size: 0.8rem; color: #94A3B8;">Purely voice-driven operations and assistant</p>
+            <p class="voice-overlay-sub" style="margin: 0; font-size: 0.8rem;">Purely voice-driven operations and assistant</p>
         </div>
 
         <div style="position: relative; display: flex; align-items: center; justify-content: center; height: 180px; width: 180px; margin: 1rem 0;">
             <div id="voiceOrb" style="width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(96,165,250,0.5) 0%, rgba(96,165,250,0) 70%); transition: all 0.5s ease;"></div>
         </div>
 
-        <div style="width: 100%; background: rgba(17, 22, 37, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; text-align: left; max-height: 220px; overflow-y: auto;">
+        <div class="voice-transcript-card" style="width: 100%; border-radius: 16px; padding: 1.25rem; text-align: left; max-height: 220px; overflow-y: auto;">
             <div style="margin-bottom: 0.75rem;">
                 <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #60A5FA;">You Said:</span>
-                <p id="voiceUserTranscript" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-style: italic; color: #cbd5e1;">"Waiting for speech..."</p>
+                <p id="voiceUserTranscript" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-style: italic;">"Waiting for speech..."</p>
             </div>
-            <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 0.75rem 0;"></div>
+            <div style="border-top: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1)); margin: 0.75rem 0;"></div>
             <div>
                 <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #34D399;">Sphere AI:</span>
-                <p id="voiceAssistantSpeech" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-weight: 500; color: #F8FAFC;">"Connecting..."</p>
+                <p id="voiceAssistantSpeech" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-weight: 500;">"Connecting..."</p>
             </div>
 
             <!-- Dynamic Interactive Content Selection Panel -->
