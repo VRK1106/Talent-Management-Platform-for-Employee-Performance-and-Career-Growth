@@ -83,6 +83,90 @@ def init_db() -> None:
             ),
         )
     
+    # Create sprint_schedules table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sprint_schedules (
+            sprint_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            current_week INTEGER DEFAULT 1,
+            current_day INTEGER DEFAULT 1,
+            sprint_progress REAL DEFAULT 0.0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(employee_id)
+        )
+        """
+    )
+
+    # Create qa_errors table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS qa_errors (
+            error_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            week_number INTEGER NOT NULL,
+            incorrect_topic TEXT NOT NULL,
+            exam_question_text TEXT NOT NULL,
+            logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(employee_id)
+        )
+        """
+    )
+
+    # Create interview_evaluations table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS interview_evaluations (
+            evaluation_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            week_number INTEGER NOT NULL,
+            technical_score REAL,
+            confidence_score REAL,
+            filler_words_count INTEGER,
+            words_per_minute REAL,
+            feedback_report TEXT,
+            graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(employee_id)
+        )
+        """
+    )
+    # Create weekly_documents table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS weekly_documents (
+            doc_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            week_number INTEGER NOT NULL,
+            day_number INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(employee_id)
+        )
+        """
+    )
+    # Create weekly_study_plans table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS weekly_study_plans (
+            plan_id TEXT PRIMARY KEY,
+            domain TEXT NOT NULL,
+            week_number INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            tasks_json TEXT NOT NULL,
+            day5_exam_id TEXT,
+            day6_interview_prompt TEXT,
+            reference_files_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    
+    # Ensure reference_files_json column exists in case DB was already created
+    try:
+        cursor.execute("ALTER TABLE weekly_study_plans ADD COLUMN reference_files_json TEXT")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 

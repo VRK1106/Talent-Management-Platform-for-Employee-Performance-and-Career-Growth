@@ -570,3 +570,64 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
     except Exception as e:
         yield f"Error: An unexpected error occurred while generating answer: {e}"
 
+
+def generate_study_plan(prompt: str, domain: str, week_number: int, model_name: str) -> dict:
+    """Generate a weekly study plan using Groq LLM and return it as a dictionary."""
+    if not GROQ_API_KEY:
+        return {"error": "Groq API Key is not configured."}
+        
+    system_instruction = (
+        "You are an expert technical curriculum designer for 'Talent Sphere Elevate'. "
+        "Your task is to generate a structured 4-day learning sprint and a Day 6 mock interview prompt based on the user's request. "
+        "You MUST return ONLY a valid, parseable JSON object with NO markdown formatting, NO backticks, and NO surrounding text. "
+        "The JSON keys MUST be exactly:\n"
+        "- 'title': A short, professional title for the week.\n"
+        "- 'day1': List of 2-3 specific study tasks.\n"
+        "- 'day2': List of 2-3 specific study tasks.\n"
+        "- 'day3': List of 2-3 specific study tasks.\n"
+        "- 'day4': List of 2-3 specific study tasks.\n"
+        "- 'day6_prompt': A scenario/question for the Day 6 mock voice interview.\n\n"
+        "Example JSON output:\n"
+        "{\n"
+        "  \"title\": \"Advanced Java Spring Boot\",\n"
+        "  \"day1\": [\"Study JPA annotations\", \"Upload java_spring_docs.pdf\"],\n"
+        "  \"day2\": [\"Practice building CRUD REST controllers\", \"Ask AI Coach about transactions\"],\n"
+        "  \"day3\": [\"Complete Spring Boot exam\", \"Analyze incorrect responses\"],\n"
+        "  \"day4\": [\"Run performance benchmarks\", \"Checklist audit\"],\n"
+        "  \"day6_prompt\": \"Explain how Spring manages transaction propagation levels and rollbacks.\"\n"
+        "}"
+    )
+    
+    user_prompt = f"Create a Week {week_number} Agile study plan for the domain '{domain}' with details: {prompt}"
+    
+    try:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        
+        req_headers = HEADERS.copy()
+        req_headers["Authorization"] = f"Bearer {GROQ_API_KEY}"
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=req_headers,
+            method="POST"
+        )
+        
+        with urllib.request.urlopen(req, timeout=15.0) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            content = data["choices"][0]["message"]["content"].strip()
+            # Parse the JSON string
+            return json.loads(content)
+    except Exception as e:
+        print(f"Error generating study plan: {e}")
+        return {"error": f"Failed to generate study plan: {str(e)}"}
+

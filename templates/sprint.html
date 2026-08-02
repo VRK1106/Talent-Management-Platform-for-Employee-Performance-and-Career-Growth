@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% block title %}Agile Learning Sprint{% endblock %}
+
+{% block head %}
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "primary": "#60A5FA",
+                    "primary-container": "#1E293B",
+                    "secondary": "#34D399",
+                    "background": "#0F172A",
+                    "surface": "rgba(30, 41, 59, 0.4)",
+                    "border": "rgba(255, 255, 255, 0.08)",
+                    "text": "#F8FAFC",
+                    "text-secondary": "#94A3B8"
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    .main-content {
+        overflow-y: hidden !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        background: #0B0F19 !important;
+    }
+    .main-container {
+        height: 100% !important;
+        max-height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        vertical-align: middle;
+        font-size: 20px;
+    }
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+    }
+    .voice-ring {
+        animation: pulse-ring 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+        0% { transform: scale(0.8); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 0.3; }
+        100% { transform: scale(0.8); opacity: 0.8; }
+    }
+    .orb-glow {
+        filter: blur(40px);
+        background: radial-gradient(circle, rgba(96, 165, 250, 0.3) 0%, rgba(96, 165, 250, 0) 70%);
+    }
+    .status-dot {
+        animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    .bar-anim {
+        animation: bar-height 0.8s ease-in-out infinite alternate;
+    }
+    @keyframes bar-height {
+        0% { height: 10px; }
+        100% { height: 50px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col h-full bg-[#0B0F19] text-[#F8FAFC] relative overflow-hidden font-sans">
+    
+    <!-- 1. Timeline Header -->
+    <header class="h-16 flex-shrink-0 flex items-center justify-between border-b border-border bg-[#111625] px-6 z-20">
+        <div class="flex items-center gap-3">
+            <div class="relative w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-[18px]">directions_run</span>
+            </div>
+            <div>
+                <h2 class="font-semibold text-sm leading-tight text-[#F8FAFC]">Agile Learn & Deploy Sprint</h2>
+                <p class="text-[11px] text-text-secondary">{{ study_plan.title }}</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-2">
+                <span class="text-xs text-text-secondary font-medium">Sprint Progress:</span>
+                <div class="w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-border">
+                    <div id="sprintProgressBar" class="h-full bg-primary transition-all duration-500" style="width: {{ sprint.sprint_progress }}%;"></div>
+                </div>
+                <span id="sprintProgressText" class="text-xs font-semibold text-primary">{{ sprint.sprint_progress|round(0)|int }}%</span>
+            </div>
+            
+            <div class="flex items-center gap-1.5 bg-slate-800/80 border border-border px-3 py-1 rounded-full text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                <span id="sprintDayBadge" class="text-text">Day {{ sprint.current_day }}: 
+                    {% if sprint.current_day <= 4 %}Execution
+                    {% elif sprint.current_day == 5 %}QA Review
+                    {% elif sprint.current_day == 6 %}Stakeholder Demo
+                    {% else %}Retrospective
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. Main Workspace -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Left Pane: Workspaces -->
+        <div id="chatPane" class="flex-1 flex flex-col h-full overflow-hidden border-r border-border bg-[#0D1220]">
+            
+            <div class="bg-slate-900/60 px-6 py-3 border-b border-border flex items-center justify-between text-xs text-text-secondary gap-4">
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day <= 4 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">1-4: Study Checkpoints</span>
+                    <span class="text-slate-600">→</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 5 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">5: QA Code Check</span>
+                    <span class="text-slate-600">→</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 6 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">6: Client Voice Demo</span>
+                    <span class="text-slate-600">→</span>
+                    <span class="px-2.5 py-1 rounded-full font-medium {% if sprint.current_day == 7 %}bg-primary/20 text-primary border border-primary/30{% else %}bg-slate-800{% endif %}">7: Retro Grade</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6" id="sprintWorkspace">
+                
+                {% if sprint.current_day <= 4 %}
+                <!-- DAYS 1-4: STUDY PLAN CHECKS -->
+                <div class="max-w-2xl mx-auto space-y-6">
+                    <div class="p-6 rounded-xl bg-slate-900/40 border border-border backdrop-blur-md">
+                        <h3 class="text-lg font-semibold text-primary mb-2">Sprint Day {{ sprint.current_day }} Checklist</h3>
+                        <p class="text-sm text-text-secondary mb-4">Complete the following curriculum study checkpoints to unlock Day 5 QA Code Review.</p>
+                        
+                        <div class="space-y-3">
+                            {% set current_day_key = "day" ~ sprint.current_day %}
+                            {% set day_tasks = tasks.get(current_day_key, []) %}
+                            
+                            {% if not day_tasks %}
+                                <p class="text-xs text-text-secondary italic">No tasks configured for today. Click completed below to advance.</p>
+                            {% else %}
+                                {% for task in day_tasks %}
+                                <label class="flex items-center gap-3 p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/80 cursor-pointer border border-transparent hover:border-border transition-all">
+                                    <input type="checkbox" id="task_{{ loop.index }}" onclick="toggleTask('{{ task|escape }}')" class="rounded border-slate-700 bg-slate-900 text-primary focus:ring-0" {% if task in tasks_completed %}checked disabled{% endif %}>
+                                    <div>
+                                        <span class="text-sm font-semibold {% if task in tasks_completed %}line-through text-text-secondary{% endif %}">{{ task }}</span>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="advanceSprintDay()" class="bg-primary text-slate-950 font-semibold px-5 py-2 rounded-lg hover:bg-primary-container transition-all text-xs">
+                                Advance Sprint Day ➡️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if sprint.current_day == 5 %}
+                <!-- DAY 5: EXAM LAUNCH -->
+                <div class="max-w-xl mx-auto py-12 text-center space-y-6">
+                    <span class="material-symbols-outlined text-[64px] text-[#FBBF24]">verified_user</span>
+                    <h3 class="text-2xl font-bold">Day 5: Quality Assurance Check</h3>
+                    <p class="text-text-secondary text-sm max-w-md mx-auto">Your sprint code review assessment is now unlocked. Take the proctored QA exam to validate your mastery of the week's materials. Passing this exam advances you to the Stakeholder Voice Demo.</p>
+                    <form action="/exams" method="GET">
+                        {% if day5_exam_id %}
+                            <input type="hidden" name="exam_id" value="{{ day5_exam_id }}">
+                        {% endif %}
+                        <button type="submit" class="bg-primary text-slate-950 font-semibold px-8 py-3 rounded-full hover:bg-primary-container transition-all active:scale-[0.98]">
+                            Start QA Pull-Request Review
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if sprint.current_day == 6 %}
+                <!-- DAY 6: VOICE DEMO RECORDER -->
+                <div id="demoStartupPanel" class="max-w-xl mx-auto py-12 text-center space-y-6">
+                    <span class="material-symbols-outlined text-[64px] text-primary">record_voice_over</span>
+                    <h3 class="text-2xl font-bold">Day 6: Stakeholder Demo</h3>
+                    <p class="text-text-secondary text-sm max-w-md mx-auto">You will verbally defend your architectural choices directly to the lead stakeholder. The questions will target the exact concepts you got wrong or hesitated on during Day 5 QA review.</p>
+                    <button onclick="startVoiceInterview()" class="bg-primary text-slate-950 font-semibold px-8 py-3 rounded-full hover:bg-primary-container transition-all active:scale-[0.98]">
+                        Start Stakeholder Interview
+                    </button>
+                </div>
+                
+                <div id="demoActivePanel" class="hidden max-w-2xl mx-auto space-y-6">
+                    <div id="interviewIntro" class="p-4 rounded-lg bg-primary-container/20 border border-primary/20 flex gap-3 text-xs text-text-secondary">
+                        <span class="material-symbols-outlined text-primary">info</span>
+                        <span>Stakeholder Mode active. Click the microphone button to record your voice response.</span>
+                    </div>
+
+                    <div id="interviewDialogueFeed" class="space-y-4"></div>
+                </div>
+                {% endif %}
+
+                {% if sprint.current_day >= 7 %}
+                <!-- DAY 7: RETRO SUMMARY -->
+                <div id="retroDashboard" class="max-w-3xl mx-auto space-y-6 py-6">
+                    <div class="text-center space-y-2 mb-8">
+                        <span class="material-symbols-outlined text-[64px] text-secondary">analytics</span>
+                        <h3 class="text-2xl font-bold">Sprint Retrospective Summary</h3>
+                        <p class="text-text-secondary text-sm max-w-md mx-auto">Your Stakeholder Voice Demo results are in. Review your technical correctness and speech quality metrics below.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-6 rounded-xl bg-slate-900/60 border border-border flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs text-text-secondary font-medium">Technical Accuracy</span>
+                                <h4 class="text-3xl font-extrabold text-[#34D399] mt-1" id="retroTechScore">--%</h4>
+                                <p class="text-[11px] text-text-secondary mt-2">LLM assessment of factual correctness, keyword coverage, and contextual completeness compared against RAG reference texts.</p>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-4">
+                                <div id="retroTechProgress" class="bg-[#34D399] h-full" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="p-6 rounded-xl bg-slate-900/60 border border-border flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs text-text-secondary font-medium">Executive Presence</span>
+                                <h4 class="text-3xl font-extrabold text-primary mt-1" id="retroConfScore">--%</h4>
+                                <p class="text-[11px] text-text-secondary mt-2">Speech performance grade calculating optimal pacing (120-150 words/min) and penalizing verbal filler words (um, like, so).</p>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-4">
+                                <div id="retroConfProgress" class="bg-primary h-full" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-900/40 border border-border">
+                        <div class="text-center">
+                            <span class="text-xs text-text-secondary">Average Pacing</span>
+                            <div class="text-xl font-bold text-text mt-1" id="retroWpm">-- WPM</div>
+                        </div>
+                        <div class="text-center border-l border-border">
+                            <span class="text-xs text-text-secondary">Total Filler Words</span>
+                            <div class="text-xl font-bold text-text mt-1" id="retroFillers">--</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 mt-6">
+                        <h4 class="font-semibold text-sm border-b border-border pb-2 text-text-secondary">Stakeholder Q&A Dialog</h4>
+                        <div id="retroDialogueLog" class="space-y-4"></div>
+                    </div>
+                    
+                    <div class="flex justify-center pt-6">
+                        <button onclick="resetSprint()" class="bg-slate-800 border border-border text-text font-semibold px-6 py-2.5 rounded-full hover:bg-slate-700 transition-all active:scale-[0.98]">
+                            Restart Agile Learning Sprint
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+        <!-- Right Pane: Whiteboard / Diagrams -->
+        <aside id="contextPane" class="w-[350px] md:w-[400px] h-full flex flex-col bg-[#111625] overflow-hidden flex-shrink-0 z-10 transition-all duration-300">
+            <div class="h-12 border-b border-border bg-slate-900/60 flex items-center px-4 justify-between">
+                <span id="paneTitle" class="text-xs font-semibold text-text uppercase tracking-wider">
+                    Whiteboard Defense (Architecture)
+                </span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col justify-center items-center">
+                <div class="w-full text-center space-y-4">
+                    <div class="p-3 bg-slate-900 border border-border rounded-lg text-left text-xs font-mono text-primary overflow-x-auto">
+                        <div class="text-[#FBBF24] font-bold border-b border-border pb-1 mb-2">⚡ SYSTEM WHITEBOARD</div>
+                        <div>Client Application</div>
+                        <div>  │ (Voice Request)</div>
+                        <div>  ▼</div>
+                        <div>API Gateway [Rate Limit: Token Bucket]</div>
+                        <div>  │</div>
+                        <div>  ├──► Microservice A (Write Log: Kafka Partition 2)</div>
+                        <div>  └──► Microservice B (Read Cache: Redis Cluster)</div>
+                    </div>
+                    <p class="text-[11px] text-text-secondary italic">Review this system layout to prepare your defense answers.</p>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+</div>
+
+<!-- Fullscreen Recording Overlay -->
+<div id="voiceOverlay" class="hidden fixed inset-0 bg-[#070A13] z-50 flex flex-col items-center justify-center p-6 transition-all duration-300">
+    <div class="absolute top-6 right-6">
+        <button onclick="closeVoiceOverlay()" class="p-2 rounded-full bg-slate-800 text-text-secondary hover:text-white transition-colors">✕</button>
+    </div>
+    
+    <div class="text-center space-y-8 max-w-lg w-full">
+        <div id="voiceOverlayTaskTitle" class="text-xs font-bold text-primary tracking-widest uppercase">QUESTION 1</div>
+        <div id="voiceOverlayQuestion" class="text-xl font-semibold text-[#F8FAFC] leading-relaxed">Preparing interview context...</div>
+        
+        <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
+            <div id="orbRing" class="absolute inset-0 rounded-full border border-primary/30 voice-ring"></div>
+            <div class="absolute inset-4 rounded-full bg-primary/10 border border-primary/20 orb-glow"></div>
+            <button id="orbBtn" onclick="toggleVoiceDemoRecording()" class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-primary to-blue-600 hover:from-primary hover:to-blue-500 flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-950 font-bold">
+                <span id="orbIcon" class="material-symbols-outlined text-[36px] text-slate-950">mic</span>
+            </button>
+        </div>
+        
+        <div id="voiceOverlayStatus" class="text-sm text-text-secondary font-medium tracking-wide">Click the mic to speak your response</div>
+        
+        <div id="voiceOverlayBars" class="hidden flex justify-center items-end gap-1 h-12">
+            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.1s; height: 12px;"></span>
+            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.3s; height: 28px;"></span>
+            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.2s; height: 42px;"></span>
+            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.5s; height: 16px;"></span>
+            <span class="w-1 bg-primary rounded bar-anim" style="animation-delay:0.4s; height: 35px;"></span>
+        </div>
+
+        <div id="liveVoiceTextContainer" class="hidden p-4 rounded-xl bg-slate-900 border border-border text-xs text-text-secondary italic min-h-[60px] text-left">
+            🎙️ <span id="liveVoiceText">Listening...</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isRecording = false;
+    let audioChunks = [];
+    let mediaRecorder = null;
+    let liveDialogue = [];
+    let currentQuestionText = "";
+    let questionIndex = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        {% if sprint.current_day >= 7 and evaluation %}
+            const eval = {{ evaluation|tojson|safe }};
+            document.getElementById('retroTechScore').innerText = eval.technical_score + '%';
+            document.getElementById('retroTechProgress').style.width = eval.technical_score + '%';
+            document.getElementById('retroConfScore').innerText = eval.confidence_score + '%';
+            document.getElementById('retroConfProgress').style.width = eval.confidence_score + '%';
+            document.getElementById('retroWpm').innerText = eval.words_per_minute + ' WPM';
+            document.getElementById('retroFillers').innerText = eval.filler_words_count;
+
+            const feedback = JSON.parse(eval.feedback_report);
+            const dialogLog = document.getElementById('retroDialogueLog');
+            dialogLog.innerHTML = '';
+            
+            if (feedback && feedback.qna_breakdown) {
+                feedback.qna_breakdown.forEach((ans, idx) => {
+                    const qaBlock = `
+                        <div class="p-4 rounded-lg bg-slate-900/40 border border-border space-y-2">
+                            <span class="text-[10px] font-bold text-primary uppercase">Question ${idx + 1}</span>
+                            <p class="text-sm font-semibold text-text">${ans.question}</p>
+                            <div class="p-3 rounded bg-slate-950/40 border border-border text-xs text-text-secondary italic">
+                                "${ans.answer}"
+                            </div>
+                            <div class="text-[11px] text-text-secondary flex justify-between">
+                                <span>Technical Accuracy: <b>${ans.tech_score}/100</b></span>
+                                <span>Pacing: <b>${ans.wpm} WPM</b></span>
+                                <span>Fillers: <b>${ans.filler_count}</b></span>
+                            </div>
+                        </div>
+                    `;
+                    dialogLog.insertAdjacentHTML('beforeend', qaBlock);
+                });
+            }
+        {% endif %}
+    });
+
+    function toggleTask(taskName) {
+        fetch('/assistant/sprint/task_complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task: taskName })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('sprintProgressBar').style.width = data.progress + '%';
+                document.getElementById('sprintProgressText').innerText = Math.round(data.progress) + '%';
+                window.location.reload();
+            }
+        });
+    }
+
+    function advanceSprintDay() {
+        const nextDay = {{ sprint.current_day }} + 1;
+        fetch('/assistant/sprint/override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: nextDay })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            }
+        });
+    }
+
+    function startVoiceInterview() {
+        document.getElementById('demoStartupPanel').classList.add('hidden');
+        document.getElementById('demoActivePanel').classList.remove('hidden');
+
+        fetch('/assistant/mock_interview/start', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                liveDialogue = data.questions;
+                questionIndex = 0;
+                loadNextQuestion();
+            }
+        });
+    }
+
+    function loadNextQuestion() {
+        if (questionIndex >= liveDialogue.length) {
+            submitCompleteDemo();
+            return;
+        }
+
+        currentQuestionText = liveDialogue[questionIndex];
+        
+        document.getElementById('voiceOverlayTaskTitle').innerText = `QUESTION ${questionIndex + 1} OF ${liveDialogue.length}`;
+        document.getElementById('voiceOverlayQuestion').innerText = currentQuestionText;
+        document.getElementById('voiceOverlay').classList.remove('hidden');
+        document.getElementById('voiceOverlay').classList.add('flex');
+    }
+
+    function closeVoiceOverlay() {
+        document.getElementById('voiceOverlay').classList.remove('flex');
+        document.getElementById('voiceOverlay').classList.add('hidden');
+    }
+
+    function toggleVoiceDemoRecording() {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecordingAndSubmit();
+        }
+    }
+
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            audioChunks = [];
+            isRecording = true;
+
+            document.getElementById('orbIcon').innerText = 'square';
+            document.getElementById('orbBtn').classList.add('bg-red-500');
+            document.getElementById('voiceOverlayStatus').innerText = "Recording... Click to finish.";
+            document.getElementById('voiceOverlayBars').classList.remove('hidden');
+            document.getElementById('voiceOverlayBars').classList.add('flex');
+
+            mediaRecorder.addEventListener("dataavailable", event => {
+                audioChunks.push(event.data);
+            });
+        });
+    }
+
+    function stopRecordingAndSubmit() {
+        mediaRecorder.stop();
+        isRecording = false;
+
+        document.getElementById('orbIcon').innerText = 'hourglass_empty';
+        document.getElementById('voiceOverlayStatus').innerText = "Transcribing audio response...";
+        document.getElementById('voiceOverlayBars').classList.remove('flex');
+        document.getElementById('voiceOverlayBars').classList.add('hidden');
+
+        mediaRecorder.addEventListener("stop", () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const formData = new FormData();
+            formData.append("audio", audioBlob);
+            formData.append("question", currentQuestionText);
+            formData.append("index", questionIndex);
+
+            fetch('/assistant/mock_interview/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const dialogContainer = document.getElementById('interviewDialogueFeed');
+                    const qaBlock = `
+                        <div class="p-4 bg-slate-900/50 rounded-lg border border-border space-y-2">
+                            <b class="text-primary text-xs">Q: ${data.question}</b>
+                            <p class="text-xs text-text-secondary italic">"${data.transcript}"</p>
+                            <span class="text-[10px] text-text-secondary block">Accuracy: <b>${data.tech_score}%</b> · Pacing: <b>${data.wpm} WPM</b></span>
+                        </div>
+                    `;
+                    dialogContainer.insertAdjacentHTML('beforeend', qaBlock);
+                    
+                    questionIndex++;
+                    loadNextQuestion();
+                } else {
+                    alert("Submission failed. Please try speaking again.");
+                    document.getElementById('orbIcon').innerText = 'mic';
+                    document.getElementById('voiceOverlayStatus').innerText = "Click mic to retry";
+                }
+            });
+        });
+    }
+
+    function submitCompleteDemo() {
+        closeVoiceOverlay();
+        alert("Agile Voice Demo completed! Compiling retrospective report...");
+        
+        fetch('/assistant/sprint/override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: 7 })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            }
+        });
+    }
+
+    function resetSprint() {
+        if (!confirm("Are you sure you want to reset the current sprint cycle back to Day 1?")) return;
+        fetch('/assistant/sprint/override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: "{{ sprint.user_id }}", day: 1, progress: 0.0 })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            }
+        });
+    }
+</script>
+{% endblock %}

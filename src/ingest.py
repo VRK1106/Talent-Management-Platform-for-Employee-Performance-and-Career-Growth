@@ -86,11 +86,12 @@ def _try_ocr_pdf(data: bytes) -> list[dict]:
     return pages
 
 
-def extract_pages(file: Any) -> list[dict]:
-    """Extract per-page text from a PDF.
+def extract_pages(file: Any, page_range: list[int] | None = None) -> list[dict]:
+    """Extract per-page text from a PDF, optionally filtering by page range (1-indexed, inclusive).
 
     Args:
         file: A path string or a file-like object (e.g. a Streamlit upload).
+        page_range: Optional [start_page, end_page] list.
 
     Returns:
         A list of ``{"page": int, "text": str}`` dicts, 1-indexed by page,
@@ -106,6 +107,8 @@ def extract_pages(file: Any) -> list[dict]:
         raise
 
     for index, page in enumerate(reader.pages, start=1):
+        if page_range and not (page_range[0] <= index <= page_range[1]):
+            continue
         try:
             raw = page.extract_text() or ""
         except Exception as exc:  # noqa: BLE001 - one bad page shouldn't kill the file
@@ -122,6 +125,8 @@ def extract_pages(file: Any) -> list[dict]:
     if not pages:
         logger.info("No extractable text found in PDF, attempting OCR fallback.")
         pages = _try_ocr_pdf(data)
+        if page_range:
+            pages = [p for p in pages if page_range[0] <= p["page"] <= page_range[1]]
 
     return pages
 

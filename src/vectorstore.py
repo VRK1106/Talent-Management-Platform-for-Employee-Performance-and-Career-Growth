@@ -296,6 +296,7 @@ def search_ephemeral(
     query_embedding: list[float],
     top_k: int,
     threshold: float = 0.0,
+    source_filters: list[str] = None,
 ) -> list[dict]:
     """Run similarity search on the ephemeral collection and return sorted results."""
     collection = get_ephemeral_collection(session_id)
@@ -303,11 +304,23 @@ def search_ephemeral(
     if total_count == 0:
         return []
 
+    # Build where clause for metadata filters
+    where_clause = None
+    if source_filters is not None:
+        if len(source_filters) == 1:
+            where_clause = {"source": source_filters[0]}
+        elif len(source_filters) > 1:
+            where_clause = {"$or": [{"source": src} for src in source_filters]}
+        else:
+            # If an empty list of files is passed for this week, return nothing
+            return []
+
     query_k = min(max(top_k * 2, 20), total_count)
 
     result = collection.query(
         query_embeddings=[query_embedding],
         n_results=query_k,
+        where=where_clause,
         include=["documents", "metadatas", "distances"],
     )
 

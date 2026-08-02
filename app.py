@@ -366,7 +366,16 @@ def inject_global_data():
     except Exception:
         pass
         
-    user_sessions = get_chat_sessions_for_user(employee_id) if employee_id else []
+    week = 1
+    if employee_id:
+        try:
+            from src.sprints import get_sprint
+            sprint = get_sprint(employee_id)
+            week = sprint.get("current_week", 1)
+        except Exception:
+            pass
+            
+    user_sessions = get_chat_sessions_for_user(employee_id, week) if employee_id else []
     active_chat_session_id = session.get('active_chat_session_id')
     
     show_chat_history = (active_page == 'assistant')
@@ -776,13 +785,33 @@ def dashboard():
         from src.exams import get_system_setting
         email_enabled = get_system_setting("email_notifications_enabled", "true").lower() == "true"
 
+        from src.sprints import get_all_sprint_schedules, get_all_interview_evaluations
+        sprints_list = get_all_sprint_schedules()
+        evaluations_list = get_all_interview_evaluations()
+        
+        eval_map = {ev["user_id"]: ev for ev in evaluations_list}
+        for sp in sprints_list:
+            ev = eval_map.get(sp["user_id"])
+            if ev:
+                sp["interview"] = {
+                    "tech_score": ev["technical_score"],
+                    "conf_score": ev["confidence_score"],
+                    "filler_count": ev["filler_words_count"],
+                    "wpm": ev["words_per_minute"],
+                    "feedback": ev["feedback_report"]
+                }
+            else:
+                sp["interview"] = None
+
         return render_template(
             'dashboard.html',
             admin_stats=admin_stats,
             trainee_rows=trainee_rows,
             doc_rows=doc_rows,
             embedding_model_name=EMBEDDING_MODEL,
-            email_enabled=email_enabled
+            email_enabled=email_enabled,
+            sprints_list=sprints_list,
+            exams_list=exams_list
         )
     else:
         assignments = get_assignments_for_trainee(emp_id)
@@ -1889,6 +1918,32 @@ def exams_submit():
         "questions": ai_breakdowns
     }
     
+    emp_id = session.get('user_info', {}).get('employee_id', 'demo')
+    
+    # ── Agile Sprint Integration: Log QA Errors & Advance to Day 6 ──
+    try:
+        from src.sprints import get_sprint, log_qa_error, update_sprint_day, clear_qa_errors
+        sprint = get_sprint(emp_id)
+        if sprint and sprint["current_day"] == 5:
+            week = sprint["current_week"]
+            clear_qa_errors(emp_id, week) # clear old ones first
+            
+            for idx, q in enumerate(detail["questions"]):
+                breakdown = ai_breakdowns[idx]
+                max_marks = float(q["marks"])
+                earned = float(breakdown["score"])
+                if earned < max_marks * 0.8:  # Trainee struggled (got < 80% marks)
+                    topic = q.get("topic", "").strip()
+                    if not topic:
+                        words = [w.strip("?,.:;\"'") for w in q["question"].split() if len(w) > 4]
+                        topic = " ".join(words[:2]).title() or "General Technical Concepts"
+                    log_qa_error(emp_id, week, topic, q["question"])
+            
+            # Automatically advance to Day 6 (Stakeholder Demo)
+            update_sprint_day(emp_id, 6)
+    except Exception as e:
+        print(f"Error in sprint exam submission integration: {e}")
+
     if submit_exam_answers(assignment_id, responses, total_earned_score, json.dumps(overall_feedback)):
         flash("Test submitted and graded successfully!")
     else:
@@ -1982,6 +2037,15 @@ def assistant_upload_ephemeral():
         embeddings = embed_documents([c["text"] for c in chunks])
         added_count = add_ephemeral_chunks(tab_id, chunks, embeddings, digest)
         
+        user_info = session.get('user_info', {}) or {}
+        emp_id = user_info.get('employee_id', 'demo')
+        
+        from src.sprints import get_sprint, add_weekly_document
+        sprint = get_sprint(emp_id)
+        week = sprint.get("current_week", 1)
+        day = sprint.get("current_day", 1)
+        add_weekly_document(emp_id, week, day, file.filename)
+        
         ephemeral_docs = session.get('ephemeral_docs', [])
         if file.filename not in ephemeral_docs:
             ephemeral_docs.append(file.filename)
@@ -2018,7 +2082,14 @@ def assistant_delete_ephemeral_file():
         # Delete from Chroma where source matches the filename
         collection.delete(where={"source": filename})
         
-        # Remove from session list
+        user_info = session.get('user_info', {}) or {}
+        emp_id = user_info.get('employee_id', 'demo')
+        
+        from src.sprints import get_sprint, delete_weekly_document
+        sprint = get_sprint(emp_id)
+        week = sprint.get("current_week", 1)
+        delete_weekly_document(emp_id, week, filename)
+        
         ephemeral_docs = session.get('ephemeral_docs', [])
         if filename in ephemeral_docs:
             ephemeral_docs.remove(filename)
@@ -2032,44 +2103,572 @@ def assistant_delete_ephemeral_file():
         return jsonify({"status": "error", "message": f"Failed to delete document: {str(e)}"}), 500
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  AGILE LEARNING SPRINT & MOCK INTERVIEW ROUTES
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.route('/assistant/sprint/status')
+@login_required
+def sprint_status():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    from src.sprints import get_sprint
+    sprint = get_sprint(emp_id)
+    
+    completed = session.get('sprint_tasks_completed', [])
+    return jsonify({
+        "status": "success",
+        "sprint": sprint,
+        "tasks_completed": completed
+    })
+
+
+@app.route('/assistant/sprint/task_complete', methods=['POST'])
+@login_required
+def sprint_task_complete():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    data = request.get_json() or {}
+    task_name = data.get('task')
+    
+    completed = session.get('sprint_tasks_completed', [])
+    if task_name and task_name not in completed:
+        completed.append(task_name)
+        session['sprint_tasks_completed'] = completed
+        
+        progress = len(completed) * 25.0
+        from src.sprints import update_sprint_progress
+        update_sprint_progress(emp_id, progress)
+        
+    return jsonify({
+        "status": "success",
+        "progress": len(completed) * 25.0,
+        "tasks_completed": completed
+    })
+
+
+@app.route('/assistant/sprint/override', methods=['POST'])
+@login_required
+def sprint_override():
+    if session.get('user_role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        
+    data = request.get_json() or {}
+    target_user_id = data.get('user_id')
+    day = data.get('day')
+    week = data.get('week')
+    progress = data.get('progress')
+    
+    if not target_user_id:
+        return jsonify({"status": "error", "message": "Missing user_id"}), 400
+        
+    from src.sprints import update_sprint_day, update_sprint_week, update_sprint_progress, clear_qa_errors, clear_interview_evaluations
+    
+    if week is not None:
+        try:
+            week = int(week)
+            update_sprint_week(target_user_id, week)
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid week value"}), 400
+            
+    if day is not None:
+        try:
+            day = int(day)
+            update_sprint_day(target_user_id, day)
+            if day < 5:
+                # Clear QA errors and voice evaluations for that week
+                clear_qa_errors(target_user_id, week if week is not None else 1)
+                clear_interview_evaluations(target_user_id, week if week is not None else 1)
+                if target_user_id == session.get('user_info', {}).get('employee_id'):
+                    session.pop('sprint_tasks_completed', None)
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid day value"}), 400
+            
+    if progress is not None:
+        try:
+            progress = float(progress)
+            update_sprint_progress(target_user_id, progress)
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid progress value"}), 400
+        
+    return jsonify({"status": "success", "message": "Sprint updated successfully"})
+
+
+@app.route('/admin/sprint/ai_generate_plan', methods=['POST'])
+@login_required
+def admin_sprint_ai_generate_plan():
+    if session.get('user_role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        
+    data = request.get_json() or {}
+    prompt = data.get('prompt')
+    domain = data.get('domain')
+    week = data.get('week')
+    
+    if not (prompt and domain and week):
+        return jsonify({"status": "error", "message": "Missing required planning fields"}), 400
+        
+    try:
+        from src.llm import generate_study_plan
+        plan = generate_study_plan(prompt, domain, int(week), model_name=OLLAMA_MODEL)
+        return jsonify({"status": "success", "plan": plan})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/admin/sprint/save_plan', methods=['POST'])
+@login_required
+def admin_sprint_save_plan():
+    if session.get('user_role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        
+    data = request.get_json() or {}
+    domain = data.get('domain')
+    week = data.get('week')
+    title = data.get('title')
+    tasks = data.get('tasks')
+    day5_exam_id = data.get('day5_exam_id', '')
+    day6_interview_prompt = data.get('day6_interview_prompt', '')
+    reference_files = data.get('reference_files', [])
+    
+    if not (domain and week and title and tasks):
+        return jsonify({"status": "error", "message": "Missing required study plan fields"}), 400
+        
+    try:
+        from src.sprints import save_study_plan
+        tasks_json = json.dumps(tasks)
+        ref_files_json = json.dumps(reference_files)
+        success = save_study_plan(domain, int(week), title, tasks_json, day5_exam_id, day6_interview_prompt, ref_files_json)
+        if success:
+            return jsonify({"status": "success", "message": "Study plan saved successfully."})
+        else:
+            return jsonify({"status": "error", "message": "Database write failed."}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/admin/sprint/upload_reference', methods=['POST'])
+@login_required
+def admin_sprint_upload_reference():
+    if session.get('user_role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "No file part"}), 400
+        
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({"status": "error", "message": "No file selected"}), 400
+        
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({"status": "error", "message": "Only PDF reference files are supported."}), 400
+        
+    try:
+        import os
+        from pypdf import PdfReader
+        upload_dir = os.path.join(app.root_path, 'uploads', 'sprint_references')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, file.filename)
+        file.save(file_path)
+        
+        reader = PdfReader(file_path)
+        total_pages = len(reader.pages)
+        
+        return jsonify({"status": "success", "filename": file.filename, "total_pages": total_pages})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/assistant/mock_interview/start', methods=['POST'])
+@login_required
+def mock_interview_start():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    from src.sprints import get_sprint, get_qa_errors
+    sprint = get_sprint(emp_id)
+    if sprint["current_day"] != 6:
+        return jsonify({"status": "error", "message": "Mock interview is only unlocked on Sprint Day 6 (Demo Phase)."}), 400
+        
+    errors = get_qa_errors(emp_id, sprint["current_week"])
+    topics = [e["incorrect_topic"] for e in errors]
+    
+    questions = []
+    if topics:
+        prompt = (
+            f"You are a Senior Project Stakeholder conducting an Agile Sprint Demo. "
+            f"Generate exactly 5 challenging questions for the trainee. "
+            f"The trainee struggled with these topics in yesterday's QA check: {', '.join(topics)}.\n"
+            f"Format each question to sound like an urgent Slack/Teams comment or ticket "
+            f"(e.g., 'Hey, I saw yesterday's code. Why did you use round-robin here instead of sticky sessions? Explain how it handles failover. Leave a voice memo.').\n"
+            f"Return ONLY a JSON array of 5 strings."
+        )
+        try:
+            local_models = list_local_models()
+            model_name = local_models[0] if local_models else "qwen2.5:latest"
+            resp = generate_chat_answer(
+                prompt=prompt,
+                model_name=model_name,
+                system_instruction="You are a senior stakeholder. Return ONLY a single JSON list of 5 strings."
+            )
+            cleaned = clean_json_response(resp)
+            questions = json.loads(cleaned)
+        except Exception:
+            pass
+            
+    if not questions or len(questions) < 5:
+        questions = [
+            "We're seeing occasional socket timeouts in our high-latency service. Why did we decide to implement a circuit breaker instead of simple retry loops? Leave a voice memo.",
+            "I'm reviewing the message broker configuration. Why did we choose Kafka partition keys over RabbitMQ exchanges for this asynchronous flow? Leave a voice memo.",
+            "In yesterday's system design, we opted for local caches. How do we ensure cache coherence across our replicas without hurting read latency? Leave a voice memo.",
+            "We need to implement distributed locks for our database transactions. Should we use Redis (Redlock) or database row locks? Defend your choice in a voice memo.",
+            "Explain how the consistency model changes when we set Cassandra writes to LOCAL_QUORUM instead of ONE. How does it impact write latency? Leave a voice memo."
+        ]
+        
+    session['mock_questions'] = questions[:5]
+    session['mock_index'] = 0
+    session['mock_answers'] = []
+    
+    return jsonify({
+        "status": "success",
+        "questions": questions[:5],
+        "first_question": questions[0]
+    })
+
+
+@app.route('/assistant/mock_interview/submit', methods=['POST'])
+@login_required
+def mock_interview_submit():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    data = request.get_json() or {}
+    answer_text = data.get('answer', '').strip()
+    duration = data.get('duration', type=float) or 10.0
+    
+    questions = session.get('mock_questions', [])
+    idx = session.get('mock_index', 0)
+    
+    if not questions or idx >= len(questions):
+        return jsonify({"status": "error", "message": "No active interview session found."}), 400
+        
+    current_question = questions[idx]
+    
+    import re
+    fillers = re.findall(r'\b(um|uh|like|so|ah|you\s+know)\b', answer_text.lower())
+    filler_count = len(fillers)
+    
+    words = answer_text.split()
+    word_count = len(words)
+    wpm = (word_count / duration * 60.0) if duration > 0 else 0.0
+    
+    pacing_score = 100.0
+    if wpm < 100:
+        pacing_score = max(100.0 - (100 - wpm), 50.0)
+    elif wpm > 160:
+        pacing_score = max(100.0 - (wpm - 160), 50.0)
+        
+    filler_penalty = min(filler_count * 5.0, 50.0)
+    confidence_score = max(pacing_score - filler_penalty, 20.0)
+    
+    from src.vectorstore import get_ephemeral_collection, get_collection
+    context = ""
+    try:
+        tab_id = session.get('_tab_id')
+        coll = get_ephemeral_collection(tab_id) if tab_id else get_collection()
+        results = coll.query(query_texts=[current_question], n_results=2)
+        if results and results.get("documents"):
+            context = "\n".join(results["documents"][0])
+    except Exception:
+         pass
+         
+    prompt = (
+        f"You are a Senior Technical Stakeholder. Grade the trainee's answer.\n"
+        f"Question: {current_question}\n"
+        f"RAG Context: {context}\n"
+        f"Trainee Spoken Response: {answer_text}\n\n"
+        f"Assess the answer for technical accuracy, completeness, and context correctness. "
+        f"Return ONLY a JSON object matching this structure: "
+        f"{{\"score\": 85, \"feedback\": \"Trainee correctly noted cache coherence but missed...\"}}"
+    )
+    
+    tech_score = 50.0
+    feedback_text = "Standard evaluation complete."
+    try:
+        local_models = list_local_models()
+        model_name = local_models[0] if local_models else "qwen2.5:latest"
+        resp = generate_chat_answer(
+            prompt=prompt,
+            model_name=model_name,
+            system_instruction="Grade the technical accuracy of the response. Return JSON only."
+        )
+        cleaned = clean_json_response(resp)
+        res_grade = json.loads(cleaned)
+        tech_score = float(res_grade.get("score", 50.0))
+        feedback_text = res_grade.get("feedback", "No feedback generated.")
+    except Exception as e:
+        print(f"Error grading mock interview question: {e}")
+        
+    answers = session.get('mock_answers', [])
+    answers.append({
+        "question": current_question,
+        "answer": answer_text,
+        "tech_score": tech_score,
+        "confidence_score": confidence_score,
+        "filler_count": filler_count,
+        "fillers_found": list(set(fillers)),
+        "wpm": round(wpm, 1),
+        "feedback": feedback_text
+    })
+    session['mock_answers'] = answers
+    
+    idx += 1
+    session['mock_index'] = idx
+    
+    finished = idx >= len(questions)
+    report = None
+    if finished:
+        avg_tech = sum(a["tech_score"] for a in answers) / len(answers)
+        avg_conf = sum(a["confidence_score"] for a in answers) / len(answers)
+        total_fillers = sum(a["filler_count"] for a in answers)
+        avg_wpm = sum(a["wpm"] for a in answers) / len(answers)
+        
+        report_data = {
+            "overall_tech": round(avg_tech, 1),
+            "overall_conf": round(avg_conf, 1),
+            "total_fillers": total_fillers,
+            "avg_wpm": round(avg_wpm, 1),
+            "qna_breakdown": answers
+        }
+        report_str = json.dumps(report_data)
+        
+        from src.sprints import log_interview_evaluation, update_sprint_day, get_sprint
+        sprint = get_sprint(emp_id)
+        log_interview_evaluation(emp_id, sprint["current_week"], avg_tech, avg_conf, total_fillers, avg_wpm, report_str)
+        
+        update_sprint_day(emp_id, 7)
+        report = report_data
+        
+    return jsonify({
+        "status": "success",
+        "finished": finished,
+        "next_index": idx,
+        "next_question": questions[idx] if not finished else None,
+        "report": report
+    })
+
+
 @app.route('/assistant')
 @login_required
 def assistant():
     user_info = session.get('user_info', {}) or {}
     emp_id = user_info.get('employee_id', 'demo')
     
-    user_sessions = get_chat_sessions_for_user(emp_id)
+    from src.sprints import get_sprint, get_weekly_documents
+    sprint = get_sprint(emp_id)
+    week = sprint.get("current_week", 1)
+    
+    user_sessions = get_chat_sessions_for_user(emp_id, week)
     
     session_id = request.args.get('session_id')
     if session_id:
-        # Delete any empty session that is not the one we are explicitly loading
         for s in user_sessions:
             if s["session_id"] != session_id and not get_chat_messages(s["session_id"]):
                 delete_chat_session(s["session_id"])
         session['active_chat_session_id'] = session_id
         active_id = session_id
     else:
-        # Check if there is an existing empty session. If so, reuse it.
-        # Otherwise, create a new one.
         empty_sessions = [s for s in user_sessions if not get_chat_messages(s["session_id"])]
         if empty_sessions:
             active_id = empty_sessions[0]["session_id"]
-            # Clean up any other empty sessions
             for s in empty_sessions[1:]:
                 delete_chat_session(s["session_id"])
         else:
             active_id = str(uuid.uuid4())
-            create_chat_session(active_id, emp_id, "New Chat")
+            create_chat_session(active_id, emp_id, "New Chat", week_number=week)
         session['active_chat_session_id'] = active_id
         
-    user_sessions = get_chat_sessions_for_user(emp_id)
+    user_sessions = get_chat_sessions_for_user(emp_id, week)
     active_messages = get_chat_messages(active_id)
+    
+    # Auto-ingest study plan reference files if any
+    from src.sprints import get_study_plan
+    study_plan = get_study_plan(user_info.get('domain', 'general'), week)
+    try:
+        ref_data = json.loads(study_plan.get("reference_files_json") or "[]")
+    except Exception:
+        ref_data = []
+        
+    target_refs = []
+    if isinstance(ref_data, dict):
+        current_day = sprint.get("current_day", 1)
+        for d in range(1, min(current_day, 4) + 1):
+            day_key = f"day{d}"
+            day_files = ref_data.get(day_key, [])
+            for f_info in day_files:
+                filename = f_info.get("filename")
+                page_range = f_info.get("page_range")
+                target_refs.append((filename, page_range))
+    elif isinstance(ref_data, list):
+        for filename in ref_data:
+            target_refs.append((filename, None))
+            
+    if target_refs:
+        from src.sprints import add_weekly_document
+        existing_docs = get_weekly_documents(emp_id, week)
+        import os
+        for filename, page_range in target_refs:
+            if page_range:
+                unique_filename = f"{os.path.splitext(filename)[0]}_p{page_range[0]}_{page_range[1]}.pdf"
+            else:
+                unique_filename = filename
+                
+            if unique_filename not in existing_docs:
+                file_path = os.path.join(app.root_path, 'uploads', 'sprint_references', filename)
+                if os.path.exists(file_path):
+                    try:
+                        from io import BytesIO
+                        from src.ingest import extract_pages, chunk_pages, file_hash
+                        from src.embeddings import embed_documents
+                        from src.vectorstore import add_ephemeral_chunks
+                        
+                        with open(file_path, 'rb') as f:
+                            file_data = f.read()
+                            
+                        digest = file_hash(file_data)
+                        pages = extract_pages(BytesIO(file_data), page_range=page_range)
+                        if pages:
+                            chunks = chunk_pages(pages, unique_filename)
+                            embeddings = embed_documents([c["text"] for c in chunks])
+                            add_ephemeral_chunks(active_id, chunks, embeddings, digest)
+                            add_weekly_document(emp_id, week, 1, unique_filename)
+                    except Exception as e:
+                        print(f"Error auto-ingesting admin reference file {filename}: {e}")
+
+    # Load study documents from SQLite DB for this week
+    ephemeral_docs = get_weekly_documents(emp_id, week)
+    
     return render_template(
         'assistant.html',
         active_messages=active_messages,
         user_sessions=user_sessions,
         active_chat_session_id=active_id,
-        ephemeral_docs=session.get('ephemeral_docs', []),
+        ephemeral_docs=ephemeral_docs,
+        groq_api_key=GROQ_API_KEY
+    )
+
+@app.route('/sprint')
+@login_required
+def sprint_view():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    domain = user_info.get('domain', 'general')
+    
+    from src.sprints import get_sprint, get_weekly_documents, get_study_plan
+    sprint = get_sprint(emp_id)
+    week = sprint.get("current_week", 1)
+    
+    # Load study plan from DB (falls back to default)
+    study_plan = get_study_plan(domain, week)
+    
+    import json
+    try:
+        tasks = json.loads(study_plan["tasks_json"])
+    except Exception:
+        tasks = {
+            "day1": ["Upload reference study documents", "Ask AI Coach initial questions"],
+            "day2": ["Review roadmap concepts", "Solve practice quiz"],
+            "day3": ["Complete training sandbox assignment", "Check answers overview"],
+            "day4": ["Run AI simulated code review check", "Commit final code changes"]
+        }
+        
+    # Auto-ingest study plan reference files if any
+    try:
+        ref_data = json.loads(study_plan.get("reference_files_json") or "[]")
+    except Exception:
+        ref_data = []
+        
+    target_refs = []
+    if isinstance(ref_data, dict):
+        current_day = sprint.get("current_day", 1)
+        for d in range(1, min(current_day, 4) + 1):
+            day_key = f"day{d}"
+            day_files = ref_data.get(day_key, [])
+            for f_info in day_files:
+                filename = f_info.get("filename")
+                page_range = f_info.get("page_range")
+                target_refs.append((filename, page_range))
+    elif isinstance(ref_data, list):
+        for filename in ref_data:
+            target_refs.append((filename, None))
+            
+    if target_refs:
+        from src.chats import get_chat_sessions_for_user, create_chat_session
+        active_id = session.get('active_chat_session_id')
+        if not active_id:
+            user_sessions = get_chat_sessions_for_user(emp_id, week)
+            if user_sessions:
+                active_id = user_sessions[0]["session_id"]
+            else:
+                active_id = str(uuid.uuid4())
+                create_chat_session(active_id, emp_id, "New Chat", week_number=week)
+            session['active_chat_session_id'] = active_id
+            
+        from src.sprints import add_weekly_document
+        existing_docs = get_weekly_documents(emp_id, week)
+        import os
+        for filename, page_range in target_refs:
+            if page_range:
+                unique_filename = f"{os.path.splitext(filename)[0]}_p{page_range[0]}_{page_range[1]}.pdf"
+            else:
+                unique_filename = filename
+                
+            if unique_filename not in existing_docs:
+                file_path = os.path.join(app.root_path, 'uploads', 'sprint_references', filename)
+                if os.path.exists(file_path):
+                    try:
+                        from io import BytesIO
+                        from src.ingest import extract_pages, chunk_pages, file_hash
+                        from src.embeddings import embed_documents
+                        from src.vectorstore import add_ephemeral_chunks
+                        
+                        with open(file_path, 'rb') as f:
+                            file_data = f.read()
+                            
+                        digest = file_hash(file_data)
+                        pages = extract_pages(BytesIO(file_data), page_range=page_range)
+                        if pages:
+                            chunks = chunk_pages(pages, unique_filename)
+                            embeddings = embed_documents([c["text"] for c in chunks])
+                            add_ephemeral_chunks(active_id, chunks, embeddings, digest)
+                            add_weekly_document(emp_id, week, 1, unique_filename)
+                    except Exception as e:
+                        print(f"Error auto-ingesting admin reference file {filename}: {e}")
+
+    tasks_completed = session.get('sprint_tasks_completed', [])
+    ephemeral_docs = get_weekly_documents(emp_id, week)
+    
+    # Load Day 6 Voice Interview Evaluation
+    from src.sprints import get_interview_evaluation
+    evaluation = get_interview_evaluation(emp_id, week)
+    
+    # Day 5 unlocked flag
+    day5_exam_unlocked = (sprint["current_day"] >= 5)
+    day5_exam_id = study_plan.get("day5_exam_id")
+    
+    return render_template(
+        'sprint.html',
+        sprint=sprint,
+        study_plan=study_plan,
+        tasks=tasks,
+        tasks_completed=tasks_completed,
+        ephemeral_docs=ephemeral_docs,
+        evaluation=evaluation,
+        day5_exam_unlocked=day5_exam_unlocked,
+        day5_exam_id=day5_exam_id,
         groq_api_key=GROQ_API_KEY
     )
 
@@ -2182,6 +2781,32 @@ def chat_stream():
             add_chat_message(active_session_id, "assistant", "Interactive Exam Creator Wizard opened.", [])
         return Response(stream_with_context(wizard_event_generator()), mimetype='text/event-stream')
 
+    list_items = None
+    list_item_type = None
+    if ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("doc" in query_lower or "pdf" in query_lower or "file" in query_lower or "reference" in query_lower):
+        from src.vectorstore import get_collection
+        coll = get_collection()
+        res = coll.get(include=["metadatas"])
+        metadatas = res.get("metadatas") or []
+        list_items = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+        list_item_type = "document"
+    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("trainee" in query_lower or "student" in query_lower or "user" in query_lower):
+        conn = sqlite3.connect(str(_DB_PATH))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT employee_id, full_name FROM users WHERE role = 'trainee'")
+        list_items = [f"{r['full_name']} ({r['employee_id']})" for r in cursor.fetchall()]
+        conn.close()
+        list_item_type = "trainee"
+    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("exam" in query_lower or "test" in query_lower or "quiz" in query_lower):
+        from src.exams import get_all_exams
+        list_items = [e.get("title") for e in get_all_exams() if e.get("title")]
+        list_item_type = "exam"
+    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("announcement" in query_lower or "notice" in query_lower):
+        from src.exams import get_all_announcements
+        list_items = [a.get("title") for a in get_all_announcements() if a.get("title")]
+        list_item_type = "announcement"
+
         
     # 1. Performance Query Intent Classification
     perf_target = detect_performance_query(query)
@@ -2231,7 +2856,11 @@ def chat_stream():
             
             # Try Ephemeral first
             if has_ephemeral:
-                results = search_ephemeral(tab_id, query_vec, top_k=10)
+                from src.sprints import get_sprint, get_weekly_documents
+                sprint = get_sprint(emp_id)
+                week = sprint.get("current_week", 1)
+                weekly_files = get_weekly_documents(emp_id, week)
+                results = search_ephemeral(tab_id, query_vec, top_k=10, source_filters=weekly_files)
                 if results:
                     sources = results
                     selected_mode = "Ephemeral Doc Q&A"
@@ -2369,6 +2998,10 @@ def chat_stream():
                 suggestions_json = json.dumps(followups)
                 yield f"[SUGGESTIONS_JSON_START]{suggestions_json}[SUGGESTIONS_JSON_END]"
                 
+            if list_items:
+                items_json = json.dumps({"items": list_items, "select_mode": "multi", "item_type": list_item_type})
+                yield f"[ITEMS_JSON_START]{items_json}[ITEMS_JSON_END]"
+                
         except Exception as e:
             yield f"Error in streaming: {e}"
         finally:
@@ -2486,6 +3119,74 @@ def assistant_voice():
         return jsonify({"text": None, "error": str(exc)}), 500
     except Exception as exc:
         return jsonify({"text": None, "error": f"Unexpected transcription error: {exc}"}), 500
+
+
+@app.route('/assistant/voice_agent/reset', methods=['POST'])
+@login_required
+def assistant_voice_agent_reset():
+    """Clear the voice agent conversation history from session."""
+    session.pop('voice_agent_history', None)
+    return jsonify({"status": "success"})
+
+
+@app.route('/assistant/voice_agent/chat', methods=['POST'])
+@login_required
+def assistant_voice_agent_chat():
+    """Handles totally voice agent requests.
+    Expects: Form-data with optional 'audio' file or JSON body with 'query'.
+    """
+    import traceback
+    query_text = None
+    
+    # 1. Check if audio is uploaded
+    if 'audio' in request.files:
+        audio_file = request.files.get("audio")
+        mime_type = request.form.get("mime_type", audio_file.content_type or "audio/webm")
+        audio_bytes = audio_file.read()
+        if not audio_bytes:
+            return jsonify({"error": "Received empty audio file."}), 400
+        try:
+            query_text = transcribe_audio_whisper(audio_bytes, mime_type=mime_type)
+        except Exception as e:
+            return jsonify({"error": f"Transcription error: {str(e)}"}), 500
+    else:
+        # Check for JSON request
+        data = request.get_json() or {}
+        query_text = data.get('query', '').strip()
+        
+    if not query_text:
+        return jsonify({
+            "response_text": "I didn't hear anything. Please try speaking again.",
+            "error": "Empty query"
+        }), 200
+        
+    # Get history from session
+    history = session.get('voice_agent_history', [])
+    
+    try:
+        from src.voice_agent import run_voice_agent
+        
+        # Read model or default
+        model = request.form.get('model') or (request.get_json() or {}).get('model') or 'llama-3.3-70b-versatile'
+        
+        spoken_response, action_executed, updated_history = run_voice_agent(
+            query=query_text,
+            history=history,
+            model_name=model
+        )
+        
+        # Save history back to session
+        session['voice_agent_history'] = updated_history
+        
+        return jsonify({
+            "query_text": query_text,
+            "response_text": spoken_response,
+            "action_executed": action_executed,
+            "error": None
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Voice agent error: {str(e)}"}), 500
 
 
 @app.route('/assistant/wizard/docs')

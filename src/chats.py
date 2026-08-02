@@ -28,6 +28,12 @@ def init_chats_db() -> None:
         """
     )
     
+    # Run migrations to add missing columns
+    cursor.execute("PRAGMA table_info(chat_sessions)")
+    session_columns = [row[1] for row in cursor.fetchall()]
+    if "week_number" not in session_columns:
+        cursor.execute("ALTER TABLE chat_sessions ADD COLUMN week_number INTEGER DEFAULT 1")
+
     # 2. Create chat_messages table
     cursor.execute(
         """
@@ -53,15 +59,15 @@ def init_chats_db() -> None:
     conn.close()
 
 
-def create_chat_session(session_id: str, user_id: str, title: str) -> bool:
+def create_chat_session(session_id: str, user_id: str, title: str, week_number: int = 1) -> bool:
     """Create a new chat session."""
     init_chats_db()
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO chat_sessions (session_id, user_id, title) VALUES (?, ?, ?)",
-            (session_id, user_id, title.strip())
+            "INSERT INTO chat_sessions (session_id, user_id, title, week_number) VALUES (?, ?, ?, ?)",
+            (session_id, user_id, title.strip(), week_number)
         )
         conn.commit()
         conn.close()
@@ -88,17 +94,23 @@ def add_chat_message(session_id: str, role: str, content: str, sources: list[dic
         return False
 
 
-def get_chat_sessions_for_user(user_id: str) -> list[dict[str, Any]]:
-    """Retrieve all chat sessions created by a specific user."""
+def get_chat_sessions_for_user(user_id: str, week_number: int = None) -> list[dict[str, Any]]:
+    """Retrieve all chat sessions created by a specific user, optionally filtered by week."""
     init_chats_db()
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT session_id, user_id, title, created_at FROM chat_sessions WHERE user_id = ? ORDER BY created_at DESC",
-            (user_id,)
-        )
+        if week_number is not None:
+            cursor.execute(
+                "SELECT session_id, user_id, title, week_number, created_at FROM chat_sessions WHERE user_id = ? AND week_number = ? ORDER BY created_at DESC",
+                (user_id, week_number)
+            )
+        else:
+            cursor.execute(
+                "SELECT session_id, user_id, title, week_number, created_at FROM chat_sessions WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,)
+            )
         rows = cursor.fetchall()
         conn.close()
         return [dict(r) for r in rows]

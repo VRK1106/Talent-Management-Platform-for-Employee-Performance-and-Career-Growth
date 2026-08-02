@@ -19,21 +19,17 @@
         min-height: 0 !important;
     }
 
-    /* Premium glassmorphic chat container */
     .chat-container {
         display: flex;
         flex-direction: column;
         flex-grow: 1;
         height: 0;
         min-height: 250px;
-        background: rgba(10, 15, 30, 0.4);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid var(--ts-border);
+        border-radius: 12px;
         overflow: hidden;
-        margin-top: 0.75rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        margin-top: 0.5rem;
     }
 
     .main-container .ts-card {
@@ -45,21 +41,18 @@
     
     .chat-messages {
         flex-grow: 1;
-        padding: 1.75rem;
+        padding: 1.5rem;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
-        scroll-behavior: smooth;
+        gap: 1.2rem;
     }
     
-    /* Message Rows and Spacing with Slide-in Animation */
+    /* Message Bubbles */
     .message-row {
         display: flex;
-        gap: 0.85rem;
         width: 100%;
-        margin-bottom: 0.25rem;
-        animation: messageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        margin-bottom: 0.5rem;
     }
     .message-row.user {
         justify-content: flex-end;
@@ -67,250 +60,87 @@
     .message-row.assistant {
         justify-content: flex-start;
     }
-
-    @keyframes messageFadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
     
-    /* Redesigned Premium Message Bubbles */
     .message-bubble {
-        max-width: 72%;
+        max-width: 75%;
         padding: 1rem 1.25rem;
         border-radius: 16px;
         line-height: 1.6;
         font-size: 0.95rem;
         word-break: break-word;
         box-shadow: var(--ts-shadow);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        position: relative;
-        transition: border-color 0.2s;
+        border: 1px solid var(--ts-border);
     }
-    
     .message-row.user .message-bubble {
-        background: rgba(96, 165, 250, 0.12);
-        color: #ffffff !important;
+        background: var(--ts-primary);
+        color: #FFFFFF !important;
         border-bottom-right-radius: 4px;
-        border: 1px solid rgba(96, 165, 250, 0.25);
+        border-color: var(--ts-primary);
     }
     .message-row.user .message-bubble * {
-        color: #ffffff !important;
+        color: #FFFFFF !important;
     }
-    
     .message-row.assistant .message-bubble {
-        background: rgba(255, 255, 255, 0.025);
+        background: var(--ts-inner-bg);
         color: var(--ts-text);
         border-bottom-left-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .message-bubble:hover {
-        border-color: rgba(96, 165, 250, 0.3);
     }
     
-    /* Professional Vector Avatars */
-    .avatar-wrapper {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
+    .message-avatar {
+        font-size: 1.5rem;
+        margin: 0 0.5rem;
         display: flex;
         align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-        user-select: none;
-    }
-    .avatar-wrapper.assistant {
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: #ffffff;
-    }
-    .avatar-wrapper.user {
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        color: var(--ts-text);
     }
     
-    /* Code Blocks Redesign */
-    .code-block-container {
-        position: relative;
-        background: #0d1117;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        margin: 1rem 0;
-        overflow: hidden;
-    }
-    .code-block-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 0.45rem 1rem;
-        font-family: 'Inter', sans-serif;
-        font-size: 0.72rem;
-        color: var(--ts-text-secondary);
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        user-select: none;
-    }
-    .code-block-copy-btn {
-        background: transparent;
-        border: none;
-        color: var(--ts-text-muted);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        transition: color 0.2s, transform 0.1s;
-        font-size: 0.72rem;
-        font-weight: 500;
-        padding: 0.15rem 0.4rem;
-        border-radius: 4px;
-    }
-    .code-block-copy-btn:hover {
-        color: var(--ts-text);
-        background: rgba(255, 255, 255, 0.04);
-    }
-    .code-block-copy-btn:active {
-        transform: scale(0.95);
-    }
-    .message-text pre {
-        margin: 0 !important;
-        padding: 1rem !important;
-        overflow-x: auto;
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-    }
-    .message-text code {
-        font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-        font-size: 0.88rem;
-        color: #e2e8f0;
-        background: transparent !important;
-        padding: 0 !important;
-    }
-    /* Inline code style */
-    .message-text :not(pre) > code {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: var(--ts-primary) !important;
-        padding: 0.2rem 0.4rem !important;
-        border-radius: 4px !important;
-        font-size: 0.85rem !important;
-    }
-
-    /* Welcome cards styling */
-    .welcome-action-card {
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.02) !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        padding: 1.5rem !important;
-        border-radius: 14px !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        text-align: left;
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-        height: 100%;
-        box-sizing: border-box;
-    }
-    .welcome-action-card:hover {
-        background: rgba(96, 165, 250, 0.05) !important;
-        transform: translateY(-4px);
-        border-color: rgba(96, 165, 250, 0.3) !important;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 15px rgba(96, 165, 250, 0.1) !important;
-    }
-    .action-card-icon {
-        color: var(--ts-primary);
-        opacity: 0.85;
-        transition: transform 0.3s ease;
-    }
-    .welcome-action-card:hover .action-card-icon {
-        transform: scale(1.1);
-        opacity: 1;
-    }
-
-    /* Redesigned Input Area */
+    /* Input Form Area */
     .chat-input-area {
-        padding: 1.25rem 1.5rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-        background: rgba(10, 15, 30, 0.6);
+        padding: 1rem;
+        border-top: 1px solid var(--ts-border);
+        background: rgba(255, 255, 255, 0.02);
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
     
     .chat-input-row {
         display: flex;
         gap: 0.75rem;
-        align-items: flex-end;
     }
     
     .chat-input-field {
         flex-grow: 1;
-        padding: 0.8rem 1.1rem;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background-color: rgba(15, 23, 42, 0.6);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--ts-border);
+        background-color: var(--ts-input-bg, #0f172a);
         color: var(--ts-text);
         outline: none;
         font-size: 0.95rem;
         resize: none;
-        height: 48px;
+        height: 44px;
         box-sizing: border-box;
-        transition: border-color 0.2s, box-shadow 0.2s;
-        font-family: inherit;
-        line-height: 1.4;
-    }
-    .chat-input-field:focus {
-        border-color: var(--ts-primary);
-        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
-    }
-    .chat-input-field:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
 
-    /* Modern Rounded Buttons */
-    .btn-ts {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-        height: 44px !important;
-        cursor: pointer;
-    }
-
-    /* Voice / Mic button */
+    /* ── Voice / Mic button ─────────────────────────────────────────── */
     #micBtn {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         flex-shrink: 0;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(15, 23, 42, 0.6);
+        border-radius: 50%;
+        border: 1.5px solid var(--ts-border);
+        background: var(--ts-input-bg, #0f172a);
         color: var(--ts-text);
+        font-size: 1.15rem;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: visible;
     }
-    #micBtn:hover {
-        border-color: var(--ts-primary);
-        background: rgba(96, 165, 250, 0.08);
-        box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
-    }
+    #micBtn:hover { border-color: var(--ts-primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     #micBtn.recording {
         background: rgba(239,68,68,0.15);
         border-color: #ef4444;
@@ -456,46 +286,329 @@
     .message-text tr:nth-child(even) {
         background-color: rgba(255, 255, 255, 0.02);
     }
-
-    /* Custom Model Dropdown Styling */
-    select#chatModel {
-        padding: 0.35rem 1.8rem 0.35rem 0.75rem;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(15, 23, 42, 0.6);
-        color: var(--ts-text);
-        font-size: 0.82rem;
-        font-weight: 500;
-        outline: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        appearance: none;
-        -webkit-appearance: none;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 0.5rem center;
-        background-size: 1em;
-        min-width: 180px;
-        max-width: 240px;
-    }
-    select#chatModel:hover {
-        border-color: rgba(96, 165, 250, 0.35);
-        background-color: rgba(15, 23, 42, 0.8);
-    }
 </style>
 <!-- Markdown Parser CDN for client-side streaming rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <!-- Mermaid.js CDN for flowchart rendering -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js">
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  TOTALLY VOICE ASSISTANT AGENT CONTROLLER & SELECTION PANEL
+    // ═══════════════════════════════════════════════════════════════════════════
+    let voiceAgentActive = false;
+    let voiceAgentMediaRecorder = null;
+    let voiceAgentAudioChunks = [];
+    let voiceAgentSynth = window.speechSynthesis;
+    let voiceAgentUtterance = null;
+
+    function setVoiceAgentState(state) {
+        const orb = document.getElementById('voiceOrb');
+        const status = document.getElementById('voiceAgentStatus');
+        const ctrlText = document.getElementById('voiceControlBtnText');
+        const ctrlBtn = document.getElementById('voiceControlBtn');
+
+        if (!orb) return;
+
+        ctrlBtn.disabled = false;
+
+        if (state === 'idle') {
+            orb.style.background = 'radial-gradient(circle, rgba(96,165,250,0.4) 0%, rgba(96,165,250,0) 70%)';
+            status.innerText = "Idle • Click button to talk";
+            status.style.color = "#94A3B8";
+            ctrlText.innerText = "Speak";
+        } else if (state === 'listening') {
+            orb.style.background = 'radial-gradient(circle, rgba(52,211,153,0.6) 0%, rgba(52,211,153,0) 70%)';
+            status.innerText = "Listening...";
+            status.style.color = "#34D399";
+            ctrlText.innerText = "Stop Speaking";
+        } else if (state === 'speaking') {
+            orb.style.background = 'radial-gradient(circle, rgba(167,139,250,0.7) 0%, rgba(167,139,250,0) 70%)';
+            status.innerText = "Speaking...";
+            status.style.color = "#A78BFA";
+            ctrlText.innerText = "Skip Speech";
+        } else if (state === 'thinking') {
+            orb.style.background = 'radial-gradient(circle, rgba(236,72,153,0.6) 0%, rgba(96,165,250,0.5) 70%)';
+            status.innerText = "Thinking & Processing...";
+            status.style.color = "#F472B6";
+            ctrlText.innerText = "Processing...";
+            ctrlBtn.disabled = true;
+        }
+    }
+
+    async function startTotallyVoiceChat() {
+        voiceAgentActive = true;
+        const overlay = document.getElementById('voiceAgentOverlay');
+        overlay.style.display = 'flex';
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = "Initializing session...";
+        document.getElementById('voiceAssistantSpeech').innerText = "Connecting to Voice AI...";
+
+        try {
+            await fetch('/assistant/voice_agent/reset', { method: 'POST' });
+            const greeting = "Hello! I am your voice-controlled educational assistant. Ask me to list reference documents, list trainees, list exams, write an announcement, or query student performance data.";
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            document.getElementById('voiceAssistantSpeech').innerText = greeting;
+            await speakText(greeting);
+        } catch (e) {
+            console.error("Error starting voice agent", e);
+            document.getElementById('voiceAssistantSpeech').innerText = "Error: Could not connect. Please try again.";
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function stopTotallyVoiceChat() {
+        voiceAgentActive = false;
+        if (voiceAgentSynth) voiceAgentSynth.cancel();
+        stopVoiceAgentRecording();
+        const overlay = document.getElementById('voiceAgentOverlay');
+        overlay.style.display = 'none';
+    }
+
+    function speakText(text) {
+        return new Promise((resolve) => {
+            if (!voiceAgentActive) { resolve(); return; }
+            if (voiceAgentSynth) voiceAgentSynth.cancel();
+
+            voiceAgentUtterance = new SpeechSynthesisUtterance(text);
+            const voices = voiceAgentSynth.getVoices();
+            const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Desktop'))) || voices.find(v => v.lang.startsWith('en'));
+            if (preferredVoice) voiceAgentUtterance.voice = preferredVoice;
+
+            voiceAgentUtterance.onstart = () => { setVoiceAgentState('speaking'); };
+            voiceAgentUtterance.onend = () => {
+                if (voiceAgentActive) {
+                    setVoiceAgentState('idle');
+                    startVoiceAgentRecording();
+                }
+                resolve();
+            };
+            voiceAgentUtterance.onerror = () => {
+                if (voiceAgentActive) {
+                    setVoiceAgentState('idle');
+                    startVoiceAgentRecording();
+                }
+                resolve();
+            };
+
+            voiceAgentSynth.speak(voiceAgentUtterance);
+        });
+    }
+
+    async function startVoiceAgentRecording() {
+        if (!voiceAgentActive) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Mic access is not supported by your browser.");
+            setVoiceAgentState('idle');
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceAgentAudioChunks = [];
+            voiceAgentMediaRecorder = new MediaRecorder(stream);
+            voiceAgentMediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) voiceAgentAudioChunks.push(e.data);
+            };
+
+            voiceAgentMediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (!voiceAgentActive) return;
+                const blob = new Blob(voiceAgentAudioChunks, { type: 'audio/webm' });
+                await uploadVoiceAgentAudio(blob);
+            };
+
+            voiceAgentMediaRecorder.start();
+            setVoiceAgentState('listening');
+            document.getElementById('voiceUserTranscript').innerText = "Listening... Speak now.";
+        } catch (err) {
+            console.error("Failed to start mic", err);
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function stopVoiceAgentRecording() {
+        if (voiceAgentMediaRecorder && voiceAgentMediaRecorder.state !== 'inactive') {
+            voiceAgentMediaRecorder.stop();
+        }
+    }
+
+    function toggleVoiceAgentRecording() {
+        const statusStr = document.getElementById('voiceAgentStatus').innerText;
+        if (statusStr.includes("Listening")) {
+            stopVoiceAgentRecording();
+        } else if (statusStr.includes("Speaking")) {
+            if (voiceAgentSynth) voiceAgentSynth.cancel();
+        } else if (statusStr.includes("Idle")) {
+            startVoiceAgentRecording();
+        }
+    }
+
+    function renderVoiceSelectionPanel(actionExecuted) {
+        const panel = document.getElementById('voiceSelectionPanel');
+        const list = document.getElementById('voiceSelectItemsList');
+        const title = document.getElementById('voiceSelectTitle');
+        const badge = document.getElementById('voiceSelectModeBadge');
+        
+        if (!panel || !list) return;
+
+        if (!actionExecuted || !actionExecuted.items || actionExecuted.items.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        const items = actionExecuted.items;
+        const isMulti = actionExecuted.select_mode === 'multi';
+        const itemType = actionExecuted.item_type || 'item';
+
+        title.innerText = `💡 Select ${itemType}(s):`;
+        badge.innerText = isMulti ? "Check single or multiple choices" : "Check single choice";
+
+        list.innerHTML = '';
+        items.forEach((item, idx) => {
+            const itemRow = document.createElement('label');
+            itemRow.style.display = 'flex';
+            itemRow.style.alignItems = 'center';
+            itemRow.style.gap = '0.5rem';
+            itemRow.style.padding = '0.4rem 0.6rem';
+            itemRow.style.background = 'rgba(30, 41, 59, 0.6)';
+            itemRow.style.borderRadius = '8px';
+            itemRow.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            itemRow.style.cursor = 'pointer';
+            itemRow.style.fontSize = '0.82rem';
+            itemRow.style.color = '#F8FAFC';
+
+            const inputType = isMulti ? 'checkbox' : 'radio';
+            itemRow.innerHTML = `
+                <input type="${inputType}" name="voice_select_choice" value="${escapeHtml(item)}" style="cursor: pointer;">
+                <span>${escapeHtml(item)}</span>
+            `;
+            list.appendChild(itemRow);
+        });
+
+        panel.style.display = 'block';
+    }
+
+    async function confirmVoiceSelection() {
+        const selectedInputs = document.querySelectorAll('input[name="voice_select_choice"]:checked');
+        if (selectedInputs.length === 0) {
+            alert("Please select at least one item from the list.");
+            return;
+        }
+
+        const selectedValues = Array.from(selectedInputs).map(cb => cb.value);
+        const textQuery = `I selected ${selectedValues.join(', ')}. Please proceed with these selections.`;
+
+        document.getElementById('voiceSelectionPanel').style.display = 'none';
+
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = `"${textQuery}"`;
+
+        try {
+            const formData = new FormData();
+            formData.append('query', textQuery);
+            const modelSelect = document.getElementById('chatModel');
+            const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
+            formData.append('model', model);
+
+            const response = await fetch('/assistant/voice_agent/chat', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            document.getElementById('voiceAssistantSpeech').innerText = data.response_text;
+            if (data.action_executed) {
+                renderVoiceSelectionPanel(data.action_executed);
+            }
+            await speakText(data.response_text);
+        } catch (e) {
+            console.error("Selection confirmation error", e);
+            setVoiceAgentState('idle');
+        }
+    }
+
+    async function uploadVoiceAgentAudio(blob) {
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = "Transcribing speech...";
+
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        formData.append('mime_type', 'audio/webm');
+        const modelSelect = document.getElementById('chatModel');
+        const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
+        formData.append('model', model);
+
+        try {
+            const response = await fetch('/assistant/voice_agent/chat', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                document.getElementById('voiceUserTranscript').innerText = "---";
+                const errorReply = "Sorry, I had trouble processing that. Please try again.";
+                document.getElementById('voiceAssistantSpeech').innerText = errorReply;
+                await speakText(errorReply);
+                return;
+            }
+
+            document.getElementById('voiceUserTranscript').innerText = `"${data.query_text}"`;
+            document.getElementById('voiceAssistantSpeech').innerText = data.response_text;
+
+            if (data.action_executed) {
+                renderVoiceSelectionPanel(data.action_executed);
+            } else {
+                const panel = document.getElementById('voiceSelectionPanel');
+                if (panel) panel.style.display = 'none';
+            }
+
+            await speakText(data.response_text);
+        } catch (err) {
+            console.error("Upload error", err);
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            const errText = "Network error. Please check your connection.";
+            document.getElementById('voiceAssistantSpeech').innerText = errText;
+            await speakText(errText);
+        }
+    }
+
+    async function resetVoiceAgentSession() {
+        if (!confirm("Are you sure you want to reset this voice assistant session?")) return;
+        if (voiceAgentSynth) voiceAgentSynth.cancel();
+        stopVoiceAgentRecording();
+        setVoiceAgentState('thinking');
+        try {
+            await fetch('/assistant/voice_agent/reset', { method: 'POST' });
+            const msg = "Session has been reset. How can I help you now?";
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            document.getElementById('voiceAssistantSpeech').innerText = msg;
+            await speakText(msg);
+        } catch (e) {
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function confirmChatSelection() {
+        const checkedBoxes = document.querySelectorAll('input[name="chat_select_choice"]:checked');
+        if (checkedBoxes.length === 0) {
+            alert("Please select at least one item from the list.");
+            return;
+        }
+        const selectedValues = Array.from(checkedBoxes).map(cb => cb.value);
+        const qInput = document.getElementById('queryInput');
+        if (qInput) {
+            qInput.value = `I selected ${selectedValues.join(', ')}. Please proceed with these selections.`;
+            submitMessage();
+        }
+    }
+
+</script>
 {% endblock %}
 
 {% block content %}
 <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; flex-shrink: 0; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.5rem;">
-    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--ts-text-heading); display: flex; align-items: center; gap: 0.5rem;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--ts-primary);"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-        AI Study Assistant
-    </h2>
+    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--ts-text-heading);">🤖 AI Study Assistant</h2>
     <span style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Interactive Learning Coach</span>
 </div>
 
@@ -506,14 +619,14 @@
 
     <!-- Left: model picker -->
     <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1;">
-        <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-10 10c0 5.523 4.477 10 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2z"/><path d="M12 6v12"/><path d="M8 10h8"/><path d="M8 14h8"/></svg>
-            Model
-        </span>
+        <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text-secondary); white-space: nowrap;">🤖 Model</span>
         {% if not groq_api_key %}
             <span style="font-size: 0.78rem; color: #f87171;">⚠️ Groq API key missing</span>
         {% else %}
-            <select id="chatModel">
+            <select id="chatModel"
+                    style="padding: 0.28rem 0.5rem; border-radius: 6px; border: 1px solid var(--ts-border);
+                           background: var(--ts-input-bg); color: var(--ts-text); font-size: 0.82rem;
+                           outline: none; max-width: 240px; flex: 1;">
                 {% for m in ollama_models %}
                     <option value="{{ m }}" {% if "llama" in m.lower() %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
@@ -523,26 +636,31 @@
 
     <!-- Right: action buttons -->
     <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+        <button type="button" onclick="startTotallyVoiceChat()"
+                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.75rem;
+                       border-radius: 20px; border: 1px solid rgba(96,165,250,0.4);
+                       background: rgba(96,165,250,0.1); color: #60A5FA;
+                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            🎙️ Totally Voice Chat
+        </button>
         {% if session.get('user_role') != 'admin' %}
         <button type="button" id="ephemeralToggleBtn" onclick="toggleEphemeralDrawer()"
-                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem;
-                       border-radius: 8px; border: 1px solid rgba(99,102,241,0.4);
+                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.7rem;
+                       border-radius: 6px; border: 1px solid rgba(99,102,241,0.4);
                        background: rgba(99,102,241,0.08); color: var(--ts-primary,#6366f1);
-                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <span id="ephemeralBtnLabel">Session Docs</span>
+                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            📎 <span id="ephemeralBtnLabel">Session Docs</span>
             <span id="ephemeralChevron" style="transition: transform 0.25s ease;">▾</span>
         </button>
         {% endif %}
         <form action="/assistant/clear" method="POST"
               onsubmit="return confirm('Clear this conversation?')" style="margin: 0;">
             <button type="submit"
-                    style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem;
-                           border-radius: 8px; border: 1px solid var(--ts-border);
+                    style="display: flex; align-items: center; gap: 0.3rem; padding: 0.28rem 0.7rem;
+                           border-radius: 6px; border: 1px solid var(--ts-border);
                            background: transparent; color: var(--ts-text-secondary); font-size: 0.8rem;
-                           cursor: pointer; white-space: nowrap; font-weight: 500; transition: all 0.2s;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                Clear
+                           cursor: pointer; white-space: nowrap;">
+                🧹 Clear
             </button>
         </form>
     </div>
@@ -613,73 +731,80 @@
             <div style="margin: auto; max-width: 680px; width: 100%; padding: 2rem 1rem; text-align: center; display: flex; flex-direction: column; gap: 1.8rem; align-items: center;">
                 
                 <!-- Animated Hero Greeting -->
-                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%); border: 1px solid rgba(99, 102, 241, 0.2); padding: 2.25rem; border-radius: 16px; box-shadow: var(--ts-shadow); width: 100%;">
-                    <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(to right, #ffffff, var(--ts-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.6rem; letter-spacing: -0.5px;">
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2rem; border-radius: 16px; box-shadow: var(--ts-shadow); width: 100%;">
+                    <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
                         Hello, {{ session.get('user_info', {}).get('full_name', 'Trainee') }}!
                     </div>
-                    <div style="font-size: 0.98rem; color: var(--ts-text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.6;">
+                    <div style="font-size: 1rem; color: var(--ts-text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.5;">
                         I am your unified AI Study Coach. I can help you analyze documents, review exam topics, and track performance.
                     </div>
                 </div>
                 
                 <!-- Quick Action Cards Grid -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1.25rem; width: 100%;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; width: 100%;">
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 1: Attach Document (Trainee only) -->
-                    <div class="welcome-action-card" onclick="toggleUploadCard()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Session Documents</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Upload a temporary PDF to ask questions directly from it.</div>
+                    <div class="welcome-action-card" onclick="toggleUploadCard()" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">📎</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Session Documents</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Upload a temporary PDF to ask questions directly from it.</div>
                     </div>
                     {% else %}
                     <!-- Card 1: Review student (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is trainee RK performing?')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Trainee Insights</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Instantly query trainee scores, session logs, and webcam proctor flags.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('How is trainee RK performing?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">👥</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Trainee Insights</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Instantly query trainee scores, session logs, and webcam proctor flags.</div>
                     </div>
                     {% endif %}
                     
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 2: Performance Summary (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is my performance?')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">My Progress</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Review your study actions, session stats, and overall exam completion.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('How is my performance?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">📊</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">My Progress</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Review your study actions, session stats, and overall exam completion.</div>
                     </div>
                     {% else %}
                     <!-- Card 2: Create Exam Assessment (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me create a new exam.')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Create Exam</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Design and compile a new exam using our structured, interactive AI wizard.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('Help me create a new exam.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">📝</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Create Exam</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Design and compile a new exam using our structured, interactive AI wizard.</div>
                     </div>
                     {% endif %}
                     
                     {% if session.get('user_role') != 'admin' %}
                     <!-- Card 3: Weakness analysis (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('What are my weakest areas and how do I study them?')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1 .5 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Weak Area Review</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Identify subjects where you scored under 70% in exams.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('What are my weakest areas and how do I study them?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">💡</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Weak Area Review</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Identify subjects where you scored under 70% in exams.</div>
                     </div>
                     {% else %}
                     <!-- Card 3: Create Announcement (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me write a new announcement.')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-card-icon"><path d="m3 11 18-5v12L3 13v-2Z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-text-heading); margin-top: 0.2rem;">Write Announcement</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.45; margin: 0;">Draft custom announcements with targeted distributions for specific courses.</div>
+                    <div class="welcome-action-card" onclick="sendFollowupText('Help me write a new announcement.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
+                        <div style="font-size: 1.5rem;">📢</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Write Announcement</div>
+                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Draft custom announcements with targeted distributions for specific courses.</div>
                     </div>
                     {% endif %}
                 </div>
+                
+                <!-- Hover effect styles -->
+                <style>
+                    .welcome-action-card:hover {
+                        transform: translateY(-4px);
+                        border-color: var(--ts-primary) !important;
+                        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
+                    }
+                </style>
             </div>
         {% else %}
             {% for msg in active_messages %}
                 <div class="message-row {{ msg.role }}">
                     {% if msg.role == 'assistant' %}
-                        <div class="avatar-wrapper assistant" title="AI Coach">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
-                        </div>
+                        <div class="message-avatar">🤖</div>
                     {% endif %}
                     
                     <div class="message-bubble">
@@ -737,9 +862,7 @@
                     </div>
                     
                     {% if msg.role == 'user' %}
-                        <div class="avatar-wrapper user" title="You">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        </div>
+                        <div class="message-avatar">👤</div>
                     {% endif %}
                 </div>
             {% endfor %}
@@ -757,15 +880,15 @@
             <!-- Mic button for voice input (Groq Whisper Large V3) -->
             <button id="micBtn" onclick="toggleVoiceRecording()" title="Hold to record voice message (Whisper Large V3)"
                     {% if not groq_api_key %}disabled style="opacity:0.4;cursor:not-allowed;"{% endif %}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                🎙️
             </button>
-            <button id="sendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0 1.5rem; height: 48px;" 
+            <button id="sendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0 1.5rem; height: 44px;" 
                     onclick="submitMessage()" {% if not groq_api_key %}disabled{% endif %}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send
+                🚀 Send
             </button>
-            <button id="stopBtn" class="btn-ts" style="width: auto; padding: 0 1.5rem; height: 48px; display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);"
+            <button id="stopBtn" class="btn-ts" style="width: auto; padding: 0 1.5rem; height: 44px; display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);"
                     onclick="stopGeneration()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg> Stop
+                ⏹️ Stop
             </button>
         </div>
         <!-- Voice recording status bar -->
@@ -773,7 +896,7 @@
             <div class="voice-waveform" id="voiceWaveform">
                 <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <span id="voiceStatusText">Recording… click mic again to stop &amp; transcribe</span>
+            <span id="voiceStatusText">🎙️ Recording… click mic again to stop &amp; transcribe</span>
         </div>
     </div>
 <!-- Citation Modal -->
@@ -795,6 +918,69 @@
 </div>
 </div>
 
+<!-- Totally Voice Assistant Overlay -->
+<div id="voiceAgentOverlay" style="display:none; position: fixed; inset: 0; z-index: 10000; background: rgba(9, 13, 26, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F8FAFC;">
+    <button onclick="stopTotallyVoiceChat()" style="position: absolute; top: 1.5rem; right: 1.5rem; padding: 0.6rem 1rem; border-radius: 9999px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 1.1rem;" title="Exit Voice Assistant">
+        ✕ Exit Voice
+    </button>
+    
+    <div style="max-width: 600px; width: 90%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 85vh; text-align: center; margin: auto; padding: 1.5rem 0;">
+        <div style="display: flex; flex-direction: column; gap: 0.4rem; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 10px; height: 10px; background: #60A5FA; border-radius: 50%; display: inline-block;"></span>
+                <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #F8FAFC;">Sphere Voice Assistant</h3>
+            </div>
+            <p style="margin: 0; font-size: 0.8rem; color: #94A3B8;">Purely voice-driven operations and assistant</p>
+        </div>
+
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; height: 180px; width: 180px; margin: 1rem 0;">
+            <div id="voiceOrb" style="width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(96,165,250,0.5) 0%, rgba(96,165,250,0) 70%); transition: all 0.5s ease;"></div>
+        </div>
+
+        <div style="width: 100%; background: rgba(17, 22, 37, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; text-align: left; max-height: 220px; overflow-y: auto;">
+            <div style="margin-bottom: 0.75rem;">
+                <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #60A5FA;">You Said:</span>
+                <p id="voiceUserTranscript" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-style: italic; color: #cbd5e1;">"Waiting for speech..."</p>
+            </div>
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 0.75rem 0;"></div>
+            <div>
+                <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #34D399;">Sphere AI:</span>
+                <p id="voiceAssistantSpeech" style="margin: 0.25rem 0 0; font-size: 0.9rem; font-weight: 500; color: #F8FAFC;">"Connecting..."</p>
+            </div>
+
+            <!-- Dynamic Interactive Content Selection Panel -->
+            <div id="voiceSelectionPanel" style="display: none; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed rgba(96, 165, 250, 0.4);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #60A5FA; text-transform: uppercase;" id="voiceSelectTitle">💡 Select item(s):</span>
+                    <span style="font-size: 0.7rem; color: #94A3B8;" id="voiceSelectModeBadge">Check single or multiple choices</span>
+                </div>
+                <div id="voiceSelectItemsList" style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 150px; overflow-y: auto;"></div>
+                <div style="margin-top: 0.6rem; display: flex; justify-content: flex-end;">
+                    <button type="button" onclick="confirmVoiceSelection()" style="padding: 0.35rem 0.85rem; border-radius: 20px; background: #60A5FA; color: #0F172A; font-weight: 700; font-size: 0.78rem; border: none; cursor: pointer;">
+                        ✓ Confirm Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
+            <span id="voiceAgentStatus" style="font-size: 0.78rem; font-weight: 600; padding: 0.35rem 1rem; border-radius: 20px; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); color: #60A5FA;">
+                Initializing...
+            </span>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button id="voiceControlBtn" onclick="toggleVoiceAgentRecording()" class="btn-ts btn-ts-primary" style="padding: 0.6rem 1.5rem; border-radius: 25px; font-weight: 600;">
+                    <span id="voiceControlBtnText">Stop Speaking</span>
+                </button>
+                <button onclick="resetVoiceAgentSession()" class="btn-ts btn-ts-secondary" style="padding: 0.6rem 1.2rem; border-radius: 25px;">
+                    ↺ Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
     const USER_ROLE = "{{ session.get('user_role', 'trainee') }}";
     let activeStreamController = null;
@@ -813,116 +999,69 @@
     window.activeSources = null;
 
     function parseAndFormatMessage(text) {
-        let html = marked.parse(text);
+        let cleanText = text;
+        cleanText = cleanText.replace(/\[ITEMS_JSON_START\][\s\S]*?\[ITEMS_JSON_END\]/g, "");
+        let html = marked.parse(cleanText);
         // Replace [1], [2] with clickable marker links/badges
         html = html.replace(/\[([0-9]+)\]/g, '<span class="citation-marker" onclick="showCitation(this, $1)">[$1]</span>');
         return html;
     }
 
     async function postRenderProcessing() {
-        // 1. Process Mermaid diagrams
         const codeElements = document.querySelectorAll('code.language-mermaid');
-        if (codeElements.length > 0 && typeof mermaid !== 'undefined') {
-            for (let i = 0; i < codeElements.length; i++) {
-                const codeEl = codeElements[i];
-                const preEl = codeEl.parentElement;
-                if (preEl && preEl.tagName === 'PRE') {
-                    let codeText = codeEl.textContent;
-                    codeText = codeText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
-                    
-                    // Client-side automatic Mermaid syntax repair:
-                    codeText = codeText.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                    codeText = codeText.replace(/--\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                    codeText = codeText.replace(/->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
-                    codeText = codeText.replace(/([A-Za-z0-9_]+)\[([^"\]]+)\]/g, '$1["$2"]');
-                    codeText = codeText.replace(/([A-Za-z0-9_]+)\(([^"\/)]+)\)/g, '$1("$2")');
-                    codeText = codeText.replace(/([A-Za-z0-9_]+)\{\{([^"\}]+)\}\}/g, '$1{{"$2"}}');
+        if (codeElements.length === 0 || typeof mermaid === 'undefined') return;
 
-                    const firstWord = codeText.split(/\s+/)[0];
-                    const validKeywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt', 'pie', 'gitGraph', 'journey', 'mindmap', 'timeline', 'quadrantChart', 'sankey-beta', 'xychart-beta', 'block-beta'];
-                    if (!validKeywords.includes(firstWord)) {
-                        codeText = 'graph TD\n' + codeText;
-                    }
+        for (let i = 0; i < codeElements.length; i++) {
+            const codeEl = codeElements[i];
+            const preEl = codeEl.parentElement;
+            if (preEl && preEl.tagName === 'PRE') {
+                let codeText = codeEl.textContent;
+                codeText = codeText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+                
+                // Client-side automatic Mermaid syntax repair:
+                // 1. Fix invalid link labels with double arrows like "-->|Text|>" to "-->|Text|"
+                codeText = codeText.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                codeText = codeText.replace(/--\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                codeText = codeText.replace(/->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                
+                // 2. Wrap unquoted node labels in double quotes (e.g. A[Label Text] to A["Label Text"])
+                codeText = codeText.replace(/([A-Za-z0-9_]+)\[([^"\]]+)\]/g, '$1["$2"]');
+                codeText = codeText.replace(/([A-Za-z0-9_]+)\(([^"\/)]+)\)/g, '$1("$2")');
+                codeText = codeText.replace(/([A-Za-z0-9_]+)\{\{([^"\}]+)\}\}/g, '$1{{"$2"}}');
 
-                    const container = document.createElement('div');
-                    container.className = 'mermaid';
-                    const id = 'mermaid-render-' + Math.floor(Math.random() * 1000000);
+                // If it doesn't start with a valid Mermaid keyword, prepend graph TD as a default
+                const firstWord = codeText.split(/\s+/)[0];
+                const validKeywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt', 'pie', 'gitGraph', 'journey', 'mindmap', 'timeline', 'quadrantChart', 'sankey-beta', 'xychart-beta', 'block-beta'];
+                if (!validKeywords.includes(firstWord)) {
+                    codeText = 'graph TD\n' + codeText;
+                }
+
+                const container = document.createElement('div');
+                container.className = 'mermaid';
+                
+                const id = 'mermaid-render-' + Math.floor(Math.random() * 1000000);
+                
+                try {
+                    // Render single node dynamically
+                    const { svg } = await mermaid.render(id, codeText);
+                    container.innerHTML = svg;
+                    preEl.replaceWith(container);
+                } catch (e) {
+                    console.error("Individual Mermaid rendering failed:", e);
+                    // Clear error elements generated by Mermaid from DOM
+                    const errEl = document.getElementById('d' + id);
+                    if (errEl) errEl.remove();
+                    const errEl2 = document.getElementById(id);
+                    if (errEl2) errEl2.remove();
                     
-                    try {
-                        const { svg } = await mermaid.render(id, codeText);
-                        container.innerHTML = svg;
-                        preEl.replaceWith(container);
-                    } catch (e) {
-                        console.error("Individual Mermaid rendering failed:", e);
-                        const errEl = document.getElementById('d' + id);
-                        if (errEl) errEl.remove();
-                        const errEl2 = document.getElementById(id);
-                        if (errEl2) errEl2.remove();
-                        
-                        preEl.style.border = '1px dashed rgba(239, 68, 68, 0.4)';
-                        preEl.style.background = 'rgba(239, 68, 68, 0.05)';
-                        preEl.style.padding = '0.75rem';
-                        preEl.style.borderRadius = '6px';
-                    }
+                    // Fallback to formatted pre code block
+                    preEl.style.border = '1px dashed rgba(239, 68, 68, 0.4)';
+                    preEl.style.background = 'rgba(239, 68, 68, 0.05)';
+                    preEl.style.padding = '0.75rem';
+                    preEl.style.borderRadius = '6px';
                 }
             }
         }
-
-        // 2. Enhance code blocks (Add wrapper, header, language name and copy button)
-        const allPreElements = document.querySelectorAll('.message-text pre');
-        allPreElements.forEach(pre => {
-            // Check if already enhanced or is a Mermaid block container
-            if (pre.parentElement.classList.contains('code-block-container') || pre.querySelector('code.language-mermaid') || pre.classList.contains('mermaid')) return;
-            
-            const code = pre.querySelector('code');
-            if (!code) return;
-            
-            let lang = 'CODE';
-            code.classList.forEach(cls => {
-                if (cls.startsWith('language-')) {
-                    lang = cls.replace('language-', '').toUpperCase();
-                }
-            });
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = 'code-block-container';
-            
-            const header = document.createElement('div');
-            header.className = 'code-block-header';
-            header.innerHTML = `
-                <span>${lang}</span>
-                <button class="code-block-copy-btn" onclick="copyCodeBlock(this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    Copy
-                </button>
-            `;
-            
-            pre.parentNode.insertBefore(wrapper, pre);
-            wrapper.appendChild(header);
-            wrapper.appendChild(pre);
-        });
-    }
-
-    // Copy Code Block Utility Function
-    function copyCodeBlock(button) {
-        const container = button.closest('.code-block-container');
-        if (!container) return;
-        const pre = container.querySelector('pre');
-        if (!pre) return;
-        
-        const text = pre.textContent;
-        navigator.clipboard.writeText(text).then(() => {
-            const originalHtml = button.innerHTML;
-            button.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #34d399;"><polyline points="20 6 9 17 4 12"/></svg>
-                <span style="color: #34d399;">Copied!</span>
-            `;
-            setTimeout(() => {
-                button.innerHTML = originalHtml;
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-        });
     }
 
     function showCitation(markerEl, index) {
@@ -1076,9 +1215,7 @@
             <div class="message-bubble">
                 <div class="message-text">${escapeHtml(query)}</div>
             </div>
-            <div class="avatar-wrapper user" title="You">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
+            <div class="message-avatar">👤</div>
         `;
         messagesBox.appendChild(userRow);
         scrollToBottom();
@@ -1087,9 +1224,7 @@
         const assistantRow = document.createElement('div');
         assistantRow.className = 'message-row assistant';
         assistantRow.innerHTML = `
-            <div class="avatar-wrapper assistant" title="AI Coach">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
-            </div>
+            <div class="message-avatar">🤖</div>
             <div class="message-bubble">
                 <div class="message-text" id="activeResponseText"><i>Thinking...</i></div>
                 <div id="activeNotFoundNotice" style="display: none; margin-top: 0.6rem; padding: 0.5rem 0.75rem; border-radius: 6px; background-color: rgba(239, 68, 68, 0.08); border: 1px dashed rgba(239, 68, 68, 0.25); color: #f87171; font-size: 0.8rem; align-items: center; gap: 0.4rem; width: fit-content;">
@@ -1206,6 +1341,40 @@
             // Render citations if present
             if (receivedSources && receivedSources.length > 0) {
                 renderCitations(receivedSources);
+            }
+
+            // Render items selection list if present
+            if (streamBuffer.includes('[ITEMS_JSON_START]')) {
+                try {
+                    const itemsStr = streamBuffer.split('[ITEMS_JSON_START]')[1].split('[ITEMS_JSON_END]')[0].trim();
+                    const itemsData = JSON.parse(itemsStr);
+                    if (itemsData && itemsData.items && itemsData.items.length > 0) {
+                        const activeTextEl = document.getElementById('activeResponseText');
+                        if (activeTextEl) {
+                            let itemsHtml = `<div class="chat-items-selection-box" style="margin-top: 0.8rem; padding: 0.85rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 10px;">
+                                <div style="font-size: 0.78rem; font-weight: 700; color: var(--ts-primary); margin-bottom: 0.5rem;">
+                                    💡 Select ${itemsData.item_type || 'item'}(s):
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 160px; overflow-y: auto;">`;
+                            itemsData.items.forEach(item => {
+                                itemsHtml += `<label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--ts-text); cursor: pointer; padding: 0.3rem 0.5rem; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                                    <input type="checkbox" name="chat_select_choice" value="${escapeHtml(item)}">
+                                    <span>${escapeHtml(item)}</span>
+                                </label>`;
+                            });
+                            itemsHtml += `</div>
+                                <div style="margin-top: 0.6rem; display: flex; justify-content: flex-end;">
+                                    <button onclick="confirmChatSelection()" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.8rem; font-size: 0.75rem; border-radius: 20px;">
+                                        ✓ Confirm Selection
+                                    </button>
+                                </div>
+                            </div>`;
+                            activeTextEl.innerHTML += itemsHtml;
+                        }
+                    }
+                } catch(e) {
+                    console.error("Failed to parse chat items json", e);
+                }
             }
 
             // Render explore suggestions if present
@@ -3246,5 +3415,317 @@
     }
 
     window.addEventListener('DOMContentLoaded', loadInputSuggestions);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  TOTALLY VOICE ASSISTANT AGENT CONTROLLER & SELECTION PANEL
+    // ═══════════════════════════════════════════════════════════════════════════
+    let voiceAgentActive = false;
+    let voiceAgentMediaRecorder = null;
+    let voiceAgentAudioChunks = [];
+    let voiceAgentSynth = window.speechSynthesis;
+    let voiceAgentUtterance = null;
+
+    function setVoiceAgentState(state) {
+        const orb = document.getElementById('voiceOrb');
+        const status = document.getElementById('voiceAgentStatus');
+        const ctrlText = document.getElementById('voiceControlBtnText');
+        const ctrlBtn = document.getElementById('voiceControlBtn');
+
+        if (!orb) return;
+
+        ctrlBtn.disabled = false;
+
+        if (state === 'idle') {
+            orb.style.background = 'radial-gradient(circle, rgba(96,165,250,0.4) 0%, rgba(96,165,250,0) 70%)';
+            status.innerText = "Idle • Click button to talk";
+            status.style.color = "#94A3B8";
+            ctrlText.innerText = "Speak";
+        } else if (state === 'listening') {
+            orb.style.background = 'radial-gradient(circle, rgba(52,211,153,0.6) 0%, rgba(52,211,153,0) 70%)';
+            status.innerText = "Listening...";
+            status.style.color = "#34D399";
+            ctrlText.innerText = "Stop Speaking";
+        } else if (state === 'speaking') {
+            orb.style.background = 'radial-gradient(circle, rgba(167,139,250,0.7) 0%, rgba(167,139,250,0) 70%)';
+            status.innerText = "Speaking...";
+            status.style.color = "#A78BFA";
+            ctrlText.innerText = "Skip Speech";
+        } else if (state === 'thinking') {
+            orb.style.background = 'radial-gradient(circle, rgba(236,72,153,0.6) 0%, rgba(96,165,250,0.5) 70%)';
+            status.innerText = "Thinking & Processing...";
+            status.style.color = "#F472B6";
+            ctrlText.innerText = "Processing...";
+            ctrlBtn.disabled = true;
+        }
+    }
+
+    async function startTotallyVoiceChat() {
+        voiceAgentActive = true;
+        const overlay = document.getElementById('voiceAgentOverlay');
+        overlay.style.display = 'flex';
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = "Initializing session...";
+        document.getElementById('voiceAssistantSpeech').innerText = "Connecting to Voice AI...";
+
+        try {
+            await fetch('/assistant/voice_agent/reset', { method: 'POST' });
+            const greeting = "Hello! I am your voice-controlled educational assistant. Ask me to list reference documents, list trainees, list exams, write an announcement, or query student performance data.";
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            document.getElementById('voiceAssistantSpeech').innerText = greeting;
+            await speakText(greeting);
+        } catch (e) {
+            console.error("Error starting voice agent", e);
+            document.getElementById('voiceAssistantSpeech').innerText = "Error: Could not connect. Please try again.";
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function stopTotallyVoiceChat() {
+        voiceAgentActive = false;
+        if (voiceAgentSynth) voiceAgentSynth.cancel();
+        stopVoiceAgentRecording();
+        const overlay = document.getElementById('voiceAgentOverlay');
+        overlay.style.display = 'none';
+    }
+
+    function speakText(text) {
+        return new Promise((resolve) => {
+            if (!voiceAgentActive) { resolve(); return; }
+            if (voiceAgentSynth) voiceAgentSynth.cancel();
+
+            voiceAgentUtterance = new SpeechSynthesisUtterance(text);
+            const voices = voiceAgentSynth.getVoices();
+            const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Desktop'))) || voices.find(v => v.lang.startsWith('en'));
+            if (preferredVoice) voiceAgentUtterance.voice = preferredVoice;
+
+            voiceAgentUtterance.onstart = () => { setVoiceAgentState('speaking'); };
+            voiceAgentUtterance.onend = () => {
+                if (voiceAgentActive) {
+                    setVoiceAgentState('idle');
+                    startVoiceAgentRecording();
+                }
+                resolve();
+            };
+            voiceAgentUtterance.onerror = () => {
+                if (voiceAgentActive) {
+                    setVoiceAgentState('idle');
+                    startVoiceAgentRecording();
+                }
+                resolve();
+            };
+
+            voiceAgentSynth.speak(voiceAgentUtterance);
+        });
+    }
+
+    async function startVoiceAgentRecording() {
+        if (!voiceAgentActive) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Mic access is not supported by your browser.");
+            setVoiceAgentState('idle');
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceAgentAudioChunks = [];
+            voiceAgentMediaRecorder = new MediaRecorder(stream);
+            voiceAgentMediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) voiceAgentAudioChunks.push(e.data);
+            };
+
+            voiceAgentMediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (!voiceAgentActive) return;
+                const blob = new Blob(voiceAgentAudioChunks, { type: 'audio/webm' });
+                await uploadVoiceAgentAudio(blob);
+            };
+
+            voiceAgentMediaRecorder.start();
+            setVoiceAgentState('listening');
+            document.getElementById('voiceUserTranscript').innerText = "Listening... Speak now.";
+        } catch (err) {
+            console.error("Failed to start mic", err);
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function stopVoiceAgentRecording() {
+        if (voiceAgentMediaRecorder && voiceAgentMediaRecorder.state !== 'inactive') {
+            voiceAgentMediaRecorder.stop();
+        }
+    }
+
+    function toggleVoiceAgentRecording() {
+        const statusStr = document.getElementById('voiceAgentStatus').innerText;
+        if (statusStr.includes("Listening")) {
+            stopVoiceAgentRecording();
+        } else if (statusStr.includes("Speaking")) {
+            if (voiceAgentSynth) voiceAgentSynth.cancel();
+        } else if (statusStr.includes("Idle")) {
+            startVoiceAgentRecording();
+        }
+    }
+
+    function renderVoiceSelectionPanel(actionExecuted) {
+        const panel = document.getElementById('voiceSelectionPanel');
+        const list = document.getElementById('voiceSelectItemsList');
+        const title = document.getElementById('voiceSelectTitle');
+        const badge = document.getElementById('voiceSelectModeBadge');
+        
+        if (!panel || !list) return;
+
+        if (!actionExecuted || !actionExecuted.items || actionExecuted.items.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        const items = actionExecuted.items;
+        const isMulti = actionExecuted.select_mode === 'multi';
+        const itemType = actionExecuted.item_type || 'item';
+
+        title.innerText = `💡 Select ${itemType}(s):`;
+        badge.innerText = isMulti ? "Check single or multiple choices" : "Check single choice";
+
+        list.innerHTML = '';
+        items.forEach((item, idx) => {
+            const itemRow = document.createElement('label');
+            itemRow.style.display = 'flex';
+            itemRow.style.alignItems = 'center';
+            itemRow.style.gap = '0.5rem';
+            itemRow.style.padding = '0.4rem 0.6rem';
+            itemRow.style.background = 'rgba(30, 41, 59, 0.6)';
+            itemRow.style.borderRadius = '8px';
+            itemRow.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            itemRow.style.cursor = 'pointer';
+            itemRow.style.fontSize = '0.82rem';
+            itemRow.style.color = '#F8FAFC';
+
+            const inputType = isMulti ? 'checkbox' : 'radio';
+            itemRow.innerHTML = `
+                <input type="${inputType}" name="voice_select_choice" value="${escapeHtml(item)}" style="cursor: pointer;">
+                <span>${escapeHtml(item)}</span>
+            `;
+            list.appendChild(itemRow);
+        });
+
+        panel.style.display = 'block';
+    }
+
+    async function confirmVoiceSelection() {
+        const selectedInputs = document.querySelectorAll('input[name="voice_select_choice"]:checked');
+        if (selectedInputs.length === 0) {
+            alert("Please select at least one item from the list.");
+            return;
+        }
+
+        const selectedValues = Array.from(selectedInputs).map(cb => cb.value);
+        const textQuery = `I selected ${selectedValues.join(', ')}. Please proceed with these selections.`;
+
+        document.getElementById('voiceSelectionPanel').style.display = 'none';
+
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = `"${textQuery}"`;
+
+        try {
+            const formData = new FormData();
+            formData.append('query', textQuery);
+            const modelSelect = document.getElementById('chatModel');
+            const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
+            formData.append('model', model);
+
+            const response = await fetch('/assistant/voice_agent/chat', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            document.getElementById('voiceAssistantSpeech').innerText = data.response_text;
+            if (data.action_executed) {
+                renderVoiceSelectionPanel(data.action_executed);
+            }
+            await speakText(data.response_text);
+        } catch (e) {
+            console.error("Selection confirmation error", e);
+            setVoiceAgentState('idle');
+        }
+    }
+
+    async function uploadVoiceAgentAudio(blob) {
+        setVoiceAgentState('thinking');
+        document.getElementById('voiceUserTranscript').innerText = "Transcribing speech...";
+
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        formData.append('mime_type', 'audio/webm');
+        const modelSelect = document.getElementById('chatModel');
+        const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
+        formData.append('model', model);
+
+        try {
+            const response = await fetch('/assistant/voice_agent/chat', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                document.getElementById('voiceUserTranscript').innerText = "---";
+                const errorReply = "Sorry, I had trouble processing that. Please try again.";
+                document.getElementById('voiceAssistantSpeech').innerText = errorReply;
+                await speakText(errorReply);
+                return;
+            }
+
+            document.getElementById('voiceUserTranscript').innerText = `"${data.query_text}"`;
+            document.getElementById('voiceAssistantSpeech').innerText = data.response_text;
+
+            if (data.action_executed) {
+                renderVoiceSelectionPanel(data.action_executed);
+            } else {
+                const panel = document.getElementById('voiceSelectionPanel');
+                if (panel) panel.style.display = 'none';
+            }
+
+            await speakText(data.response_text);
+        } catch (err) {
+            console.error("Upload error", err);
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            const errText = "Network error. Please check your connection.";
+            document.getElementById('voiceAssistantSpeech').innerText = errText;
+            await speakText(errText);
+        }
+    }
+
+    async function resetVoiceAgentSession() {
+        if (!confirm("Are you sure you want to reset this voice assistant session?")) return;
+        if (voiceAgentSynth) voiceAgentSynth.cancel();
+        stopVoiceAgentRecording();
+        setVoiceAgentState('thinking');
+        try {
+            await fetch('/assistant/voice_agent/reset', { method: 'POST' });
+            const msg = "Session has been reset. How can I help you now?";
+            document.getElementById('voiceUserTranscript').innerText = "---";
+            document.getElementById('voiceAssistantSpeech').innerText = msg;
+            await speakText(msg);
+        } catch (e) {
+            setVoiceAgentState('idle');
+        }
+    }
+
+    function confirmChatSelection() {
+        const checkedBoxes = document.querySelectorAll('input[name="chat_select_choice"]:checked');
+        if (checkedBoxes.length === 0) {
+            alert("Please select at least one item from the list.");
+            return;
+        }
+        const selectedValues = Array.from(checkedBoxes).map(cb => cb.value);
+        const qInput = document.getElementById('queryInput');
+        if (qInput) {
+            qInput.value = `I selected ${selectedValues.join(', ')}. Please proceed with these selections.`;
+            submitMessage();
+        }
+    }
+
 </script>
 {% endblock %}
