@@ -581,18 +581,18 @@
 
         <!-- ── Navigation ── -->
         <div class="sb-section-label">Hub</div>
-        <a href="/" class="sb-nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <a href="/" class="sb-nav-link {% if request.path == '/' or active_page == 'dashboard' and request.path == '/' %}active{% endif %}">
             <span class="sb-nav-icon">📊</span>
             <span class="sb-nav-label">Dashboard</span>
         </a>
 
         <div class="sb-section-label">AI Workspace</div>
-        <a href="/assistant" class="sb-nav-link {% if active_page == 'assistant' %}active{% endif %}">
+        <a href="/assistant" class="sb-nav-link {% if request.path.startswith('/assistant') %}active{% endif %}">
             <span class="sb-nav-icon">🤖</span>
             <span class="sb-nav-label">AI Assistant</span>
         </a>
         {% if session.get('user_role') != 'admin' %}
-        <a href="/sprint" class="sb-nav-link {% if active_page == 'sprint' %}active{% endif %}">
+        <a href="/sprint" class="sb-nav-link {% if request.path.startswith('/sprint') %}active{% endif %}">
             <span class="sb-nav-icon">🏃</span>
             <span class="sb-nav-label">6-Day Sprint</span>
         </a>

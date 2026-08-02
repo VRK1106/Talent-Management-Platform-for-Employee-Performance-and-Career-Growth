@@ -207,7 +207,7 @@
                 </td>
                 <td style="color: var(--ts-text-secondary);">{{ row.email }}</td>
                 <td>
-                    <span class="sp-badge">{{ row.domain|capitalize }} Sprint</span>
+                    <span class="sp-badge">{% if row.plan_title %}{{ row.plan_title }}{% else %}{{ row.domain|capitalize }} Learning Sprint{% endif %}</span>
                 </td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
