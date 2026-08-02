@@ -3167,7 +3167,7 @@ def assistant_voice_agent_chat():
         from src.voice_agent import run_voice_agent
         
         # Read model or default
-        model = request.form.get('model') or (request.get_json() or {}).get('model') or 'llama-3.3-70b-versatile'
+        model = request.form.get('model') or (request.get_json(silent=True) or {}).get('model') or 'llama-3.3-70b-versatile'
         
         spoken_response, action_executed, updated_history = run_voice_agent(
             query=query_text,
@@ -3746,7 +3746,41 @@ def admin_kill_overall():
     except Exception as e:
         print(f"Error resetting vectorstore/files during overall kill: {e}")
         
+    # Clear all study plans and sprint database tables
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        c = conn.cursor()
+        c.execute("DELETE FROM sprint_schedules")
+        c.execute("DELETE FROM weekly_study_plans")
+        c.execute("DELETE FROM qa_errors")
+        c.execute("DELETE FROM interview_evaluations")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error resetting sprint tables during overall kill: {e}")
+
     flash("💥 OVERALL SYSTEM RESET COMPLETE: All data has been wiped.")
+    return redirect(url_for('admin_maintenance'))
+
+@app.route('/admin/kill/sprints', methods=['POST'])
+@login_required
+def admin_kill_sprints():
+    if session.get('user_role') != 'admin':
+        return redirect(url_for('dashboard'))
+    
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        c = conn.cursor()
+        c.execute("DELETE FROM sprint_schedules")
+        c.execute("DELETE FROM weekly_study_plans")
+        c.execute("DELETE FROM qa_errors")
+        c.execute("DELETE FROM interview_evaluations")
+        conn.commit()
+        conn.close()
+        flash("📚 SPRINT DATABASE RESET COMPLETE: All study plans, sprint schedules, QA errors, and interview reports wiped.")
+    except Exception as e:
+        flash(f"Failed to reset sprint database: {e}")
+        
     return redirect(url_for('admin_maintenance'))
 
 

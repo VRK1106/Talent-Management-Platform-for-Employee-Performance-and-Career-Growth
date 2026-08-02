@@ -89,6 +89,24 @@
             </button>
         </form>
     </div>
+
+    <!-- 4. Reset All Study Plans & Sprints -->
+    <div class="ts-card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.25) !important; background: rgba(239, 68, 68, 0.03) !important; display: flex; flex-direction: column; justify-content: space-between; gap: 1.2rem;">
+        <div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--ts-text-heading); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+                📚 <span>Reset All Study Plans & Sprints</span>
+            </div>
+            <p style="font-size: 0.87rem; color: var(--ts-text-secondary); line-height: 1.55; margin: 0;">
+                Permanently resets all study plans, trainee sprint progress, QA weakness logs, and voice interview evaluation reports for a fresh start.
+            </p>
+        </div>
+        <form action="/admin/kill/sprints" method="POST"
+              onsubmit="return confirm('🚨 DANGER: Permanently wipe ALL study plans and trainee sprint progression? This cannot be undone.')">
+            <button type="submit" class="btn-ts" style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.35); color: #ef4444; width: 100%; font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                Reset All Study Plans &amp; Sprints
+            </button>
+        </form>
+    </div>
 </div>
 
 <!-- Global Reset -->
