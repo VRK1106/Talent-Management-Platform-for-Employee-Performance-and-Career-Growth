@@ -776,13 +776,34 @@
         document.getElementById('voiceOverlay').style.display = 'none';
     }
 
-    function speakText(text) {
-        if (!('speechSynthesis' in window)) return;
+    function speakText(text, onCompleteCallback) {
+        if (!('speechSynthesis' in window)) {
+            if (onCompleteCallback) onCompleteCallback();
+            return;
+        }
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
+        
+        let hasFired = false;
+        const fireDone = () => {
+            if (!hasFired) {
+                hasFired = true;
+                if (onCompleteCallback) onCompleteCallback();
+            }
+        };
+
+        utterance.onend = fireDone;
+        utterance.onerror = fireDone;
+
         window.speechSynthesis.speak(utterance);
+        
+        // Fallback safety timer if browser speechSynthesis fails to emit onend event
+        if (onCompleteCallback) {
+            const estimatedMs = Math.max(3000, text.length * 70);
+            setTimeout(fireDone, estimatedMs);
+        }
     }
 
     function repeatAiQuestion() {
@@ -820,8 +841,8 @@
                         const res = await fetch('/sprint/voice_interview/turn', { method: 'POST', body: formData });
                         const data = await res.json();
                         
-                        const userSpoken = data.user_text || "I explained the concepts.";
-                        const aiFollowup = data.ai_question || "Can you expand further?";
+                        const userSpoken = data.user_text || "I explained the concepts and principles.";
+                        const aiFollowup = data.ai_question || "Thank you for explaining your implementation details.";
                         
                         liveText.innerText = `"${userSpoken}"`;
                         liveContainer.style.display = 'block';
@@ -837,27 +858,37 @@
                             orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
                             speakText(aiFollowup);
                         } else {
-                            // Final turn reached: Submit for evaluation
-                            statusEl.innerText = "Interview complete! Generating performance scorecard...";
+                            // Final Turn 4 completed: AI speaks wrap-up concluding response completely first!
+                            statusEl.innerText = "🔊 Socratic AI Interviewer concluding evaluation...";
                             document.getElementById('voiceOverlayQuestion').innerText = aiFollowup;
-                            speakText(aiFollowup);
-                            
-                            setTimeout(async () => {
-                                const evalRes = await fetch('/sprint/voice_interview/submit', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ transcript: voiceTranscript.join('\n\n') })
-                                });
-                                const evalData = await evalRes.json();
-                                closeVoiceOverlay();
-                                alert(`🎉 Day 6 Voice Interview Passed!\n\nTechnical Score: ${evalData.tech_score}%\nConfidence Score: ${evalData.conf_score}%\n\nAdvancing to Day 7 Performance Retro...`);
-                                window.location.reload();
-                            }, 3500);
+                            orbIcon.innerText = "✓";
+                            orbBtn.style.background = "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)";
+
+                            speakText(aiFollowup, async () => {
+                                statusEl.innerText = "✓ Interview Complete! Generating Performance Scorecard...";
+                                try {
+                                    const evalRes = await fetch('/sprint/voice_interview/submit', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ transcript: voiceTranscript.join('\n\n') })
+                                    });
+                                    const evalData = await evalRes.json();
+                                    closeVoiceOverlay();
+                                    alert(`🎉 Day 6 Voice Mock Interview Complete!\n\nTechnical Score: ${evalData.tech_score}%\nConfidence Score: ${evalData.conf_score}%\n\nAdvancing to Day 7 Performance Retro...`);
+                                    window.location.reload();
+                                } catch (e) {
+                                    console.error(e);
+                                    window.location.reload();
+                                }
+                            });
                         }
                     } catch (err) {
                         console.error(err);
-                        statusEl.innerText = "Error evaluating speech. Please try speaking again.";
+                        statusEl.innerText = "Processing response... Click orb to continue.";
                         orbIcon.innerText = "🎙️";
+                        orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+                    }
+                };
                         orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
                     }
                 };
