@@ -387,11 +387,43 @@ def run_sprint_orchestrator(state_payload: dict, model_name: str = "llama-3.3-70
         try:
             return json.loads(cleaned)
         except Exception:
-            # Fallback regex JSON extraction
             match = re.search(r'(\{[\s\S]*\})', cleaned)
             if match:
                 return json.loads(match.group(1))
             return {"raw_response": raw_resp}
     except Exception as e:
         return {"error": f"Failed to execute orchestrator: {str(e)}"}
+
+def delete_study_plan(plan_id: str) -> bool:
+    """Delete a study plan by ID."""
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
+    """Assign a specific study plan to a trainee user."""
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(sprint_schedules)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if "assigned_plan_id" not in cols:
+            cursor.execute("ALTER TABLE sprint_schedules ADD COLUMN assigned_plan_id TEXT")
+        
+        cursor.execute(
+            "UPDATE sprint_schedules SET assigned_plan_id = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
+            (plan_id, user_id)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error assigning study plan: {e}")
+        return False
 

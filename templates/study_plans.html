@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Study Plans Administration{% endblock %}
+
+{% block head %}
+<style>
+    .sp-card {
+        background: var(--ts-card-bg, rgba(30, 41, 59, 0.4));
+        border: 1px solid var(--ts-border, rgba(255, 255, 255, 0.1));
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    .sp-card:hover {
+        border-color: var(--ts-primary, #6366f1);
+        transform: translateY(-2px);
+    }
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(9, 13, 26, 0.85);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Top Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight" style="color: var(--ts-text);">📚 Study Plans Management</h2>
+            <p class="text-sm text-slate-400 mt-1">Create AI-orchestrated multi-week curriculum schedules, assign trainees, and monitor daily study progression.</p>
+        </div>
+        <button onclick="openCreateModal()" class="btn-ts btn-ts-primary px-4 py-2 text-sm font-semibold flex items-center gap-2" style="width: auto;">
+            <span>⚡ Create AI Study Plan</span>
+        </button>
+    </div>
+
+    <!-- Active Study Plans Table -->
+    <div class="sp-card space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                <span>📋 Active Study Plans</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-normal">{{ all_plans|length }} Plans</span>
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-300">
+                <thead class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
+                    <tr>
+                        <th class="px-4 py-3">Title & Domain</th>
+                        <th class="px-4 py-3">Description</th>
+                        <th class="px-4 py-3">Created By</th>
+                        <th class="px-4 py-3">Enrolled Users</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% if not all_plans %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-6 text-center text-slate-500 italic">No custom study plans created yet. Click "+ Create AI Study Plan" to generate one.</td>
+                    </tr>
+                    {% else %}
+                    {% for p in all_plans %}
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="px-4 py-3">
+                            <div class="font-bold text-slate-100">{{ p.title }}</div>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono">{{ p.domain|capitalize }} &middot; Week {{ p.week_number }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-slate-400 max-w-xs truncate">AI Orchestrated 6-Day Learning Sprint</td>
+                        <td class="px-4 py-3 text-slate-400">admin@company.com</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold text-[11px]">Enrolled</span>
+                        </td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button onclick="previewSyllabus('{{ p.title|escape }}', '{{ p.tasks_json|escape }}')" class="btn-ts btn-ts-secondary px-2.5 py-1 text-[11px]" style="width: auto;">👁️ Syllabus</button>
+                            <button onclick="openAssignModal('{{ p.plan_id }}', '{{ p.title|escape }}')" class="btn-ts btn-ts-primary px-2.5 py-1 text-[11px]" style="width: auto;">👤 Assign</button>
+                            <button onclick="deletePlan('{{ p.plan_id }}')" class="px-2.5 py-1 text-[11px] rounded bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Trainee Study Progression Dashboard -->
+    <div class="sp-card space-y-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                <span>🎯 Trainee Study Progression Dashboard</span>
+            </h3>
+            <span class="text-xs text-slate-400">Track sequential day-by-day learning metrics, exam scores, and interview performance.</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-300">
+                <thead class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
+                    <tr>
+                        <th class="px-4 py-3">Trainee</th>
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">Study Plan</th>
+                        <th class="px-4 py-3">Current Progress</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% if not all_schedules %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-6 text-center text-slate-500 italic">No active trainees found. Assign a study plan to trainees to view metrics.</td>
+                    </tr>
+                    {% else %}
+                    {% for row in all_schedules %}
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="px-4 py-3 font-semibold text-slate-100">{{ row.full_name }} <span class="text-slate-500 font-normal">({{ row.user_id }})</span></td>
+                        <td class="px-4 py-3 text-slate-400">{{ row.email }}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{{ row.domain|capitalize }} Sprint</span></td>
+                        <td class="px-4 py-3">
+                            <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden inline-block mr-2">
+                                <div class="bg-blue-500 h-full" style="width: {{ row.sprint_progress }}%;"></div>
+                            </div>
+                            <span>Day {{ row.current_day }}/6 ({{ row.sprint_progress|round(0)|int }}%)</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if row.current_day <= 4 %}<span class="text-blue-400 font-semibold">Phase 1: Days 1-4 Study</span>
+                            {% elif row.current_day == 5 %}<span class="text-yellow-400 font-semibold">Phase 2: Gateway Exam</span>
+                            {% elif row.current_day == 6 %}<span class="text-emerald-400 font-semibold">Phase 3: Voice Interview</span>
+                            {% else %}<span class="text-purple-400 font-semibold">Phase 4: Completed</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <button onclick="advanceTrainee('{{ row.user_id }}')" class="btn-ts btn-ts-primary px-2.5 py-1 text-[11px]" style="width: auto;">Next: Day {{ row.current_day + 1 if row.current_day < 6 else 6 }}</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal 1: Create AI Study Plan -->
+<div id="createModal" class="hidden modal-overlay">
+    <div class="bg-[#111625] border border-blue-500/30 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 class="font-bold text-base text-blue-400 flex items-center gap-2">
+                <span>⚡ Create AI-Orchestrated Study Plan</span>
+            </h3>
+            <button onclick="closeCreateModal()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="block font-semibold mb-1">Study Plan Title:</label>
+                <input type="text" id="newPlanTitle" placeholder="e.g. Python & Data Science 6-Day Sprint" class="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-slate-100">
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Target Domain:</label>
+                <select id="newPlanDomain" class="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-slate-100">
+                    <option value="python">Python Engineering</option>
+                    <option value="general">General</option>
+                    <option value="metallurgy">Materials & Metallurgy</option>
+                    <option value="cloud">Cloud & DevOps</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Select Ingested PDF Reference File:</label>
+                <select id="newPlanDoc" class="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-slate-100">
+                    <option value="">-- Choose PDF Document --</option>
+                    {% for d in all_docs %}
+                    <option value="{{ d }}">{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Or Paste Custom Documentation Text:</label>
+                <textarea id="newPlanText" rows="3" placeholder="Paste documentation notes here for AI Phase 1 chunking..." class="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-slate-100"></textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-white/10">
+            <button onclick="closeCreateModal()" class="btn-ts btn-ts-secondary px-4 py-2 text-xs" style="width: auto;">Cancel</button>
+            <button onclick="submitCreatePlan()" id="submitCreateBtn" class="btn-ts btn-ts-primary px-5 py-2 text-xs font-bold" style="width: auto;">⚡ Generate AI Plan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Syllabus Preview -->
+<div id="syllabusModal" class="hidden modal-overlay">
+    <div class="bg-[#111625] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 class="font-bold text-base text-slate-100" id="syllabusModalTitle">Study Plan Syllabus</h3>
+            <button onclick="closeSyllabusModal()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+        <div id="syllabusContent" class="space-y-3 text-xs max-h-96 overflow-y-auto"></div>
+        <div class="flex justify-end pt-2">
+            <button onclick="closeSyllabusModal()" class="btn-ts btn-ts-secondary px-4 py-1.5 text-xs" style="width: auto;">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openCreateModal() {
+        document.getElementById('createModal').classList.remove('hidden');
+    }
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.add('hidden');
+    }
+
+    async function submitCreatePlan() {
+        const title = document.getElementById('newPlanTitle').value;
+        const domain = document.getElementById('newPlanDomain').value;
+        const docName = document.getElementById('newPlanDoc').value;
+        const rawText = document.getElementById('newPlanText').value;
+        const btn = document.getElementById('submitCreateBtn');
+
+        if (!title) {
+            alert('Please enter a Study Plan Title.');
+            return;
+        }
+        if (!docName && !rawText) {
+            alert('Please select a PDF document or paste documentation text.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = '⚡ Processing AI Phase 1 Chunking...';
+
+        try {
+            const res = await fetch('/sprint/chunk_document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doc_name: docName, raw_text: rawText, domain: domain, week_number: 1 })
+            });
+            const data = await res.json();
+            btn.disabled = false;
+            btn.innerText = '⚡ Generate AI Plan';
+
+            if (data.status === 'success') {
+                alert('✓ AI Study Plan Created Successfully!');
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to create plan'));
+            }
+        } catch (e) {
+            console.error(e);
+            btn.disabled = false;
+            btn.innerText = '⚡ Generate AI Plan';
+        }
+    }
+
+    function previewSyllabus(title, tasksJson) {
+        document.getElementById('syllabusModalTitle').innerText = 'Syllabus: ' + title;
+        const container = document.getElementById('syllabusContent');
+        container.innerHTML = '';
+
+        try {
+            const tasks = JSON.parse(tasksJson);
+            let html = '<div class="space-y-2">';
+            for (let i = 1; i <= 4; i++) {
+                const dayTasks = tasks['day' + i] || [];
+                html += `<div class="p-3 rounded bg-slate-900 border border-white/10">
+                    <span class="font-bold text-blue-400">Day ${i} (Learning Module):</span>
+                    <p class="text-slate-300 mt-1">${dayTasks.join(', ') || 'General study material'}</p>
+                </div>`;
+            }
+            html += `<div class="p-3 rounded bg-slate-900 border border-yellow-500/30">
+                <span class="font-bold text-yellow-400">Day 5 (Phase 2 Gateway Exam):</span>
+                <p class="text-slate-300 mt-1">Gated Multiple-Choice & Short Answer Exam covering Days 1-4.</p>
+            </div>`;
+            html += `<div class="p-3 rounded bg-slate-900 border border-emerald-500/30">
+                <span class="font-bold text-emerald-400">Day 6 (Phase 3 Voice Interview):</span>
+                <p class="text-slate-300 mt-1">Socratic Voice Technical Interview targeting Day 5 weak concepts.</p>
+            </div>`;
+            html += `<div class="p-3 rounded bg-slate-900 border border-purple-500/30">
+                <span class="font-bold text-purple-400">Day 7 (Phase 4 Performance Retro):</span>
+                <p class="text-slate-300 mt-1">Analytical Report & Step-by-Step Revision Plan.</p>
+            </div>`;
+            html += '</div>';
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p class="text-slate-400 italic">Syllabus breakdown preview unavailable.</p>';
+        }
+
+        document.getElementById('syllabusModal').classList.remove('hidden');
+    }
+
+    function closeSyllabusModal() {
+        document.getElementById('syllabusModal').classList.add('hidden');
+    }
+
+    async function deletePlan(planId) {
+        if (!confirm('Are you sure you want to delete this study plan?')) return;
+        try {
+            await fetch('/study_plans/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_id: planId })
+            });
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function advanceTrainee(userId) {
+        try {
+            await fetch('/sprint/advance_day', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+</script>
+{% endblock %}

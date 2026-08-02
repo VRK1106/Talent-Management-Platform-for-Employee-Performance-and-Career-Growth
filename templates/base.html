@@ -680,6 +680,10 @@
 
         {% if session.get('user_role') == 'admin' %}
         <div class="sb-section-label">Management</div>
+        <a href="/study_plans" class="sb-nav-link {% if active_page == 'study_plans' %}active{% endif %}">
+            <span class="sb-nav-icon">📚</span>
+            <span class="sb-nav-label">Study Plans</span>
+        </a>
         <a href="/user_management" class="sb-nav-link {% if active_page == 'user_management' %}active{% endif %}">
             <span class="sb-nav-icon">👥</span>
             <span class="sb-nav-label">User Management</span>

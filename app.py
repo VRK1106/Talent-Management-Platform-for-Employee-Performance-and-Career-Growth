@@ -3750,6 +3750,57 @@ def admin_kill_overall():
     return redirect(url_for('admin_maintenance'))
 
 
+@app.route('/study_plans', methods=['GET'])
+@login_required
+def study_plans_page():
+    if session.get('user_role') != 'admin':
+        return redirect(url_for('sprint_page'))
+
+    from src.sprints import get_all_study_plans, get_all_sprint_schedules
+    all_plans = get_all_study_plans()
+    all_schedules = get_all_sprint_schedules()
+
+    all_docs = []
+    try:
+        from src.vectorstore import get_collection
+        coll = get_collection()
+        res = coll.get(include=["metadatas"])
+        metadatas = res.get("metadatas") or []
+        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+    except Exception:
+        all_docs = []
+
+    return render_template(
+        'study_plans.html',
+        active_page='study_plans',
+        all_plans=all_plans,
+        all_schedules=all_schedules,
+        all_docs=all_docs
+    )
+
+@app.route('/study_plans/delete', methods=['POST'])
+@login_required
+def study_plans_delete():
+    if session.get('user_role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json(silent=True) or {}
+    plan_id = data.get('plan_id', '')
+    from src.sprints import delete_study_plan
+    delete_study_plan(plan_id)
+    return jsonify({'status': 'success'})
+
+@app.route('/study_plans/assign', methods=['POST'])
+@login_required
+def study_plans_assign():
+    if session.get('user_role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json(silent=True) or {}
+    user_id = data.get('user_id', '')
+    plan_id = data.get('plan_id', '')
+    from src.sprints import assign_study_plan_to_user
+    assign_study_plan_to_user(user_id, plan_id)
+    return jsonify({'status': 'success'})
+
 @app.route('/sprint', methods=['GET'])
 @login_required
 def sprint_page():
