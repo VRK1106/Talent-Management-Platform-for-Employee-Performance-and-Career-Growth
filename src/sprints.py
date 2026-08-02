@@ -177,7 +177,7 @@ def clear_interview_evaluations(user_id: str, week_number: int) -> bool:
         return False
 
 def get_all_sprint_schedules() -> list[dict]:
-    """Retrieve sprint details for all trainees (for admin panel) using LEFT JOIN to ensure all are listed."""
+    """Retrieve sprint details for trainees who have active sprint schedules."""
     conn = sqlite3.connect(str(_DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -188,12 +188,12 @@ def get_all_sprint_schedules() -> list[dict]:
             u.full_name, 
             u.email, 
             u.domain,
-            COALESCE(s.current_week, 1) as current_week,
-            COALESCE(s.current_day, 1) as current_day,
-            COALESCE(s.sprint_progress, 0.0) as sprint_progress,
+            s.current_week,
+            s.current_day,
+            s.sprint_progress,
             s.last_updated
         FROM users u
-        LEFT JOIN sprint_schedules s ON u.employee_id = s.user_id
+        JOIN sprint_schedules s ON u.employee_id = s.user_id
         WHERE u.role = 'trainee'
         """
     )
