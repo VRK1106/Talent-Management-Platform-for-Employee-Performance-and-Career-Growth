@@ -91,14 +91,17 @@
         border-radius: 16px;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         z-index: 99999;
-        display: flex;
+        display: none;
         flex-direction: column;
         opacity: 0;
+        pointer-events: none;
         transform: translateY(20px) scale(0.95);
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .ai-coach-drawer.open {
+        display: flex !important;
         opacity: 1 !important;
+        pointer-events: auto !important;
         transform: translateY(0) scale(1) !important;
     }
     .ai-coach-toggle-btn {
