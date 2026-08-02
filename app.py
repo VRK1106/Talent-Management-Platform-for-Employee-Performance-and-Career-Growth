@@ -3894,7 +3894,8 @@ def sprint_page():
     
     user_sprint = get_sprint(emp_id)
     week_num = user_sprint.get('current_week', 1)
-    study_plan = get_study_plan(domain, week_num)
+    assigned_plan_id = user_sprint.get('assigned_plan_id')
+    study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=assigned_plan_id)
     
     tasks = {}
     try:

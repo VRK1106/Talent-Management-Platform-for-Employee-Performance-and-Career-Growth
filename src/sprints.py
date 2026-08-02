@@ -300,16 +300,28 @@ def save_study_plan(domain: str, week_number: int, title: str, tasks_json: str, 
         print(f"Error saving study plan: {e}")
         return False
 
-def get_study_plan(domain: str, week_number: int) -> dict:
-    """Retrieve study plan for a domain and week. Returns a default plan if none found."""
+def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str = None) -> dict:
+    """Retrieve study plan by plan_id if provided, or latest plan for domain/week, or latest overall plan."""
     conn = sqlite3.connect(str(_DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM weekly_study_plans WHERE domain = ? AND week_number = ?",
-        (domain.lower(), week_number)
-    )
-    row = cursor.fetchone()
+    
+    row = None
+    if plan_id:
+        cursor.execute("SELECT * FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        row = cursor.fetchone()
+        
+    if not row:
+        cursor.execute(
+            "SELECT * FROM weekly_study_plans WHERE domain = ? AND week_number = ? ORDER BY rowid DESC",
+            (domain.lower(), week_number)
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        cursor.execute("SELECT * FROM weekly_study_plans ORDER BY rowid DESC")
+        row = cursor.fetchone()
+
     conn.close()
     
     if row:
@@ -340,7 +352,7 @@ def get_study_plan(domain: str, week_number: int) -> dict:
         "plan_id": "default",
         "domain": domain,
         "week_number": week_number,
-        "title": f"Week {week_number} Agile Learn & Deploy Sprint",
+        "title": f"{domain.capitalize()} Study Plan",
         "tasks_json": json.dumps(default_tasks),
         "day5_exam_id": "",
         "day6_interview_prompt": f"Defend the core architectural patterns and choices you made during Week {week_number}.",
