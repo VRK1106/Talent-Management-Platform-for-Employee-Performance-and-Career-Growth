@@ -3926,6 +3926,34 @@ def sprint_page():
     except Exception:
         ref_files = []
 
+    if not isinstance(ref_files, list):
+        ref_files = []
+
+    # Smart fallback: Extract document names directly from tasks if ref_files is missing/incomplete
+    import re
+    extracted = []
+    for day in ['day1', 'day2', 'day3', 'day4']:
+        day_t = tasks.get(day, [])
+        doc_found = ""
+        items = day_t if isinstance(day_t, list) else [day_t]
+        for item in items:
+            match = re.search(r'\[([^\]]+\.pdf)\]', str(item), re.IGNORECASE)
+            if match:
+                doc_found = match.group(1).strip()
+                break
+        extracted.append(doc_found)
+    
+    final_ref_files = []
+    for idx in range(4):
+        doc_name = ""
+        if idx < len(ref_files) and ref_files[idx]:
+            doc_name = ref_files[idx]
+        elif idx < len(extracted) and extracted[idx]:
+            doc_name = extracted[idx]
+        final_ref_files.append(doc_name)
+        
+    ref_files = final_ref_files
+
     return render_template(
         'sprint.html',
         active_page='sprint',
