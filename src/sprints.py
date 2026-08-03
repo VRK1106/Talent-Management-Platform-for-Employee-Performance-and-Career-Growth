@@ -297,21 +297,27 @@ def save_study_plan(domain: str, week_number: int, title: str, tasks_json: str, 
             
         conn.commit()
 
-        # Auto-assign this plan to all trainees in domain or all trainees
+        # Fetch trainee employee_ids before closing connection to prevent SQLite locking
+        trainee_ids = []
         try:
             cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee' AND (LOWER(domain) = ? OR domain = 'general' OR domain IS NULL)", (domain.lower(),))
             trainees = cursor.fetchall()
             if not trainees:
                 cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
                 trainees = cursor.fetchall()
+            trainee_ids = [t_row[0] for t_row in trainees]
+        except Exception as fetch_err:
+            print(f"Fetch trainees warning: {fetch_err}")
             
-            for t_row in trainees:
-                u_id = t_row[0]
-                assign_study_plan_to_user(u_id, plan_id)
-        except Exception as assign_err:
-            print(f"Auto-assign warning: {assign_err}")
-
         conn.close()
+
+        # Auto-assign this plan to trainees safely after main connection is closed
+        for u_id in trainee_ids:
+            try:
+                assign_study_plan_to_user(u_id, plan_id)
+            except Exception as assign_err:
+                print(f"Auto-assign warning: {assign_err}")
+
         return True
     except Exception as e:
         print(f"Error saving study plan: {e}")

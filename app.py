@@ -3897,6 +3897,69 @@ def sprint_page():
         user_role=user_role
     )
 
+@app.route('/study_plans/assign', methods=['POST'])
+@login_required
+def study_plans_assign():
+    if session.get('user_role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json(silent=True) or {}
+    plan_id = data.get('plan_id', '')
+    user_ids = data.get('user_ids', [])
+    single_user = data.get('user_id', '')
+    assign_all = data.get('assign_all', False)
+    
+    if single_user and single_user not in user_ids:
+        if isinstance(user_ids, list):
+            user_ids.append(single_user)
+        else:
+            user_ids = [single_user]
+
+    from src.sprints import assign_study_plan_to_user, get_study_plan
+    count = 0
+    assigned_emails = []
+
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        c = conn.cursor()
+
+        if assign_all:
+            c.execute("SELECT employee_id, email FROM users WHERE role = 'trainee'")
+            trainees = c.fetchall()
+            for u_id, email in trainees:
+                if assign_study_plan_to_user(u_id, plan_id):
+                    count += 1
+                    if email:
+                        assigned_emails.append(email)
+        else:
+            if isinstance(user_ids, str):
+                user_ids = [user_ids]
+            for u_id in user_ids:
+                if assign_study_plan_to_user(u_id, plan_id):
+                    count += 1
+                    c.execute("SELECT email FROM users WHERE employee_id = ?", (u_id,))
+                    row = c.fetchone()
+                    if row and row[0]:
+                        assigned_emails.append(row[0])
+        
+        conn.close()
+    except Exception as e:
+        print(f"Error assigning trainees: {e}")
+
+    # Send Email Notifications to Assigned Trainees
+    try:
+        plan = get_study_plan(plan_id=plan_id)
+        if plan and assigned_emails:
+            from src.mail import send_study_plan_assignment_email
+            send_study_plan_assignment_email(
+                emails=assigned_emails,
+                plan_title=plan.get('title', 'Agile Study Plan'),
+                domain=plan.get('domain', 'General'),
+                week_number=plan.get('week_number', 1)
+            )
+    except Exception as mail_err:
+        print(f"Error sending assignment email: {mail_err}")
+
+    return jsonify({'status': 'success', 'assigned_count': count})
 
 
 @app.route('/documents/view/<path:filename>')
