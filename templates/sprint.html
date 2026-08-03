@@ -183,242 +183,181 @@
     </div>
 </div>
 
-<!-- MULTI-WEEK NAVIGATION & ROADMAP TABS -->
-<div class="ts-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
-    <div style="font-weight: 700; font-size: 0.95rem; color: var(--ts-text); margin-bottom: 0.8rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-        <span>📅 Curriculum Weeks Roadmap ({{ weeks_list|length }} Configured Weeks)</span>
-        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click any week tab to view, review, or switch its 6-day sprint schedule</span>
+<!-- WEEK 1 SYLLABUS GRID -->
+<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
+    <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <span>📅 Week 1 Training Schedule & Learning Outcomes</span>
+        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click unlocked Day cards to open topic breakdown & source PDF files</span>
     </div>
 
-    <div style="display: flex; gap: 0.65rem; overflow-x: auto; padding-bottom: 0.4rem;">
-        {% for wk in weeks_list %}
-        {% set is_active_tab = (selected_week and selected_week == wk.week_number) or (not selected_week and wk.is_active) or (not selected_week and loop.first) %}
-        <button onclick="switchWeekTab({{ wk.week_number }})" 
-                id="weekTabBtn_{{ wk.week_number }}" 
-                class="btn-ts {% if is_active_tab %}btn-ts-primary{% else %}btn-ts-secondary{% endif %}" 
-                style="padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; width: auto;">
-            <span>📅 Week {{ wk.week_number }}: {{ wk.title }}</span>
-            {% if wk.is_completed %}
-                <span class="s-tag s-tag-voice" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">✓ Completed</span>
-            {% elif wk.is_active %}
-                <span class="s-tag s-tag-learning" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">Active</span>
-            {% else %}
-                <span style="font-size: 0.68rem; color: var(--ts-text-secondary);">🔒</span>
-            {% endif %}
-        </button>
-        {% endfor %}
-    </div>
-</div>
+    {% set d1_tasks = tasks.get('day1', []) %}
+    {% set d2_tasks = tasks.get('day2', []) %}
+    {% set d3_tasks = tasks.get('day3', []) %}
+    {% set d4_tasks = tasks.get('day4', []) %}
 
-<!-- WEEK CONTENT PANES -->
-{% for wk in weeks_list %}
-{% set is_active_tab = (selected_week and selected_week == wk.week_number) or (not selected_week and wk.is_active) or (not selected_week and loop.first) %}
-<div id="weekSection_{{ wk.week_number }}" class="week-section-pane" style="display: {% if is_active_tab %}block{% else %}none{% endif %};">
+    {% set d1_doc = ref_files[0] if ref_files|length > 0 else '' %}
+    {% set d2_doc = ref_files[1] if ref_files|length > 1 else (ref_files[0] if ref_files|length > 0 else '') %}
+    {% set d3_doc = ref_files[2] if ref_files|length > 2 else (ref_files[0] if ref_files|length > 0 else '') %}
+    {% set d4_doc = ref_files[3] if ref_files|length > 3 else (ref_files[0] if ref_files|length > 0 else '') %}
 
-    {% if wk.is_completed %}
-    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 1.1rem 1.4rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-            <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800;">✓</div>
+    <div class="s-days-grid">
+        
+        <!-- Day 1 Card -->
+        <div onclick="handleDayClick(1)" 
+             class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
             <div>
-                <div style="font-weight: 800; font-size: 1.05rem; color: #10b981;">Week {{ wk.week_number }} Completed!</div>
-                <div style="font-size: 0.8rem; color: var(--ts-text-secondary);">All 6 days, Gateway Exam, and Voice Mock Interview finished for {{ wk.title }}.</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
+                    {% if sprint.current_day > 1 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 1 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 1 Learning</div>
+                <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📄</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d1_doc if d1_doc else 'Module 1 Concepts' }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
+                {% if sprint.current_day == 1 %}
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                {% endif %}
             </div>
         </div>
-        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-            <button onclick="openReviewModal({{ wk.week_number }})" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.45rem 0.95rem; font-size: 0.82rem; border-radius: 8px;">
-                🔍 Review Performance Report
-            </button>
-            <button onclick="removeWeekProgress({{ wk.week_number }})" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.45rem 0.95rem; font-size: 0.82rem; border-radius: 8px; color: #f87171; border-color: rgba(248,113,113,0.3);">
-                🗑️ Remove / Reset Week
-            </button>
-        </div>
-    </div>
-    {% elif not wk.is_active %}
-    <div style="background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="font-weight: 700; font-size: 0.95rem; color: var(--ts-primary);">📅 Week {{ wk.week_number }}: {{ wk.title }}</div>
-            <div style="font-size: 0.8rem; color: var(--ts-text-secondary);">Click below to switch your active progression to Week {{ wk.week_number }}.</div>
-        </div>
-        <button onclick="activateWeek({{ wk.week_number }})" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.45rem 0.95rem; font-size: 0.82rem; border-radius: 8px;">
-            ▶️ Make Week {{ wk.week_number }} Active
-        </button>
-    </div>
-    {% endif %}
 
-    <div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
-        <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
-            <span>📅 Week {{ wk.week_number }} Training Schedule & Learning Outcomes</span>
-            <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click unlocked Day cards to view breakdown & PDF</span>
-        </div>
-
-        {% set wk_d1_tasks = wk.tasks.get('day1', []) %}
-        {% set wk_d2_tasks = wk.tasks.get('day2', []) %}
-        {% set wk_d3_tasks = wk.tasks.get('day3', []) %}
-        {% set wk_d4_tasks = wk.tasks.get('day4', []) %}
-
-        {% set wk_d1_doc = wk.ref_files[0] if wk.ref_files|length > 0 else '' %}
-        {% set wk_d2_doc = wk.ref_files[1] if wk.ref_files|length > 1 else (wk.ref_files[0] if wk.ref_files|length > 0 else '') %}
-        {% set wk_d3_doc = wk.ref_files[2] if wk.ref_files|length > 2 else (wk.ref_files[0] if wk.ref_files|length > 0 else '') %}
-        {% set wk_d4_doc = wk.ref_files[3] if wk.ref_files|length > 3 else (wk.ref_files[0] if wk.ref_files|length > 0 else '') %}
-
-        <div class="s-days-grid">
-            <!-- Day 1 Card -->
-            <div onclick="handleWeekDayClick({{ wk.week_number }}, 1)" 
-                 class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 1) %}completed-day{% elif wk.is_active and sprint.current_day == 1 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 1) %}<span class="s-tag s-tag-voice">✓ Done</span>
-                        {% elif wk.is_active and sprint.current_day == 1 %}<span class="s-tag s-tag-learning">Active</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 1 Learning</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                        <span>📄</span>
-                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ wk_d1_doc if wk_d1_doc else 'Module 1 Concepts' }}</span>
-                    </div>
+        <!-- Day 2 Card -->
+        <div onclick="handleDayClick(2)" 
+             class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
+                    {% if sprint.current_day > 2 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 2 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
                 </div>
-                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
-                    {% if wk.is_active and sprint.current_day == 1 %}
-                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                    {% endif %}
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 2 Learning</div>
+                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📄</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d2_doc if d2_doc else 'Module 2 Concepts' }}</span>
                 </div>
             </div>
-
-            <!-- Day 2 Card -->
-            <div onclick="handleWeekDayClick({{ wk.week_number }}, 2)" 
-                 class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 2) %}completed-day{% elif wk.is_active and sprint.current_day == 2 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 2) %}<span class="s-tag s-tag-voice">✓ Done</span>
-                        {% elif wk.is_active and sprint.current_day == 2 %}<span class="s-tag s-tag-learning">Active</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 2 Learning</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                        <span>📄</span>
-                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ wk_d2_doc if wk_d2_doc else 'Module 2 Concepts' }}</span>
-                    </div>
-                </div>
-                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
-                    {% if wk.is_active and sprint.current_day == 2 %}
-                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 3 Card -->
-            <div onclick="handleWeekDayClick({{ wk.week_number }}, 3)" 
-                 class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 3) %}completed-day{% elif wk.is_active and sprint.current_day == 3 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 3) %}<span class="s-tag s-tag-voice">✓ Done</span>
-                        {% elif wk.is_active and sprint.current_day == 3 %}<span class="s-tag s-tag-learning">Active</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 3 Learning</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                        <span>📄</span>
-                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ wk_d3_doc if wk_d3_doc else 'Module 3 Concepts' }}</span>
-                    </div>
-                </div>
-                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
-                    {% if wk.is_active and sprint.current_day == 3 %}
-                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 4 Card -->
-            <div onclick="handleWeekDayClick({{ wk.week_number }}, 4)" 
-                 class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 4) %}completed-day{% elif wk.is_active and sprint.current_day == 4 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 4) %}<span class="s-tag s-tag-voice">✓ Done</span>
-                        {% elif wk.is_active and sprint.current_day == 4 %}<span class="s-tag s-tag-learning">Active</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 4 Learning</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                        <span>📄</span>
-                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ wk_d4_doc if wk_d4_doc else 'Module 4 Concepts' }}</span>
-                    </div>
-                </div>
-                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
-                    {% if wk.is_active and sprint.current_day == 4 %}
-                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 5 Card -->
-            <div class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 5) %}completed-day{% elif wk.is_active and sprint.current_day == 5 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: #f59e0b;">Day 5</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 5) %}<span class="s-tag s-tag-voice">✓ Passed</span>
-                        {% elif wk.is_active and sprint.current_day == 5 %}<span class="s-tag s-tag-exam">Exam Ready</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 2 Gateway Exam</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Gated exam covering Days 1-4.</div>
-                </div>
-                <div style="margin-top: 0.8rem;">
-                    {% if wk.is_active and sprint.current_day == 5 %}
-                    <form action="/sprint/take_day5_exam" method="GET">
-                        <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 6 Card -->
-            <div onclick="{% if wk.is_active and sprint.current_day == 6 %}startVoiceInterview(){% endif %}" class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day > 6) %}completed-day{% elif wk.is_active and sprint.current_day == 6 %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day > 6) %}<span class="s-tag s-tag-voice">✓ Complete</span>
-                        {% elif wk.is_active and sprint.current_day == 6 %}<span class="s-tag s-tag-voice">Voice Mode</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 3 Voice Interview</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Socratic voice technical mock interview.</div>
-                </div>
-                <div style="margin-top: 0.8rem;">
-                    {% if wk.is_active and sprint.current_day == 6 %}
-                    <button onclick="event.stopPropagation(); startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Day 7 Card -->
-            <div onclick="{% if wk.is_completed or (wk.is_active and sprint.current_day >= 7) %}openRetroModal(){% endif %}" class="s-day-card {% if wk.is_completed or (wk.is_active and sprint.current_day >= 7) %}active-day{% else %}locked-day{% endif %}">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
-                        {% if wk.is_completed or (wk.is_active and sprint.current_day >= 7) %}<span class="s-tag s-tag-retro">Retro Ready</span>
-                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                    </div>
-                    <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
-                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
-                </div>
-                <div style="margin-top: 0.8rem;">
-                    {% if wk.is_completed or (wk.is_active and sprint.current_day >= 7) %}
-                    <button onclick="event.stopPropagation(); openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
-                    {% endif %}
-                </div>
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 2 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
+                {% if sprint.current_day == 2 %}
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Day 3 Card -->
+        <div onclick="handleDayClick(3)" 
+             class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
+                    {% if sprint.current_day > 3 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 3 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 3 Learning</div>
+                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📄</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d3_doc if d3_doc else 'Module 3 Concepts' }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 3 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
+                {% if sprint.current_day == 3 %}
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 4 Card -->
+        <div onclick="handleDayClick(4)" 
+             class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
+                    {% if sprint.current_day > 4 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                    {% elif sprint.current_day == 4 %}<span class="s-tag s-tag-learning">Active</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 4 Learning</div>
+                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📄</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d4_doc if d4_doc else 'Module 4 Concepts' }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 4 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
+                {% if sprint.current_day == 4 %}
+                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 5 Card -->
+        <div class="s-day-card {% if sprint.current_day == 5 %}active-day{% elif sprint.current_day > 5 %}completed-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #f59e0b;">Day 5</span>
+                    {% if sprint.current_day > 5 %}<span class="s-tag s-tag-voice">✓ Passed</span>
+                    {% elif sprint.current_day == 5 %}<span class="s-tag s-tag-exam">Exam Ready</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 2 Gateway Exam</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Gated exam covering Days 1-4.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 5 %}
+                <form action="/sprint/take_day5_exam" method="GET">
+                    <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 6 Card -->
+        <div onclick="startVoiceInterview()" class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
+                    {% if sprint.current_day > 6 %}<span class="s-tag s-tag-voice">✓ Complete</span>
+                    {% elif sprint.current_day == 6 %}<span class="s-tag s-tag-voice">Voice Mode</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 3 Voice Interview</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Socratic voice technical mock interview.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day == 6 %}
+                <button onclick="event.stopPropagation(); startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Day 7 Card -->
+        <div onclick="openRetroModal()" class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
+                    {% if sprint.current_day >= 7 %}<span class="s-tag s-tag-retro">Retro Ready</span>
+                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                </div>
+                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
+                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
+            </div>
+            <div style="margin-top: 0.8rem;">
+                {% if sprint.current_day >= 7 %}
+                <button onclick="event.stopPropagation(); openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 </div>
-{% endfor %}
 
 <!-- Modal 1: Day Details & Source Document Modal -->
 <div id="dayDetailModal" class="sp-modal-backdrop" style="display: none;">
@@ -616,196 +555,48 @@
     </div>
 </div>
 
-<!-- Modal 4: Completed Week Performance Review Modal -->
-{% for wk in weeks_list %}
-{% if wk.is_completed %}
-<div id="reviewModal_{{ wk.week_number }}" class="sp-modal-backdrop" style="display: none;">
-    <div class="sp-modal-content" style="max-width: 650px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--ts-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-            <div>
-                <span class="sp-badge sp-badge-success">✓ Week {{ wk.week_number }} Performance Report</span>
-                <div style="font-weight: 800; font-size: 1.1rem; color: var(--ts-primary); margin-top: 0.2rem;">{{ wk.title }}</div>
-            </div>
-            <button onclick="closeReviewModal({{ wk.week_number }})" style="background: none; border: none; color: var(--ts-text-secondary); cursor: pointer; font-size: 1.3rem;">✕</button>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 1rem; max-height: 400px; overflow-y: auto;">
-            {% if wk.eval_report %}
-            <div style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1rem;">
-                <div style="font-weight: 700; color: var(--ts-primary); margin-bottom: 0.5rem;">🎙️ Day 6 Voice Interview Scores & Metrics</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center; margin-bottom: 0.75rem;">
-                    <div style="background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 8px;">
-                        <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Technical</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">{{ wk.eval_report.technical_score }}%</div>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 8px;">
-                        <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Confidence</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #6366f1;">{{ wk.eval_report.confidence_score }}%</div>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 8px;">
-                        <div style="font-size: 0.72rem; color: var(--ts-text-secondary);">Pacing (WPM)</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">{{ wk.eval_report.words_per_minute|round(0)|int }}</div>
-                    </div>
-                </div>
-                <div style="font-size: 0.82rem; color: var(--ts-text); line-height: 1.4; white-space: pre-line;">
-                    <strong>Interviewer Feedback:</strong>
-                    {{ wk.eval_report.feedback_report }}
-                </div>
-            </div>
-            {% else %}
-            <div style="padding: 1rem; background: rgba(99,102,241,0.06); border-radius: 10px; font-size: 0.85rem; color: var(--ts-text-secondary);">
-                ℹ️ No voice mock interview scores recorded yet for Week {{ wk.week_number }}.
-            </div>
-            {% endif %}
-
-            {% if wk.qa_errors %}
-            <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 12px; padding: 1rem;">
-                <div style="font-weight: 700; color: #ef4444; margin-bottom: 0.5rem;">⚠️ Day 5 Exam Missed Topics (Revision List)</div>
-                {% for err in wk.qa_errors %}
-                <div style="font-size: 0.8rem; color: var(--ts-text); margin-bottom: 0.4rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    📌 <strong>Topic:</strong> {{ err.incorrect_topic }}<br>
-                    <span style="color: var(--ts-text-secondary);">Question: {{ err.exam_question_text }}</span>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <div style="font-size: 0.85rem; color: var(--ts-text-secondary);">
-                <strong>Reference Documents:</strong> {{ wk.ref_files|join(', ') if wk.ref_files else 'None' }}
-            </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
-            <button onclick="removeWeekProgress({{ wk.week_number }})" class="btn-ts btn-ts-secondary" style="width: auto; color: #f87171; border-color: rgba(248,113,113,0.3);">
-                🗑️ Remove / Reset Week
-            </button>
-            <button onclick="closeReviewModal({{ wk.week_number }})" class="btn-ts btn-ts-primary" style="width: auto;">
-                Close Review
-            </button>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endfor %}
-
 <script>
-    const WEEKS_DATA = {
-        {% for wk in weeks_list %}
-        {{ wk.week_number }}: {
-            title: {{ wk.title|tojson }},
-            tasks: {{ wk.tasks|tojson }},
-            ref_files: {{ wk.ref_files|tojson }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
+    // Safe Jinja2 data payload object
+    const SPRINT_DAYS_DATA = {
+        1: {
+            title: "Module 1 Learning",
+            tasks: {{ d1_tasks|tojson }},
+            doc: {{ d1_doc|tojson }},
+            isLocked: false,
+            isActive: {{ 'true' if sprint.current_day == 1 else 'false' }}
+        },
+        2: {
+            title: "Module 2 Learning",
+            tasks: {{ d2_tasks|tojson }},
+            doc: {{ d2_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 2 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 2 else 'false' }}
+        },
+        3: {
+            title: "Module 3 Learning",
+            tasks: {{ d3_tasks|tojson }},
+            doc: {{ d3_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 3 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 3 else 'false' }}
+        },
+        4: {
+            title: "Module 4 Learning",
+            tasks: {{ d4_tasks|tojson }},
+            doc: {{ d4_doc|tojson }},
+            isLocked: {{ 'true' if sprint.current_day < 4 else 'false' }},
+            isActive: {{ 'true' if sprint.current_day == 4 else 'false' }}
+        }
     };
 
-    function switchWeekTab(weekNum) {
-        document.querySelectorAll('.week-section-pane').forEach(el => el.style.display = 'none');
-        const target = document.getElementById('weekSection_' + weekNum);
-        if (target) target.style.display = 'block';
+    let activeModalDay = 1;
+    let activeModalDoc = '';
 
-        {% for wk in weeks_list %}
-        const btn_{{ wk.week_number }} = document.getElementById('weekTabBtn_{{ wk.week_number }}');
-        if (btn_{{ wk.week_number }}) {
-            if ({{ wk.week_number }} === weekNum) {
-                btn_{{ wk.week_number }}.classList.remove('btn-ts-secondary');
-                btn_{{ wk.week_number }}.classList.add('btn-ts-primary');
-            } else {
-                btn_{{ wk.week_number }}.classList.remove('btn-ts-primary');
-                btn_{{ wk.week_number }}.classList.add('btn-ts-secondary');
-            }
-        }
-        {% endfor %}
-    }
-
-    function handleWeekDayClick(weekNum, dayNum) {
-        const wkData = WEEKS_DATA[weekNum] || {};
-        const tasks = wkData.tasks || {};
-        const refFiles = wkData.ref_files || [];
-        
-        let dayTasks = tasks['day' + dayNum] || [];
-        let docName = (dayNum <= refFiles.length) ? refFiles[dayNum - 1] : '';
-        
-        let taskText = Array.isArray(dayTasks) ? dayTasks.join('\n\n• ') : String(dayTasks);
-        let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
-
-        activeModalDay = dayNum;
-        activeModalDoc = docName;
-
-        const titleEl = document.getElementById('dayModalTitle');
-        if (titleEl) titleEl.innerText = `Week ${weekNum} - Day ${dayNum}: Module ${dayNum} Learning`;
-
-        const contentEl = document.getElementById('dayModalContent');
-        if (contentEl) contentEl.innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
-
-        const docBox = document.getElementById('dayModalDocBox');
-        const docNameEl = document.getElementById('dayModalDocName');
-        const docLinkEl = document.getElementById('dayModalDocLink');
-
-        if (docBox && docNameEl && docLinkEl) {
-            docBox.style.display = 'block';
-            if (docName && String(docName).trim() !== '') {
-                docNameEl.innerText = docName;
-                docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
-                docLinkEl.onclick = null;
-            } else {
-                docNameEl.innerText = 'No PDF document linked for this day.';
-                docLinkEl.href = '#';
-                docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
-            }
-        }
-
-        const modal = document.getElementById('dayDetailModal');
-        if (modal) modal.style.display = 'flex';
-    }
-
-    function openReviewModal(weekNum) {
-        const modal = document.getElementById('reviewModal_' + weekNum);
-        if (modal) modal.style.display = 'flex';
-    }
-
-    function closeReviewModal(weekNum) {
-        const modal = document.getElementById('reviewModal_' + weekNum);
-        if (modal) modal.style.display = 'none';
-    }
-
-    async function removeWeekProgress(weekNum) {
-        if (!confirm(`Are you sure you want to remove/reset your progress for Week ${weekNum}?\n\nThis will clear exam scores, voice interview evaluations, and reset your active day to Day 1.`)) {
-            return;
-        }
+    function handleDayClick(dayNum) {
+        console.log("handleDayClick called for day:", dayNum);
         try {
-            const res = await fetch('/sprint/remove_week', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ week_number: weekNum })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                alert(`✓ Week ${weekNum} progress reset successfully!`);
-                window.location.href = '/sprint?week=' + weekNum;
-            } else {
-                alert('Error: ' + (data.error || 'Failed to reset week'));
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async function activateWeek(weekNum) {
-        try {
-            const res = await fetch('/sprint/switch_week', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ week_number: weekNum })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                window.location.href = '/sprint?week=' + weekNum;
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
+            const data = SPRINT_DAYS_DATA[dayNum] || {};
+            if (data.isLocked) {
+                alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
                 return;
             }
 

@@ -3803,18 +3803,6 @@ def sprint_page():
     user_role = session.get('user_role', 'trainee')
     domain = user_info.get('domain', 'general')
 
-    from src.sprints import (
-        get_sprint, get_study_plan, get_qa_errors, 
-        get_interview_evaluation, get_all_sprint_schedules, get_all_study_plans,
-        get_study_plans_by_domain
-    )
-    
-    user_sprint = get_sprint(emp_id)
-    current_week = user_sprint.get('current_week', 1)
-    current_day = user_sprint.get('current_day', 1)
-    assigned_plan_id = user_sprint.get('assigned_plan_id')
-
-    domain = user_info.get('domain', 'general')
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         c = conn.cursor()
@@ -3827,138 +3815,89 @@ def sprint_page():
         conn.close()
     except Exception:
         pass
+
+    from src.sprints import (
+        get_sprint, get_study_plan, get_qa_errors, 
+        get_interview_evaluation, get_all_sprint_schedules, get_all_study_plans
+    )
     
-    selected_week_param = request.args.get('week', type=int)
-
-    all_custom_plans = get_all_study_plans()
-
-    domain_plans = [p for p in all_custom_plans if p.get('domain', '').lower() == domain.lower()]
+    user_sprint = get_sprint(emp_id)
+    week_num = user_sprint.get('current_week', 1)
+    assigned_plan_id = user_sprint.get('assigned_plan_id')
+    study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=assigned_plan_id)
     
-    if assigned_plan_id:
-        assigned_plan = get_study_plan(plan_id=assigned_plan_id)
-        if assigned_plan and assigned_plan.get('plan_id') != 'default':
-            if not any(p.get('plan_id') == assigned_plan_id for p in domain_plans):
-                domain_plans.append(assigned_plan)
+    tasks = {}
+    try:
+        tasks = json.loads(study_plan.get('tasks_json', '{}'))
+    except Exception:
+        tasks = {}
 
-    if not domain_plans:
-        domain_plans = all_custom_plans
+    qa_errors = get_qa_errors(emp_id, week_num)
+    eval_report = get_interview_evaluation(emp_id, week_num)
+    
+    all_schedules = get_all_sprint_schedules() if user_role == 'admin' else []
+    all_plans = get_all_study_plans() if user_role == 'admin' else []
 
-    if not domain_plans:
-        domain_plans = [get_study_plan(domain=domain, week_number=1)]
+    all_docs = []
+    try:
+        from src.vectorstore import get_collection
+        coll = get_collection()
+        res = coll.get(include=["metadatas"])
+        metadatas = res.get("metadatas") or []
+        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+    except Exception:
+        all_docs = []
 
-    domain_plans = sorted(domain_plans, key=lambda p: p.get('week_number', 1))
+    ref_files = []
+    try:
+        ref_files_raw = study_plan.get('reference_files_json', '[]')
+        ref_files = json.loads(ref_files_raw) if isinstance(ref_files_raw, str) else ref_files_raw
+    except Exception:
+        ref_files = []
 
-    weeks_list = []
+    if not isinstance(ref_files, list):
+        ref_files = []
+
     import re
-
-    for plan in domain_plans:
-        w_num = plan.get('week_number', 1)
+    extracted = []
+    for day in ['day1', 'day2', 'day3', 'day4']:
+        day_t = tasks.get(day, [])
+        doc_found = ""
+        items = day_t if isinstance(day_t, list) else [day_t]
+        for item in items:
+            match = re.search(r'\[([^\]]+\.pdf)\]', str(item), re.IGNORECASE)
+            if match:
+                doc_found = match.group(1).strip()
+                break
+        extracted.append(doc_found)
+    
+    final_ref_files = []
+    for idx in range(4):
+        doc_name = ""
+        if idx < len(ref_files) and ref_files[idx]:
+            doc_name = ref_files[idx]
+        elif idx < len(extracted) and extracted[idx]:
+            doc_name = extracted[idx]
+        final_ref_files.append(doc_name)
         
-        w_tasks = {}
-        try:
-            w_tasks = json.loads(plan.get('tasks_json', '{}'))
-        except Exception:
-            w_tasks = {}
-
-        w_qa_errors = get_qa_errors(emp_id, w_num)
-        w_eval_report = get_interview_evaluation(emp_id, w_num)
-
-        w_ref_files = []
-        try:
-            rf_raw = plan.get('reference_files_json', '[]')
-            w_ref_files = json.loads(rf_raw) if isinstance(rf_raw, str) else rf_raw
-        except Exception:
-            w_ref_files = []
-
-        if not isinstance(w_ref_files, list):
-            w_ref_files = []
-
-        extracted = []
-        for day in ['day1', 'day2', 'day3', 'day4']:
-            day_t = w_tasks.get(day, [])
-            doc_found = ""
-            items = day_t if isinstance(day_t, list) else [day_t]
-            for item in items:
-                match = re.search(r'\[([^\]]+\.pdf)\]', str(item), re.IGNORECASE)
-                if match:
-                    doc_found = match.group(1).strip()
-                    break
-            extracted.append(doc_found)
-
-        final_ref_files = []
-        for idx in range(4):
-            doc_name = ""
-            if idx < len(w_ref_files) and w_ref_files[idx]:
-                doc_name = w_ref_files[idx]
-            elif idx < len(extracted) and extracted[idx]:
-                doc_name = extracted[idx]
-            final_ref_files.append(doc_name)
-
-        is_completed = (current_week > w_num) or (current_week == w_num and current_day >= 7) or bool(w_eval_report)
-        is_active = (current_week == w_num) and not is_completed
-        is_locked = (current_week < w_num)
-
-        weeks_list.append({
-            'week_number': w_num,
-            'plan': plan,
-            'title': plan.get('title', f'Week {w_num} Sprint'),
-            'tasks': w_tasks,
-            'ref_files': final_ref_files,
-            'qa_errors': w_qa_errors,
-            'eval_report': w_eval_report,
-            'is_completed': is_completed,
-            'is_active': is_active,
-            'is_locked': is_locked
-        })
-
-    active_plan = next((w['plan'] for w in weeks_list if w['week_number'] == current_week), domain_plans[0])
-    active_tasks = json.loads(active_plan.get('tasks_json', '{}')) if isinstance(active_plan.get('tasks_json'), str) else active_plan.get('tasks_json', {})
+    ref_files = final_ref_files
 
     return render_template(
         'sprint.html',
         active_page='sprint',
         sprint=user_sprint,
-        study_plan=active_plan,
-        tasks=active_tasks,
-        weeks_list=weeks_list,
-        selected_week=selected_week_param,
+        study_plan=study_plan,
+        tasks=tasks,
+        ref_files=ref_files,
+        qa_errors=qa_errors,
+        eval_report=eval_report,
+        all_schedules=all_schedules,
+        all_plans=all_plans,
+        all_docs=all_docs,
         user_role=user_role
     )
 
-@app.route('/sprint/remove_week', methods=['POST'])
-@login_required
-def sprint_remove_week():
-    user_info = session.get('user_info', {}) or {}
-    emp_id = user_info.get('employee_id', 'demo')
-    
-    data = request.get_json(silent=True) or {}
-    week_num = int(data.get('week_number', 1))
 
-    from src.sprints import clear_qa_errors, clear_interview_evaluations, update_sprint_day, update_sprint_week, update_sprint_progress
-    clear_qa_errors(emp_id, week_num)
-    clear_interview_evaluations(emp_id, week_num)
-    
-    update_sprint_week(emp_id, week_num)
-    update_sprint_day(emp_id, 1)
-    update_sprint_progress(emp_id, 0.0)
-
-    return jsonify({'status': 'success', 'message': f'Week {week_num} progress reset successfully.'})
-
-@app.route('/sprint/switch_week', methods=['POST'])
-@login_required
-def sprint_switch_week():
-    user_info = session.get('user_info', {}) or {}
-    emp_id = user_info.get('employee_id', 'demo')
-    
-    data = request.get_json(silent=True) or {}
-    week_num = int(data.get('week_number', 1))
-
-    from src.sprints import update_sprint_week, update_sprint_day, update_sprint_progress
-    update_sprint_week(emp_id, week_num)
-    update_sprint_day(emp_id, 1)
-    update_sprint_progress(emp_id, 0.0)
-
-    return jsonify({'status': 'success', 'message': f'Switched active sprint to Week {week_num}.'})
 
 @app.route('/documents/view/<path:filename>')
 @login_required
