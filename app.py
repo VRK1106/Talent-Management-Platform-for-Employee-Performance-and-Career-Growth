@@ -3430,6 +3430,9 @@ def assistant_wizard_generate():
                 except Exception as e:
                     print(f"Error parsing JSON from response: {e}. Raw response: {response}")
                     
+        from src.exams import sanitize_exam_questions
+        all_questions = sanitize_exam_questions(all_questions)
+
         import difflib
         def similarity_ratio(a, b):
             return difflib.SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
@@ -3889,85 +3892,137 @@ def sprint_page():
 
     from src.sprints import (
         get_sprint, get_study_plan, get_qa_errors, 
-        get_interview_evaluation, get_all_sprint_schedules, get_all_study_plans
+        get_interview_evaluation, get_all_sprint_schedules, get_all_study_plans,
+        get_study_plans_by_domain
     )
     
     user_sprint = get_sprint(emp_id)
-    week_num = user_sprint.get('current_week', 1)
-    assigned_plan_id = user_sprint.get('assigned_plan_id')
-    study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=assigned_plan_id)
+    current_week = user_sprint.get('current_week', 1)
+    current_day = user_sprint.get('current_day', 1)
     
-    tasks = {}
-    try:
-        tasks = json.loads(study_plan.get('tasks_json', '{}'))
-    except Exception:
-        tasks = {}
+    selected_week_param = request.args.get('week', type=int)
 
-    qa_errors = get_qa_errors(emp_id, week_num)
-    eval_report = get_interview_evaluation(emp_id, week_num)
-    
-    all_schedules = get_all_sprint_schedules() if user_role == 'admin' else []
-    all_plans = get_all_study_plans() if user_role == 'admin' else []
+    domain_plans = get_study_plans_by_domain(domain)
+    if not domain_plans:
+        domain_plans = get_all_study_plans()
+        domain_plans = [p for p in domain_plans if p.get('domain', '').lower() == domain.lower()]
 
-    all_docs = []
-    try:
-        from src.vectorstore import get_collection
-        coll = get_collection()
-        res = coll.get(include=["metadatas"])
-        metadatas = res.get("metadatas") or []
-        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
-    except Exception:
-        all_docs = []
+    if not domain_plans:
+        domain_plans = [get_study_plan(domain=domain, week_number=1)]
 
-    ref_files = []
-    try:
-        ref_files_raw = study_plan.get('reference_files_json', '[]')
-        ref_files = json.loads(ref_files_raw) if isinstance(ref_files_raw, str) else ref_files_raw
-    except Exception:
-        ref_files = []
+    domain_plans = sorted(domain_plans, key=lambda p: p.get('week_number', 1))
 
-    if not isinstance(ref_files, list):
-        ref_files = []
-
-    # Smart fallback: Extract document names directly from tasks if ref_files is missing/incomplete
+    weeks_list = []
     import re
-    extracted = []
-    for day in ['day1', 'day2', 'day3', 'day4']:
-        day_t = tasks.get(day, [])
-        doc_found = ""
-        items = day_t if isinstance(day_t, list) else [day_t]
-        for item in items:
-            match = re.search(r'\[([^\]]+\.pdf)\]', str(item), re.IGNORECASE)
-            if match:
-                doc_found = match.group(1).strip()
-                break
-        extracted.append(doc_found)
-    
-    final_ref_files = []
-    for idx in range(4):
-        doc_name = ""
-        if idx < len(ref_files) and ref_files[idx]:
-            doc_name = ref_files[idx]
-        elif idx < len(extracted) and extracted[idx]:
-            doc_name = extracted[idx]
-        final_ref_files.append(doc_name)
+
+    for plan in domain_plans:
+        w_num = plan.get('week_number', 1)
         
-    ref_files = final_ref_files
+        w_tasks = {}
+        try:
+            w_tasks = json.loads(plan.get('tasks_json', '{}'))
+        except Exception:
+            w_tasks = {}
+
+        w_qa_errors = get_qa_errors(emp_id, w_num)
+        w_eval_report = get_interview_evaluation(emp_id, w_num)
+
+        w_ref_files = []
+        try:
+            rf_raw = plan.get('reference_files_json', '[]')
+            w_ref_files = json.loads(rf_raw) if isinstance(rf_raw, str) else rf_raw
+        except Exception:
+            w_ref_files = []
+
+        if not isinstance(w_ref_files, list):
+            w_ref_files = []
+
+        extracted = []
+        for day in ['day1', 'day2', 'day3', 'day4']:
+            day_t = w_tasks.get(day, [])
+            doc_found = ""
+            items = day_t if isinstance(day_t, list) else [day_t]
+            for item in items:
+                match = re.search(r'\[([^\]]+\.pdf)\]', str(item), re.IGNORECASE)
+                if match:
+                    doc_found = match.group(1).strip()
+                    break
+            extracted.append(doc_found)
+
+        final_ref_files = []
+        for idx in range(4):
+            doc_name = ""
+            if idx < len(w_ref_files) and w_ref_files[idx]:
+                doc_name = w_ref_files[idx]
+            elif idx < len(extracted) and extracted[idx]:
+                doc_name = extracted[idx]
+            final_ref_files.append(doc_name)
+
+        is_completed = (current_week > w_num) or (current_week == w_num and current_day >= 7) or bool(w_eval_report)
+        is_active = (current_week == w_num) and not is_completed
+        is_locked = (current_week < w_num)
+
+        weeks_list.append({
+            'week_number': w_num,
+            'plan': plan,
+            'title': plan.get('title', f'Week {w_num} Sprint'),
+            'tasks': w_tasks,
+            'ref_files': final_ref_files,
+            'qa_errors': w_qa_errors,
+            'eval_report': w_eval_report,
+            'is_completed': is_completed,
+            'is_active': is_active,
+            'is_locked': is_locked
+        })
+
+    active_plan = next((w['plan'] for w in weeks_list if w['week_number'] == current_week), domain_plans[0])
+    active_tasks = json.loads(active_plan.get('tasks_json', '{}')) if isinstance(active_plan.get('tasks_json'), str) else active_plan.get('tasks_json', {})
 
     return render_template(
         'sprint.html',
         active_page='sprint',
         sprint=user_sprint,
-        study_plan=study_plan,
-        tasks=tasks,
-        ref_files=ref_files,
-        qa_errors=qa_errors,
-        eval_report=eval_report,
-        all_schedules=all_schedules,
-        all_plans=all_plans,
-        all_docs=all_docs,
+        study_plan=active_plan,
+        tasks=active_tasks,
+        weeks_list=weeks_list,
+        selected_week=selected_week_param,
         user_role=user_role
     )
+
+@app.route('/sprint/remove_week', methods=['POST'])
+@login_required
+def sprint_remove_week():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    data = request.get_json(silent=True) or {}
+    week_num = int(data.get('week_number', 1))
+
+    from src.sprints import clear_qa_errors, clear_interview_evaluations, update_sprint_day, update_sprint_week, update_sprint_progress
+    clear_qa_errors(emp_id, week_num)
+    clear_interview_evaluations(emp_id, week_num)
+    
+    update_sprint_week(emp_id, week_num)
+    update_sprint_day(emp_id, 1)
+    update_sprint_progress(emp_id, 0.0)
+
+    return jsonify({'status': 'success', 'message': f'Week {week_num} progress reset successfully.'})
+
+@app.route('/sprint/switch_week', methods=['POST'])
+@login_required
+def sprint_switch_week():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    data = request.get_json(silent=True) or {}
+    week_num = int(data.get('week_number', 1))
+
+    from src.sprints import update_sprint_week, update_sprint_day, update_sprint_progress
+    update_sprint_week(emp_id, week_num)
+    update_sprint_day(emp_id, 1)
+    update_sprint_progress(emp_id, 0.0)
+
+    return jsonify({'status': 'success', 'message': f'Switched active sprint to Week {week_num}.'})
 
 @app.route('/documents/view/<path:filename>')
 @login_required
@@ -4090,6 +4145,8 @@ def sprint_take_day5_exam():
             ]
 
         exam_title = f"{domain.capitalize()} Week {week_num} Gateway Exam"
+        from src.exams import sanitize_exam_questions
+        q_list = sanitize_exam_questions(q_list, exam_title=exam_title)
         exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam covering Week {week_num} study materials.", len(q_list) * 10, q_list)
 
     trainee_assignments = get_assignments_for_trainee(emp_id)
@@ -4198,9 +4255,11 @@ def sprint_chunk_document():
         exam_prompt += f"--- File {idx+1} ({d['source']}) ---\n{d['text'][:1500]}\n\n"
 
     exam_prompt += (
-        f"CRITICAL REQUIREMENT FOR OPTIONS:\n"
-        f"For every question, provide 4 distinct, realistic, technical answer choices derived directly from the document content.\n"
-        f"Do NOT use placeholder strings like 'Option A', 'Option B', 'Correct Concept', or 'Incorrect Option'. Every option must be a real technical concept or term from the materials.\n\n"
+        f"CRITICAL REQUIREMENTS FOR QUESTION & OPTION UNIQUENESS:\n"
+        f"1. Every single question MUST be unique and test a completely different concept from the documents. Do NOT repeat questions or question stems.\n"
+        f"2. For every question, provide 4 distinct, realistic, technical answer choices derived directly from the document content.\n"
+        f"3. Do NOT reuse the same set of option choices across different questions. Each question must have its own unique answer choices.\n"
+        f"4. Do NOT use bare placeholder strings like 'Option A', 'Option B', 'Correct Concept', or 'Incorrect Option'. Write out full technical answer choices.\n\n"
         f"You MUST return ONLY a valid JSON list of objects with no surrounding text. Structure:\n"
         f"[\n"
         f"  {{\n"
@@ -4222,43 +4281,20 @@ def sprint_chunk_document():
         print(f"Error generating exam questions: {e}")
         questions_list = []
 
-    # Clean up and sanitize question options
-    cleaned_questions = []
-    for idx, q in enumerate(questions_list):
-        if not isinstance(q, dict):
-            continue
-        opts = q.get('options', [])
-        has_placeholder = any(
-            any(ph in str(opt).lower() for ph in ['option a', 'option b', 'incorrect option', 'correct concept', 'option 1'])
-            for opt in opts
-        )
-        if len(opts) < 4 or has_placeholder:
-            opts = [
-                f"Primary Principle of {domain.capitalize()} (Module {(idx%4)+1})",
-                f"Secondary Methodology in {domain.capitalize()} (Section {(idx%4)+2})",
-                f"Alternative Standard Implementation",
-                f"Deprecating Legacy Standard Approach"
-            ]
-            q['options'] = opts
-            q['correct_answer'] = opts[0]
-        cleaned_questions.append(q)
-
-    if not cleaned_questions:
-        for i in range(target_q_count):
-            opts = [
-                f"Fundamental Standard in {domain.capitalize()} (Unit {(i%4)+1})",
-                f"Secondary Derivative Process",
-                f"Non-Standard Legacy Variant",
-                f"Unrelated System Specification"
-            ]
-            cleaned_questions.append({
-                "question": f"What is a core architectural requirement in {domain.capitalize()} Module {(i%4)+1}?",
+    if not isinstance(questions_list, list) or not questions_list:
+        questions_list = [
+            {
+                "question": f"What is a core technical requirement for {domain.capitalize()} covered in Section {i+1}?",
                 "type": "mcq",
-                "marks": 10,
-                "options": opts,
-                "correct_answer": opts[0]
-            })
-    questions_list = cleaned_questions
+                "marks": 10
+            }
+            for i in range(target_q_count)
+        ]
+
+    from src.exams import sanitize_exam_questions
+    plan_title = title_input or f"Week {week_num} ({domain.capitalize()}) AI Study Plan"
+    exam_title = f"Day 5 Gateway Exam: {plan_title}"
+    questions_list = sanitize_exam_questions(questions_list, exam_title=exam_title)
 
     plan_title = title_input or f"Week {week_num} ({domain.capitalize()}) AI Study Plan"
     exam_title = f"Day 5 Gateway Exam: {plan_title}"

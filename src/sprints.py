@@ -301,7 +301,7 @@ def save_study_plan(domain: str, week_number: int, title: str, tasks_json: str, 
         return False
 
 def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str = None) -> dict:
-    """Retrieve study plan by plan_id if provided, or latest plan for domain/week, or latest overall plan."""
+    """Retrieve study plan by plan_id if provided, or exact plan for domain/week, or default for week."""
     conn = sqlite3.connect(str(_DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -318,16 +318,12 @@ def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str =
         )
         row = cursor.fetchone()
 
-    if not row:
-        cursor.execute("SELECT * FROM weekly_study_plans ORDER BY rowid DESC")
-        row = cursor.fetchone()
-
     conn.close()
     
     if row:
         return dict(row)
         
-    # Provide a default study plan if not configured yet
+    # Provide a default study plan if not configured yet for this exact week
     import json
     default_tasks = {
         "day1": [
@@ -349,15 +345,29 @@ def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str =
     }
     
     return {
-        "plan_id": "default",
+        "plan_id": f"default_{domain.lower()}_w{week_number}",
         "domain": domain,
         "week_number": week_number,
-        "title": f"{domain.capitalize()} Study Plan",
+        "title": f"{domain.capitalize()} Week {week_number} Study Plan",
         "tasks_json": json.dumps(default_tasks),
         "day5_exam_id": "",
         "day6_interview_prompt": f"Defend the core architectural patterns and choices you made during Week {week_number}.",
         "reference_files_json": "[]"
     }
+
+def get_study_plans_by_domain(domain: str = "general") -> list[dict]:
+    """Retrieve all study plans for a specific domain ordered by week_number."""
+    conn = sqlite3.connect(str(_DB_PATH))
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM weekly_study_plans WHERE domain = ? ORDER BY week_number ASC",
+        (domain.lower(),)
+    )
+    rows = cursor.fetchall()
+    res = [dict(r) for r in rows]
+    conn.close()
+    return res
 
 def get_all_study_plans() -> list[dict]:
     """Retrieve all custom weekly study plans."""

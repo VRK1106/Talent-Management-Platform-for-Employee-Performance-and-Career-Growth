@@ -131,31 +131,88 @@ def init_exams_db() -> None:
 
 
 def sanitize_exam_questions(questions: list, exam_title: str = "") -> list:
-    """Ensure no exam options contain placeholder text like 'Correct Concept' or 'Incorrect Option'."""
+    """Ensure all exam questions and option choices are unique, contain no bare placeholders, and no two questions share identical options or text."""
     if not isinstance(questions, list):
         return []
-    
+
+    clean_title = exam_title.replace("Day 5 Gateway Exam:", "").replace("Gateway Exam:", "").replace("Combined Exam", "").strip(" ()")
+    domain = clean_title if clean_title else "Engineering"
+
+    seen_questions = set()
+    seen_option_sets = set()
     cleaned = []
-    domain = 'Metallurgy' if 'metallurgy' in exam_title.lower() else ('Physics' if 'physics' in exam_title.lower() else 'Engineering')
-    
+
     for idx, q in enumerate(questions):
         if not isinstance(q, dict):
             continue
-        opts = q.get('options', [])
-        has_placeholder = any(
-            any(ph in str(opt).lower() for ph in ['incorrect option', 'correct concept', 'option a', 'option b'])
-            for opt in opts
-        )
-        if len(opts) < 4 or has_placeholder:
-            new_opts = [
-                f"Primary Standard Specification in {domain} (Module {(idx%4)+1})",
-                f"Secondary Methodological Approach (Section {(idx%4)+2})",
-                f"Alternative Structural Implementation",
-                f"Legacy Non-Compliant Standard"
+
+        q_text = str(q.get("question", "")).strip()
+        q_type = str(q.get("type", "mcq")).lower()
+        q_marks = q.get("marks", 10)
+
+        # Check question text uniqueness
+        norm_q = q_text.lower()
+        if not norm_q or norm_q in seen_questions:
+            q_text = f"Question {idx + 1}: What is a key technical requirement for {domain} in Topic {idx + 1}?"
+            norm_q = q_text.lower()
+
+        if norm_q in seen_questions:
+            q_text = f"{q_text} (Variant {idx + 1})"
+            norm_q = q_text.lower()
+
+        seen_questions.add(norm_q)
+
+        opts = q.get("options", [])
+        if not isinstance(opts, list):
+            opts = []
+
+        cleaned_opts = []
+        for opt in opts:
+            opt_str = str(opt).strip()
+            opt_lower = opt_str.lower()
+            is_bare_placeholder = opt_lower in [
+                "option a", "option b", "option c", "option d",
+                "option 1", "option 2", "option 3", "option 4",
+                "correct concept", "incorrect option"
             ]
-            q['options'] = new_opts
-            q['correct_answer'] = new_opts[0]
-        cleaned.append(q)
+            if opt_str and not is_bare_placeholder and opt_str not in cleaned_opts:
+                cleaned_opts.append(opt_str)
+
+        # If options are fewer than 4 or contained placeholders, create unique options for this question
+        if len(cleaned_opts) < 4:
+            cleaned_opts = [
+                f"Primary Standard Specification for {domain} (Part {idx + 1}.1)",
+                f"Secondary Methodological Approach (Part {idx + 1}.2)",
+                f"Alternative Operational Variant (Part {idx + 1}.3)",
+                f"Legacy Non-Compliant Standard (Part {idx + 1}.4)"
+            ]
+
+        # Ensure option sets are unique across questions
+        opt_key = "||".join(sorted(o.lower() for o in cleaned_opts))
+        if opt_key in seen_option_sets:
+            cleaned_opts = [
+                f"{cleaned_opts[0]} [Spec {idx + 1}-A]",
+                f"{cleaned_opts[1]} [Spec {idx + 1}-B]",
+                f"{cleaned_opts[2]} [Spec {idx + 1}-C]",
+                f"{cleaned_opts[3]} [Spec {idx + 1}-D]"
+            ]
+            opt_key = "||".join(sorted(o.lower() for o in cleaned_opts))
+
+        seen_option_sets.add(opt_key)
+
+        correct_ans = str(q.get("correct_answer", "")).strip()
+        if correct_ans not in cleaned_opts:
+            correct_ans = cleaned_opts[0]
+
+        cleaned.append({
+            "question": q_text,
+            "type": q_type,
+            "marks": q_marks,
+            "options": cleaned_opts,
+            "correct_answer": correct_ans,
+            "section": q.get("section", "General")
+        })
+
     return cleaned
 
 

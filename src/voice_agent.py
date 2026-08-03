@@ -220,6 +220,7 @@ def execute_agent_action(command_dict: dict) -> str:
                 if not isinstance(questions, list):
                     raise ValueError("Response is not a JSON list")
                 
+                questions = sanitize_exam_questions(questions, title)
                 for q in questions:
                     q["section"] = "Combined Section"
                 
@@ -318,8 +319,12 @@ def execute_agent_action(command_dict: dict) -> str:
             exam_prompt = (
                 f"Generate an exam based on the following training materials for {domain.capitalize()} Week {week_num}.\n"
                 f"Generate EXACTLY {target_q_count} multiple-choice questions.\n"
-                f"CRITICAL: For every question, provide 4 distinct technical options. No placeholders.\n"
-                f"Output ONLY a valid JSON list of objects.\n"
+                f"CRITICAL REQUIREMENTS FOR QUESTION & OPTION UNIQUENESS:\n"
+                f"1. Every single question MUST be unique and test a completely different concept from the documents. Do NOT repeat questions or question stems.\n"
+                f"2. For every question, provide 4 distinct, realistic, technical answer choices derived directly from the document content.\n"
+                f"3. Do NOT reuse the same set of option choices across different questions. Each question must have its own unique answer choices.\n"
+                f"4. Do NOT use bare placeholder strings like 'Option A', 'Option B', 'Correct Concept', or 'Incorrect Option'. Write out full technical answer choices.\n\n"
+                f"You MUST return ONLY a valid JSON list of objects with no surrounding text.\n"
             )
             for idx, d in enumerate(docs_contents):
                 exam_prompt += f"--- File {idx+1} ({d['source']}) ---\n{d['text'][:1000]}\n\n"
@@ -332,40 +337,19 @@ def execute_agent_action(command_dict: dict) -> str:
             except Exception:
                 questions_list = []
 
-            cleaned_questions = []
-            for idx, q in enumerate(questions_list):
-                if not isinstance(q, dict):
-                    continue
-                opts = q.get('options', [])
-                has_placeholder = any(any(ph in str(opt).lower() for ph in ['option a', 'option b', 'incorrect option', 'correct concept']) for opt in opts)
-                if len(opts) < 4 or has_placeholder:
-                    opts = [
-                        f"Primary Standard in {domain.capitalize()} (Module {(idx%4)+1})",
-                        f"Secondary Methodology (Section {(idx%4)+2})",
-                        f"Alternative Implementation Choice",
-                        f"Legacy Non-Compliant Standard"
-                    ]
-                    q['options'] = opts
-                    q['correct_answer'] = opts[0]
-                cleaned_questions.append(q)
-
-            if not cleaned_questions:
-                for i in range(target_q_count):
-                    opts = [
-                        f"Core Principle in {domain.capitalize()} (Unit {(i%4)+1})",
-                        f"Secondary Process Variant",
-                        f"Non-Compliant Legacy Specification",
-                        f"Unrelated System Property"
-                    ]
-                    cleaned_questions.append({
-                        "question": f"What is a key architectural requirement in {domain.capitalize()} Module {(i%4)+1}?",
+            if not isinstance(questions_list, list) or not questions_list:
+                questions_list = [
+                    {
+                        "question": f"What is a key technical requirement for {domain.capitalize()} covered in Topic {i+1}?",
                         "type": "mcq",
-                        "marks": 10,
-                        "options": opts,
-                        "correct_answer": opts[0]
-                    })
+                        "marks": 10
+                    }
+                    for i in range(target_q_count)
+                ]
 
             exam_title = f"Day 5 Gateway Exam: {plan_title}"
+            cleaned_questions = sanitize_exam_questions(questions_list, exam_title=exam_title)
+
             total_marks = len(cleaned_questions) * 10
             exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam for {plan_title}.", total_marks, cleaned_questions)
             if exam_id:
