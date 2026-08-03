@@ -263,6 +263,73 @@ def broadcast_announcement(title: str, content: str) -> None:
     thread.start()
 
 
+def send_study_plan_assignment_email(emails: list[str], plan_title: str, domain: str, week_number: int) -> None:
+    """Send an email notification to assigned trainees when a new study plan is assigned."""
+    if not emails:
+        return
+        
+    from flask import has_request_context, request
+    from src.exams import get_system_setting
+
+    if get_system_setting("email_notifications_enabled", "true").lower() != "true":
+        return
+
+    app_url = os.getenv("APP_URL", "")
+    if not app_url:
+        if has_request_context():
+            forwarded_host = request.headers.get("X-Forwarded-Host")
+            scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+            if forwarded_host:
+                app_url = f"{scheme}://{forwarded_host}"
+            else:
+                app_url = request.url_root.rstrip('/')
+        else:
+            app_url = "http://127.0.0.1:5000"
+
+    sprint_url = f"{app_url.rstrip('/')}/sprint"
+    subject = f"📚 New Study Plan Assigned: {plan_title} (Week {week_number})"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }}
+            .card {{ background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; max-width: 600px; margin: auto; }}
+            .header {{ font-size: 20px; font-weight: bold; color: #6366f1; margin-bottom: 12px; }}
+            .badge {{ background: rgba(99,102,241,0.15); color: #6366f1; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; margin-bottom: 16px; }}
+            .btn {{ display: inline-block; background-color: #6366f1; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">📚 New Study Plan Assigned</div>
+            <div class="badge">{domain.capitalize()} &middot; Week {week_number}</div>
+            <p>You have been assigned a new AI-orchestrated Agile Sprint Study Plan:</p>
+            <h3 style="color: #f8fafc; margin-top: 8px;">{plan_title}</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Log into your dashboard to access your day-by-day learning modules, source documents, Day 5 Gateway Exam, and Day 6 Voice Interview.</p>
+            <a href="{sprint_url}" class="btn">🚀 Start Study Plan Now</a>
+        </div>
+    </body>
+    </html>
+    """
+
+    text_body = f"""New Study Plan Assigned: {plan_title} (Week {week_number})
+
+Domain: {domain.capitalize()}
+Week Number: {week_number}
+
+Log in to start your learning sprint: {sprint_url}
+"""
+
+    thread = threading.Thread(
+        target=_send_email_async,
+        args=(subject, html_body, text_body, emails),
+        daemon=True
+    )
+    thread.start()
+
+
 def send_user_credentials(email: str, name: str, employee_id: str, password_plain: str) -> None:
     """Send an onboarding email containing the user's new login credentials in a background thread."""
     from flask import has_request_context, request

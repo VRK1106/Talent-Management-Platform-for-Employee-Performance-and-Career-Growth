@@ -3855,27 +3855,50 @@ def study_plans_assign():
         else:
             user_ids = [single_user]
 
-    from src.sprints import assign_study_plan_to_user
+    from src.sprints import assign_study_plan_to_user, get_study_plan
     count = 0
+    assigned_emails = []
 
-    if assign_all:
-        try:
-            conn = sqlite3.connect(str(_DB_PATH))
-            c = conn.cursor()
-            c.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
-            trainee_ids = [r[0] for r in c.fetchall()]
-            conn.close()
-            for u_id in trainee_ids:
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        c = conn.cursor()
+
+        if assign_all:
+            c.execute("SELECT employee_id, email FROM users WHERE role = 'trainee'")
+            trainees = c.fetchall()
+            for u_id, email in trainees:
                 if assign_study_plan_to_user(u_id, plan_id):
                     count += 1
-        except Exception as e:
-            print(f"Error assigning all trainees: {e}")
-    else:
-        if isinstance(user_ids, str):
-            user_ids = [user_ids]
-        for u_id in user_ids:
-            if assign_study_plan_to_user(u_id, plan_id):
-                count += 1
+                    if email:
+                        assigned_emails.append(email)
+        else:
+            if isinstance(user_ids, str):
+                user_ids = [user_ids]
+            for u_id in user_ids:
+                if assign_study_plan_to_user(u_id, plan_id):
+                    count += 1
+                    c.execute("SELECT email FROM users WHERE employee_id = ?", (u_id,))
+                    row = c.fetchone()
+                    if row and row[0]:
+                        assigned_emails.append(row[0])
+        
+        conn.close()
+    except Exception as e:
+        print(f"Error assigning trainees: {e}")
+
+    # Send Email Notifications to Assigned Trainees
+    try:
+        plan = get_study_plan(plan_id=plan_id)
+        if plan and assigned_emails:
+            from src.mail import send_study_plan_assignment_email
+            send_study_plan_assignment_email(
+                emails=assigned_emails,
+                plan_title=plan.get('title', 'Agile Study Plan'),
+                domain=plan.get('domain', 'General'),
+                week_number=plan.get('week_number', 1)
+            )
+    except Exception as mail_err:
+        print(f"Error sending assignment email: {mail_err}")
 
     return jsonify({'status': 'success', 'assigned_count': count})
 
@@ -3899,13 +3922,36 @@ def sprint_page():
     user_sprint = get_sprint(emp_id)
     current_week = user_sprint.get('current_week', 1)
     current_day = user_sprint.get('current_day', 1)
+    assigned_plan_id = user_sprint.get('assigned_plan_id')
+
+    domain = user_info.get('domain', 'general')
+    try:
+        conn = sqlite3.connect(str(_DB_PATH))
+        c = conn.cursor()
+        c.execute("SELECT domain FROM users WHERE employee_id = ?", (emp_id,))
+        r = c.fetchone()
+        if r and r[0]:
+            domain = r[0]
+            if isinstance(session.get('user_info'), dict):
+                session['user_info']['domain'] = domain
+        conn.close()
+    except Exception:
+        pass
     
     selected_week_param = request.args.get('week', type=int)
 
-    domain_plans = get_study_plans_by_domain(domain)
+    all_custom_plans = get_all_study_plans()
+
+    domain_plans = [p for p in all_custom_plans if p.get('domain', '').lower() == domain.lower()]
+    
+    if assigned_plan_id:
+        assigned_plan = get_study_plan(plan_id=assigned_plan_id)
+        if assigned_plan and assigned_plan.get('plan_id') != 'default':
+            if not any(p.get('plan_id') == assigned_plan_id for p in domain_plans):
+                domain_plans.append(assigned_plan)
+
     if not domain_plans:
-        domain_plans = get_all_study_plans()
-        domain_plans = [p for p in domain_plans if p.get('domain', '').lower() == domain.lower()]
+        domain_plans = all_custom_plans
 
     if not domain_plans:
         domain_plans = [get_study_plan(domain=domain, week_number=1)]

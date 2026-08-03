@@ -431,10 +431,21 @@ def delete_study_plan(plan_id: str) -> bool:
         return False
 
 def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
-    """Assign a specific study plan to a trainee user, creating schedule row if needed."""
+    """Assign a specific study plan to a trainee user, updating domain and schedule row."""
     try:
         conn = sqlite3.connect(str(_DB_PATH))
         cursor = conn.cursor()
+        
+        # Get plan details to retrieve domain and week_number
+        cursor.execute("SELECT domain, week_number FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        plan_row = cursor.fetchone()
+        plan_domain = plan_row[0] if plan_row else None
+        plan_week = plan_row[1] if plan_row else 1
+        
+        # Update user's domain in users table if plan_domain is set
+        if plan_domain:
+            cursor.execute("UPDATE users SET domain = ? WHERE employee_id = ?", (plan_domain, user_id))
+
         cursor.execute("PRAGMA table_info(sprint_schedules)")
         cols = [r[1] for r in cursor.fetchall()]
         if "assigned_plan_id" not in cols:
@@ -445,20 +456,20 @@ def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
             cursor.execute(
                 """
                 UPDATE sprint_schedules 
-                SET assigned_plan_id = ?, current_day = 1, sprint_progress = 0.0, last_updated = CURRENT_TIMESTAMP 
+                SET assigned_plan_id = ?, current_week = ?, current_day = 1, sprint_progress = 0.0, last_updated = CURRENT_TIMESTAMP 
                 WHERE user_id = ?
                 """,
-                (plan_id, user_id)
+                (plan_id, plan_week, user_id)
             )
         else:
             cursor.execute(
-                "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, 1, 1, 0.0, ?)",
-                (str(uuid.uuid4()), user_id, plan_id)
+                "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, ?, 1, 0.0, ?)",
+                (str(uuid.uuid4()), user_id, plan_week, plan_id)
             )
         
-        # Clear prior QA errors and interview evaluations so trainee starts clean on new plan
-        cursor.execute("DELETE FROM qa_errors WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM interview_evaluations WHERE user_id = ?", (user_id,))
+        # Clear prior QA errors and interview evaluations for this week so trainee starts clean
+        cursor.execute("DELETE FROM qa_errors WHERE user_id = ? AND week_number = ?", (user_id, plan_week))
+        cursor.execute("DELETE FROM interview_evaluations WHERE user_id = ? AND week_number = ?", (user_id, plan_week))
         conn.commit()
         conn.close()
         return True
