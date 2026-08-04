@@ -3,6 +3,7 @@
 {% block title %}Agile Study Plan Syllabus - Talent Sphere Elevate{% endblock %}
 
 {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
     .s-days-grid {
         display: grid;
@@ -52,6 +53,33 @@
     .s-tag-exam { background: rgba(251, 191, 36, 0.15); color: #f59e0b; }
     .s-tag-voice { background: rgba(52, 211, 153, 0.15); color: #10b981; }
     .s-tag-retro { background: rgba(167, 139, 250, 0.15); color: #8b5cf6; }
+
+    /* Smooth Glitch-Free Transitions */
+    .fade-workspace-transition {
+        animation: fadeInWorkspace 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes fadeInWorkspace {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    #wsGridContainer {
+        transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #wsPdfPane {
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .btn-ts {
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .btn-ts:active {
+        transform: scale(0.97);
+    }
 
     /* Modals */
     .sp-modal-backdrop {
@@ -158,201 +186,295 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Header -->
-<div class="ts-hero" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; color: var(--ts-primary);">
-                Study Plan Syllabus &middot; Agile 6-Day Sprint
+<!-- WEEK PLAN ASSIGNMENTS BAR (MINIMAL) -->
+{% if week_plans_summary %}
+<div class="ts-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--ts-text-secondary); margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between;">
+        <span>📚 WEEK PLAN ASSIGNMENTS</span>
+        <span style="font-size: 0.75rem; color: var(--ts-text-secondary); font-weight: 500;">Complete prior weeks to unlock subsequent plans</span>
+    </div>
+    <div style="display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.2rem;">
+        {% for wp in week_plans_summary %}
+        <div 
+            {% if not wp.is_locked %}
+            onclick="window.location.href='/sprint?week={{ wp.week_number }}'"
+            {% else %}
+            onclick="alert('🔒 Week {{ wp.week_number }} is locked!\n\nPlease complete Week {{ wp.week_number - 1 }} commitments first to access this study plan.')"
+            {% endif %}
+            style="min-width: 175px; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid {% if wp.week_number == view_week_num %}var(--ts-primary){% else %}var(--ts-border){% endif %}; background: {% if wp.week_number == view_week_num %}rgba(99, 102, 241, 0.08){% elif wp.is_locked %}rgba(0,0,0,0.2){% else %}var(--ts-card-bg){% endif %}; opacity: {% if wp.is_locked %}0.55{% else %}1{% endif %}; cursor: {% if wp.is_locked %}not-allowed{% else %}pointer{% endif %}; transition: all 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: {% if wp.is_locked %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %};">Week {{ wp.week_number }}</span>
+                {% if wp.is_locked %}
+                <span class="s-tag" style="background: rgba(255,255,255,0.06); color: var(--ts-text-secondary);">🔒 Locked</span>
+                {% elif wp.is_current %}
+                <span class="s-tag s-tag-learning">Active</span>
+                {% else %}
+                <span class="s-tag s-tag-voice">Unlocked</span>
+                {% endif %}
             </div>
-            <div class="ts-hero-title" style="margin-top: 0.2rem;">
-                {{ study_plan.title if study_plan else 'Python Engineering Sprint' }}
-            </div>
-            <div class="ts-hero-subtitle">
-                Master sequential day-by-day learning modules, pass Day 5 Gateway Exam, and defend your architecture in Day 6 Voice Interview.
+            <div style="font-size: 0.82rem; font-weight: 700; color: var(--ts-text); margin-top: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ wp.title }}
             </div>
         </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
-        <div style="text-align: right; background: var(--ts-card-bg); border: 1px solid var(--ts-border); border-radius: 12px; padding: 0.75rem 1.25rem;">
-            <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Sprint Progression</div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-primary);">Day {{ sprint.current_day }} of 6</div>
-            <div style="width: 120px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; margin-top: 0.3rem;">
-                <div style="width: {{ sprint.sprint_progress }}%; height: 100%; background: var(--ts-primary);"></div>
+<!-- WEEK OVERVIEW CONTAINER -->
+<div id="weekOverviewContainer">
+    <!-- Hero Header -->
+    <div class="ts-hero" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; color: var(--ts-primary);">
+                    Study Plan Syllabus &middot; Agile 6-Day Sprint
+                </div>
+                <div class="ts-hero-title" style="margin-top: 0.2rem;">
+                    {{ study_plan.title if study_plan else 'Python Engineering Sprint' }}
+                </div>
+                <div class="ts-hero-subtitle">
+                    Master sequential day-by-day learning modules, pass Day 5 Gateway Exam, and defend your architecture in Day 6 Voice Interview.
+                </div>
             </div>
+
+            <div style="text-align: right; background: var(--ts-card-bg); border: 1px solid var(--ts-border); border-radius: 12px; padding: 0.75rem 1.25rem;">
+                <div style="font-size: 0.78rem; color: var(--ts-text-secondary);">Sprint Progression</div>
+                <div style="font-size: 1.2rem; font-weight: 800; color: var(--ts-primary);">Day {{ sprint.current_day }} of 6</div>
+                <div style="width: 120px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; margin-top: 0.3rem;">
+                    <div style="width: {{ sprint.sprint_progress }}%; height: 100%; background: var(--ts-primary);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WEEK SYLLABUS GRID -->
+    <div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
+        <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <span>📅 Week {{ view_week_num }} Training Schedule & Learning Outcomes</span>
+            <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click unlocked Day cards for full-page workspace view & source PDF</span>
+        </div>
+
+        {% set d1_tasks = tasks.get('day1', []) %}
+        {% set d2_tasks = tasks.get('day2', []) %}
+        {% set d3_tasks = tasks.get('day3', []) %}
+        {% set d4_tasks = tasks.get('day4', []) %}
+
+        {% set d1_doc = ref_files[0] if ref_files|length > 0 else '' %}
+        {% set d2_doc = ref_files[1] if ref_files|length > 1 else (ref_files[0] if ref_files|length > 0 else '') %}
+        {% set d3_doc = ref_files[2] if ref_files|length > 2 else (ref_files[0] if ref_files|length > 0 else '') %}
+        {% set d4_doc = ref_files[3] if ref_files|length > 3 else (ref_files[0] if ref_files|length > 0 else '') %}
+
+        <div class="s-days-grid">
+            
+            <!-- Day 1 Card -->
+            <div onclick="handleDayClick(1)" 
+                 class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
+                        {% if sprint.current_day > 1 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                        {% elif sprint.current_day == 1 %}<span class="s-tag s-tag-learning">Active</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 1 Learning</div>
+                    <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                        <span>📄</span>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d1_doc if d1_doc else 'Module 1 Concepts' }}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 Open Full Page View</span>
+                    {% if sprint.current_day == 1 %}
+                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 2 Card -->
+            <div onclick="handleDayClick(2)" 
+                 class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
+                        {% if sprint.current_day > 2 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                        {% elif sprint.current_day == 2 %}<span class="s-tag s-tag-learning">Active</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 2 Learning</div>
+                    <div style="font-size: 0.75rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                        <span>📄</span>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d2_doc if d2_doc else 'Module 2 Concepts' }}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.72rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 2 %}🔒 Locked{% else %}🔍 Open Full Page View{% endif %}</span>
+                    {% if sprint.current_day == 2 %}
+                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 3 Card -->
+            <div onclick="handleDayClick(3)" 
+                 class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
+                        {% if sprint.current_day > 3 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                        {% elif sprint.current_day == 3 %}<span class="s-tag s-tag-learning">Active</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 3 Learning</div>
+                    <div style="font-size: 0.75rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                        <span>📄</span>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d3_doc if d3_doc else 'Module 3 Concepts' }}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.72rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 3 %}🔒 Locked{% else %}🔍 Open Full Page View{% endif %}</span>
+                    {% if sprint.current_day == 3 %}
+                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 4 Card -->
+            <div onclick="handleDayClick(4)" 
+                 class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
+                        {% if sprint.current_day > 4 %}<span class="s-tag s-tag-voice">✓ Done</span>
+                        {% elif sprint.current_day == 4 %}<span class="s-tag s-tag-learning">Active</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 4 Learning</div>
+                    <div style="font-size: 0.75rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                        <span>📄</span>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d4_doc if d4_doc else 'Module 4 Concepts' }}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.72rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 4 %}🔒 Locked{% else %}🔍 Open Full Page View{% endif %}</span>
+                    {% if sprint.current_day == 4 %}
+                    <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 5 Card -->
+            <div onclick="handleDayClick(5)" class="s-day-card {% if sprint.current_day == 5 %}active-day{% elif sprint.current_day > 5 %}completed-day{% else %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: #f59e0b;">Day 5</span>
+                        {% if sprint.current_day > 5 %}<span class="s-tag s-tag-voice">✓ Passed</span>
+                        {% elif sprint.current_day == 5 %}<span class="s-tag s-tag-exam">Exam Ready</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 2 Gateway Exam</div>
+                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Gated exam covering Days 1-4.</div>
+                </div>
+                <div style="margin-top: 0.8rem;">
+                    {% if sprint.current_day == 5 %}
+                    <form action="/sprint/take_day5_exam" method="GET">
+                        <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 6 Card -->
+            <div onclick="handleDayClick(6)" class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
+                        {% if sprint.current_day > 6 %}<span class="s-tag s-tag-voice">✓ Complete</span>
+                        {% elif sprint.current_day == 6 %}<span class="s-tag s-tag-voice">Voice Mode</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 3 Voice Interview</div>
+                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Socratic voice technical mock interview.</div>
+                </div>
+                <div style="margin-top: 0.8rem;">
+                    {% if sprint.current_day == 6 %}
+                    <button onclick="event.stopPropagation(); startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Day 7 Card -->
+            <div onclick="handleDayClick(7)" class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
+                        {% if sprint.current_day >= 7 %}<span class="s-tag s-tag-retro">Retro Ready</span>
+                        {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
+                    <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
+                </div>
+                <div style="margin-top: 0.8rem;">
+                    {% if sprint.current_day >= 7 %}
+                    <button onclick="event.stopPropagation(); openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- WEEK 1 SYLLABUS GRID -->
-<div class="ts-card" style="margin-bottom: 2rem; padding: 1.25rem;">
-    <div style="font-size: 1.0rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-        <span>📅 Week 1 Training Schedule & Learning Outcomes</span>
-        <span style="font-size: 0.78rem; font-weight: 500; color: var(--ts-text-secondary);">💡 Click unlocked Day cards to open topic breakdown & source PDF files</span>
+<!-- FULL PAGE DAY WORKSPACE CONTAINER -->
+<div id="fullPageDayWorkspace" style="display: none; margin-bottom: 2rem;">
+    <!-- Minimal Top Header / Navigation Bar -->
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; border-radius: 12px; background: var(--ts-card-bg); border: 1px solid var(--ts-border); margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <button onclick="closeDayWorkspace()" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;">
+                ← Back to Syllabus
+            </button>
+            <div>
+                <span id="wsDayTag" class="s-tag s-tag-learning" style="font-size: 0.7rem;">Day Workspace</span>
+                <div id="wsDayTitle" style="font-weight: 800; font-size: 1.1rem; color: var(--ts-text); margin-top: 0.1rem;">Day 1: Module 1 Learning</div>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="wsPrevBtn" onclick="navigateDayWorkspace(-1)" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.78rem;">← Prev</button>
+            <button id="wsNextBtn" onclick="navigateDayWorkspace(1)" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.78rem;">Next →</button>
+            <button id="wsTogglePdfBtn" onclick="toggleWorkspacePdf()" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem;">
+                📄 Toggle PDF Reader
+            </button>
+        </div>
     </div>
 
-    {% set d1_tasks = tasks.get('day1', []) %}
-    {% set d2_tasks = tasks.get('day2', []) %}
-    {% set d3_tasks = tasks.get('day3', []) %}
-    {% set d4_tasks = tasks.get('day4', []) %}
-
-    {% set d1_doc = ref_files[0] if ref_files|length > 0 else '' %}
-    {% set d2_doc = ref_files[1] if ref_files|length > 1 else (ref_files[0] if ref_files|length > 0 else '') %}
-    {% set d3_doc = ref_files[2] if ref_files|length > 2 else (ref_files[0] if ref_files|length > 0 else '') %}
-    {% set d4_doc = ref_files[3] if ref_files|length > 3 else (ref_files[0] if ref_files|length > 0 else '') %}
-
-    <div class="s-days-grid">
+    <!-- Main Split Workspace View (Expands to 100% full width for Custom Text mode) -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: start;" id="wsGridContainer">
         
-        <!-- Day 1 Card -->
-        <div onclick="handleDayClick(1)" 
-             class="s-day-card {% if sprint.current_day == 1 %}active-day{% elif sprint.current_day > 1 %}completed-day{% else %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 1</span>
-                    {% if sprint.current_day > 1 %}<span class="s-tag s-tag-voice">✓ Done</span>
-                    {% elif sprint.current_day == 1 %}<span class="s-tag s-tag-learning">Active</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 1 Learning</div>
-                <div style="font-size: 0.75rem; color: var(--ts-primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                    <span>📄</span>
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d1_doc if d1_doc else 'Module 1 Concepts' }}</span>
-                </div>
+        <!-- Left Pane: Topics & Day Actions -->
+        <div class="ts-card" style="padding: 1.25rem;">
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--ts-primary); margin-bottom: 0.75rem;">📌 Learning Objectives & Breakdown</div>
+            <div id="wsTopicsContent" style="color: var(--ts-text-secondary); font-size: 0.88rem; line-height: 1.6; min-height: 160px; white-space: pre-line;">
+                Loading topics...
             </div>
-            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.72rem; color: var(--ts-primary); font-weight: 600;">🔍 View & Read PDF</span>
-                {% if sprint.current_day == 1 %}
-                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                {% endif %}
+
+            <!-- Dynamic Action Feature Section per Day -->
+            <div id="wsActionSection" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--ts-border);">
+                <!-- Populated dynamically based on day -->
             </div>
         </div>
 
-        <!-- Day 2 Card -->
-        <div onclick="handleDayClick(2)" 
-             class="s-day-card {% if sprint.current_day == 2 %}active-day{% elif sprint.current_day > 2 %}completed-day{% elif sprint.current_day < 2 %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 2</span>
-                    {% if sprint.current_day > 2 %}<span class="s-tag s-tag-voice">✓ Done</span>
-                    {% elif sprint.current_day == 2 %}<span class="s-tag s-tag-learning">Active</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 2 Learning</div>
-                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                    <span>📄</span>
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d2_doc if d2_doc else 'Module 2 Concepts' }}</span>
+        <!-- Right Pane: Embedded In-Page PDF Reader (Visible only when valid PDF is attached) -->
+        <div id="wsPdfPane" class="ts-card" style="padding: 1rem; display: none; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--ts-border);">
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--ts-text); display: flex; align-items: center; gap: 0.4rem;">
+                    <span>📄 Reference Document:</span>
+                    <span id="wsPdfTitle" style="color: var(--ts-primary); font-weight: 600;">document.pdf</span>
                 </div>
             </div>
-            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 2 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 2 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
-                {% if sprint.current_day == 2 %}
-                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Day 3 Card -->
-        <div onclick="handleDayClick(3)" 
-             class="s-day-card {% if sprint.current_day == 3 %}active-day{% elif sprint.current_day > 3 %}completed-day{% elif sprint.current_day < 3 %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 3</span>
-                    {% if sprint.current_day > 3 %}<span class="s-tag s-tag-voice">✓ Done</span>
-                    {% elif sprint.current_day == 3 %}<span class="s-tag s-tag-learning">Active</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 3 Learning</div>
-                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                    <span>📄</span>
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d3_doc if d3_doc else 'Module 3 Concepts' }}</span>
-                </div>
-            </div>
-            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 3 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 3 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
-                {% if sprint.current_day == 3 %}
-                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Day 4 Card -->
-        <div onclick="handleDayClick(4)" 
-             class="s-day-card {% if sprint.current_day == 4 %}active-day{% elif sprint.current_day > 4 %}completed-day{% elif sprint.current_day < 4 %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: var(--ts-primary);">Day 4</span>
-                    {% if sprint.current_day > 4 %}<span class="s-tag s-tag-voice">✓ Done</span>
-                    {% elif sprint.current_day == 4 %}<span class="s-tag s-tag-learning">Active</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.3rem;">Module 4 Learning</div>
-                <div style="font-size: 0.75rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                    <span>📄</span>
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ d4_doc if d4_doc else 'Module 4 Concepts' }}</span>
-                </div>
-            </div>
-            <div style="margin-top: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.72rem; color: {% if sprint.current_day < 4 %}var(--ts-text-secondary){% else %}var(--ts-primary){% endif %}; font-weight: 600;">{% if sprint.current_day < 4 %}🔒 Locked{% else %}🔍 View & Read PDF{% endif %}</span>
-                {% if sprint.current_day == 4 %}
-                <button onclick="event.stopPropagation(); advanceSprintDay();" class="btn-ts btn-ts-primary" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; width: auto;">✓ Done</button>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Day 5 Card -->
-        <div class="s-day-card {% if sprint.current_day == 5 %}active-day{% elif sprint.current_day > 5 %}completed-day{% else %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: #f59e0b;">Day 5</span>
-                    {% if sprint.current_day > 5 %}<span class="s-tag s-tag-voice">✓ Passed</span>
-                    {% elif sprint.current_day == 5 %}<span class="s-tag s-tag-exam">Exam Ready</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 2 Gateway Exam</div>
-                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Gated exam covering Days 1-4.</div>
-            </div>
-            <div style="margin-top: 0.8rem;">
-                {% if sprint.current_day == 5 %}
-                <form action="/sprint/take_day5_exam" method="GET">
-                    <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important;">🚀 Start Exam</button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Day 6 Card -->
-        <div onclick="startVoiceInterview()" class="s-day-card {% if sprint.current_day == 6 %}active-day{% elif sprint.current_day > 6 %}completed-day{% else %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: #10b981;">Day 6</span>
-                    {% if sprint.current_day > 6 %}<span class="s-tag s-tag-voice">✓ Complete</span>
-                    {% elif sprint.current_day == 6 %}<span class="s-tag s-tag-voice">Voice Mode</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 3 Voice Interview</div>
-                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Socratic voice technical mock interview.</div>
-            </div>
-            <div style="margin-top: 0.8rem;">
-                {% if sprint.current_day == 6 %}
-                <button onclick="event.stopPropagation(); startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #10b981; border-color: #10b981; color: #000 !important;">🎙️ Start Interview</button>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Day 7 Card -->
-        <div onclick="openRetroModal()" class="s-day-card {% if sprint.current_day >= 7 %}active-day{% else %}locked-day{% endif %}">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                    <span style="font-weight: 800; font-size: 0.9rem; color: #8b5cf6;">Day 7</span>
-                    {% if sprint.current_day >= 7 %}<span class="s-tag s-tag-retro">Retro Ready</span>
-                    {% else %}<span style="font-size: 0.72rem; color: var(--ts-text-secondary);">🔒 Locked</span>{% endif %}
-                </div>
-                <div style="font-weight: 700; font-size: 0.82rem; color: var(--ts-text); margin-bottom: 0.2rem;">Phase 4 Performance Retro</div>
-                <div style="font-size: 0.75rem; color: var(--ts-text-secondary); line-height: 1.3;">Analytical score & revision guide.</div>
-            </div>
-            <div style="margin-top: 0.8rem;">
-                {% if sprint.current_day >= 7 %}
-                <button onclick="event.stopPropagation(); openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; background: #8b5cf6; border-color: #8b5cf6;">📊 View Retro</button>
-                {% endif %}
+            
+            <div id="wsPdfContainer" style="flex: 1; min-height: 520px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
+                <iframe id="wsPdfIframe" src="" style="width: 100%; height: 550px; border: none; border-radius: 8px;"></iframe>
             </div>
         </div>
 
@@ -466,8 +588,11 @@
 
         </div>
 
-        <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; border-top: 1px solid var(--ts-border); padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <button onclick="closeRetroModal()" class="btn-ts btn-ts-secondary" style="width: auto;">Close Retro</button>
+            <button onclick="completeRetroAndUnlockNextWeek()" class="btn-ts btn-ts-primary" style="width: auto; background: #8b5cf6; border-color: #8b5cf6;">
+                🎉 Complete Retrospective & Unlock Next Week →
+            </button>
         </div>
     </div>
 </div>
@@ -591,72 +716,191 @@
     let activeModalDay = 1;
     let activeModalDoc = '';
 
+    function isValidPdfDoc(docName) {
+        if (!docName || typeof docName !== 'string') return false;
+        const s = docName.trim().toLowerCase();
+        if (!s || s === 'none' || s === 'null' || s === 'undefined' || s === '[]' || s === 'custom text' || s === 'custom input' || s.startsWith('no pdf')) return false;
+        return /\.(pdf|txt|md|doc|docx|png|jpg|jpeg)$/i.test(s);
+    }
+
     function handleDayClick(dayNum) {
         console.log("handleDayClick called for day:", dayNum);
-        try {
-            const data = SPRINT_DAYS_DATA[dayNum] || {};
-            if (data.isLocked) {
-                alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
-                return;
+        const currDay = {{ sprint.current_day }};
+        const viewWeek = {{ view_week_num }};
+        const currWeek = {{ sprint.current_week }};
+        
+        let isLocked = false;
+        if (viewWeek > currWeek) {
+            isLocked = true;
+        } else if (viewWeek == currWeek && dayNum > currDay) {
+            isLocked = true;
+        }
+
+        if (isLocked) {
+            alert(`🔒 Day ${dayNum} is currently locked!\n\nPlease complete Day ${dayNum - 1} study materials and checkpoints first to unlock Day ${dayNum}.`);
+            return;
+        }
+
+        activeModalDay = dayNum;
+        const data = SPRINT_DAYS_DATA[dayNum] || {};
+
+        let docName = data.doc || '';
+        let taskText = '';
+        if (Array.isArray(data.tasks)) {
+            taskText = data.tasks.join('\n\n• ');
+        } else {
+            taskText = String(data.tasks || '');
+        }
+
+        if (!docName || String(docName).trim() === '') {
+            const match = taskText.match(/\[([^\]]+\.(pdf|txt|md|doc|docx))\]/i);
+            if (match) {
+                docName = match[1].trim();
             }
+        }
+        activeModalDoc = docName;
 
-            activeModalDay = dayNum;
+        // Hide week overview grid, show full page workspace view with smooth transition
+        const overviewEl = document.getElementById('weekOverviewContainer');
+        const workspaceEl = document.getElementById('fullPageDayWorkspace');
+        if (overviewEl) overviewEl.style.display = 'none';
+        if (workspaceEl) {
+            workspaceEl.style.display = 'block';
+            workspaceEl.classList.remove('fade-workspace-transition');
+            void workspaceEl.offsetWidth;
+            workspaceEl.classList.add('fade-workspace-transition');
+        }
 
-            let docName = data.doc || '';
-            let taskText = '';
-            if (Array.isArray(data.tasks)) {
-                taskText = data.tasks.join('\n\n• ');
-            } else {
-                taskText = String(data.tasks || '');
+        // Title and Tag
+        const titleEl = document.getElementById('wsDayTitle');
+        if (titleEl) titleEl.innerText = `Day ${dayNum}: ${data.title || ('Module ' + dayNum + ' Learning')}`;
+        
+        let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
+        const topicsEl = document.getElementById('wsTopicsContent');
+        if (topicsEl) topicsEl.innerText = cleanTopicText ? '• ' + cleanTopicText : 'No specific topic breakdown configured for this day module.';
+
+        // PDF Pane & In-Page Reader Setup
+        const pdfPane = document.getElementById('wsPdfPane');
+        const pdfIframe = document.getElementById('wsPdfIframe');
+        const pdfTitle = document.getElementById('wsPdfTitle');
+        const gridEl = document.getElementById('wsGridContainer');
+        const toggleBtn = document.getElementById('wsTogglePdfBtn');
+
+        const hasValidPdf = isValidPdfDoc(docName);
+
+        if (hasValidPdf) {
+            if (pdfTitle) pdfTitle.innerText = docName;
+            if (pdfIframe) pdfIframe.src = '/documents/view/' + encodeURIComponent(docName);
+            if (pdfPane) pdfPane.style.display = 'flex';
+            if (gridEl) gridEl.style.gridTemplateColumns = '1fr 1fr';
+            if (toggleBtn) toggleBtn.style.display = 'inline-flex';
+        } else {
+            if (pdfTitle) pdfTitle.innerText = 'Custom Text Learning Module';
+            if (pdfIframe) pdfIframe.src = 'about:blank';
+            if (pdfPane) pdfPane.style.display = 'none';
+            if (gridEl) gridEl.style.gridTemplateColumns = '1fr';
+            if (toggleBtn) toggleBtn.style.display = 'none';
+        }
+
+        // Action Section per Day
+        const actionEl = document.getElementById('wsActionSection');
+        if (actionEl) {
+            if (dayNum <= 4) {
+                let isDoneBtn = (currWeek > viewWeek || currDay > dayNum) ? 
+                    `<span class="s-tag s-tag-voice" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">✓ Checkpoint Completed</span>` :
+                    `<button onclick="advanceSprintDay();" class="btn-ts btn-ts-primary" style="width: auto; padding: 0.45rem 1rem; font-size: 0.85rem;">✓ Complete Day Checkpoint</button>`;
+                
+                actionEl.innerHTML = `
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        ${isDoneBtn}
+                        <button onclick="openCoachFromModal();" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.45rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+                            🤖 Ask AI Sprint Coach
+                        </button>
+                    </div>
+                `;
+            } else if (dayNum === 5) {
+                actionEl.innerHTML = `
+                    <div style="background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.3); border-radius: 12px; padding: 1rem;">
+                        <div style="font-weight: 700; color: #f59e0b; font-size: 0.9rem; margin-bottom: 0.4rem;">Phase 2 Gateway Assessment</div>
+                        <div style="font-size: 0.82rem; color: var(--ts-text-secondary); margin-bottom: 0.85rem; line-height: 1.4;">Comprehensive multiple-choice test covering Days 1 to 4 topics.</div>
+                        ${(currWeek > viewWeek || currDay > 5) ? `<span class="s-tag s-tag-voice" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">✓ Gateway Exam Passed</span>` : `
+                        <form action="/sprint/take_day5_exam" method="GET">
+                            <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important; font-weight: 700;">🚀 Launch Gateway Exam</button>
+                        </form>`}
+                    </div>
+                `;
+            } else if (dayNum === 6) {
+                actionEl.innerHTML = `
+                    <div style="background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 1rem;">
+                        <div style="font-weight: 700; color: #10b981; font-size: 0.9rem; margin-bottom: 0.4rem;">Phase 3 Socratic Voice Interview</div>
+                        <div style="font-size: 0.82rem; color: var(--ts-text-secondary); margin-bottom: 0.85rem; line-height: 1.4;">Defend architectural principles and concepts live using Socratic voice mock.</div>
+                        <button onclick="startVoiceInterview();" class="btn-ts btn-ts-primary" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: #10b981; border-color: #10b981; color: #000 !important; font-weight: 700;">🎙️ Start Socratic Voice Mock</button>
+                    </div>
+                `;
+            } else if (dayNum === 7) {
+                actionEl.innerHTML = `
+                    <div style="background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.3); border-radius: 12px; padding: 1rem;">
+                        <div style="font-weight: 700; color: #8b5cf6; font-size: 0.9rem; margin-bottom: 0.4rem;">Phase 4 Performance Retro</div>
+                        <div style="font-size: 0.82rem; color: var(--ts-text-secondary); margin-bottom: 0.85rem; line-height: 1.4;">View detailed feedback analytics, logged knowledge gaps, and revision roadmaps.</div>
+                        <button onclick="openRetroModal();" class="btn-ts btn-ts-primary" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: #8b5cf6; border-color: #8b5cf6; font-weight: 700;">📊 Open Retro Modal</button>
+                    </div>
+                `;
             }
+        }
 
-            if (!docName || String(docName).trim() === '') {
-                const match = taskText.match(/\[([^\]]+\.pdf)\]/i);
-                if (match) {
-                    docName = match[1].trim();
-                }
-            }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-            activeModalDoc = docName;
-            
-            const titleEl = document.getElementById('dayModalTitle');
-            if (titleEl) titleEl.innerText = `Day ${dayNum}: ${data.title || ('Module ' + dayNum + ' Learning')}`;
+    function closeDayWorkspace() {
+        document.getElementById('fullPageDayWorkspace').style.display = 'none';
+        document.getElementById('weekOverviewContainer').style.display = 'block';
+    }
 
-            let cleanTopicText = taskText.replace(/\[([^\]]+\.pdf)\]\s*/gi, '');
-            const contentEl = document.getElementById('dayModalContent');
-            if (contentEl) contentEl.innerText = cleanTopicText ? '• ' + cleanTopicText : 'No topics available.';
+    function navigateDayWorkspace(dir) {
+        let nextDay = activeModalDay + dir;
+        if (nextDay >= 1 && nextDay <= 7) {
+            handleDayClick(nextDay);
+        }
+    }
 
-            const docBox = document.getElementById('dayModalDocBox');
-            const docNameEl = document.getElementById('dayModalDocName');
-            const docLinkEl = document.getElementById('dayModalDocLink');
+    function toggleWorkspacePdf() {
+        const pdfPane = document.getElementById('wsPdfPane');
+        const grid = document.getElementById('wsGridContainer');
+        if (!pdfPane || !grid) return;
+        
+        if (!isValidPdfDoc(activeModalDoc)) {
+            alert("📝 Custom Text Learning Mode:\n\nNo external PDF file is attached for this module. The complete study material is provided in the topic breakdown on the left.");
+            return;
+        }
 
-            if (docBox && docNameEl && docLinkEl) {
-                docBox.style.display = 'block';
-                if (docName && String(docName).trim() !== '') {
-                    docNameEl.innerText = docName;
-                    docLinkEl.href = '/documents/view/' + encodeURIComponent(docName);
-                    docLinkEl.onclick = null;
-                } else {
-                    docNameEl.innerText = 'No PDF document linked for this day.';
-                    docLinkEl.href = '#';
-                    docLinkEl.onclick = (e) => { e.preventDefault(); alert('No source PDF file attached to this day.'); };
-                }
-            }
-
-            const modal = document.getElementById('dayDetailModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                console.log("Opened dayDetailModal for day", dayNum);
-            }
-        } catch (err) {
-            console.error("Error opening day modal:", err);
-            const modal = document.getElementById('dayDetailModal');
-            if (modal) modal.style.display = 'flex';
+        if (pdfPane.style.display === 'none') {
+            pdfPane.style.display = 'flex';
+            grid.style.gridTemplateColumns = '1fr 1fr';
+        } else {
+            pdfPane.style.display = 'none';
+            grid.style.gridTemplateColumns = '1fr';
         }
     }
 
     function closeDayModal() {
         document.getElementById('dayDetailModal').style.display = 'none';
+    }
+
+    async function completeRetroAndUnlockNextWeek() {
+        try {
+            const res = await fetch('/sprint/complete_retro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ week_number: {{ view_week_num }} })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                window.location.href = '/sprint?week=' + (data.next_week || ({{ view_week_num }} + 1));
+            }
+        } catch (e) {
+            console.error("Error completing retro:", e);
+            window.location.reload();
+        }
     }
 
     function openRetroModal() {
@@ -706,6 +950,29 @@
         submitCoachQuery();
     }
 
+    function renderMarkdownText(text) {
+        if (!text) return '';
+        if (window.marked && typeof marked.parse === 'function') {
+            try {
+                return marked.parse(text);
+            } catch (e) {
+                console.error("marked parse error:", e);
+            }
+        }
+        // Fallback markdown renderer if marked.js is offline
+        let html = String(text)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/^### (.*$)/gim, '<h4 style="margin: 0.4rem 0; color: var(--ts-primary); font-weight: 700;">$1</h4>')
+            .replace(/^## (.*$)/gim, '<h3 style="margin: 0.5rem 0; color: var(--ts-primary); font-weight: 700;">$1</h3>')
+            .replace(/^# (.*$)/gim, '<h2 style="margin: 0.6rem 0; color: var(--ts-primary); font-weight: 700;">$1</h2>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^\* (.*$)/gim, '<li style="margin-left: 1rem; margin-bottom: 0.2rem;">$1</li>')
+            .replace(/^- (.*$)/gim, '<li style="margin-left: 1rem; margin-bottom: 0.2rem;">$1</li>')
+            .replace(/\n/g, '<br>');
+        return html;
+    }
+
     async function submitCoachQuery() {
         const input = document.getElementById('coachInput');
         const query = input.value.trim();
@@ -736,8 +1003,9 @@
             container.removeChild(loadingDiv);
 
             const aiDiv = document.createElement('div');
-            aiDiv.style.cssText = "align-self: flex-start; padding: 0.65rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text); max-width: 90%; line-height: 1.4; white-space: pre-wrap;";
-            aiDiv.innerText = data.answer || data.error || "No response received.";
+            aiDiv.style.cssText = "align-self: flex-start; padding: 0.65rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--ts-border); color: var(--ts-text); max-width: 90%; line-height: 1.5; font-size: 0.84rem;";
+            const rawAns = data.answer || data.error || "No response received.";
+            aiDiv.innerHTML = renderMarkdownText(rawAns);
             container.appendChild(aiDiv);
             container.scrollTop = container.scrollHeight;
         } catch (e) {
@@ -748,6 +1016,13 @@
 
     async function advanceSprintDay() {
         try {
+            const workspaceEl = document.getElementById('fullPageDayWorkspace');
+            const isWorkspaceActive = workspaceEl && workspaceEl.style.display !== 'none';
+            if (isWorkspaceActive && activeModalDay) {
+                const nextDay = Math.min(7, activeModalDay + 1);
+                sessionStorage.setItem('auto_open_day', nextDay);
+            }
+            
             const res = await fetch('/sprint/advance_day', { method: 'POST' });
             const data = await res.json();
             if (data.status === 'success') {
@@ -757,6 +1032,19 @@
             console.error(e);
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const autoDay = sessionStorage.getItem('auto_open_day');
+        if (autoDay) {
+            sessionStorage.removeItem('auto_open_day');
+            const dayNum = parseInt(autoDay, 10);
+            if (dayNum >= 1 && dayNum <= 7) {
+                setTimeout(function() {
+                    handleDayClick(dayNum);
+                }, 150);
+            }
+        }
+    });
 
     // --- DAY 6 VOICE-TO-VOICE SOCRATIC MOCK INTERVIEW ---
     let voiceTurn = 1;

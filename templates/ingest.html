@@ -205,6 +205,9 @@
     <div class="spinner"></div>
     <div style="font-size: 1.2rem; font-weight: 700; color: #ffffff;">Building Vector Index...</div>
     <div style="font-size: 0.9rem; color: #9ca3af;">Processing PDF pages, extracting content, generating embeddings, and building catalog database.</div>
+    <button type="button" onclick="cancelIndexingProcess()" class="btn-ts btn-ts-primary" id="cancelIndexBtn" style="margin-top: 1.5rem; background: #ef4444; border-color: #ef4444; color: #ffffff !important; width: auto; padding: 0.6rem 1.5rem; font-weight: 700; cursor: pointer;">
+        ❌ Cancel Indexing
+    </button>
 </div>
 
 <script>
@@ -230,6 +233,22 @@
     document.getElementById('uploadForm').addEventListener('submit', function() {
         document.getElementById('loadingOverlay').style.display = 'flex';
     });
+
+    async function cancelIndexingProcess() {
+        const btn = document.getElementById('cancelIndexBtn');
+        if (btn) {
+            btn.innerText = "⏳ Cancelling Indexing...";
+            btn.disabled = true;
+        }
+        try {
+            await fetch('/ingest/cancel', { method: 'POST' });
+        } catch (e) {
+            console.error("Cancel request failed:", e);
+        }
+        setTimeout(() => {
+            window.location.href = '/ingest';
+        }, 800);
+    }
 </script>
 
 {% endblock %}

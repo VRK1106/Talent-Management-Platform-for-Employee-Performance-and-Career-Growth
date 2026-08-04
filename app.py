@@ -1061,6 +1061,12 @@ def ingest():
         summary=session.pop('ingest_summary', None)
     )
 
+@app.route('/ingest/cancel', methods=['POST'])
+@login_required
+def ingest_cancel():
+    session['cancel_ingestion'] = True
+    return jsonify({'status': 'cancelling'})
+
 @app.route('/ingest', methods=['POST'])
 @login_required
 def ingest_post():
@@ -1071,6 +1077,7 @@ def ingest_post():
     from src.ingest import chunk_pages, extract_pages, file_hash
     from src.vectorstore import add_chunks, ingested_hashes
     
+    session['cancel_ingestion'] = False
     uploaded_files = request.files.getlist('files')
     if not uploaded_files or not uploaded_files[0].filename:
         flash("No files selected")
@@ -1083,6 +1090,9 @@ def ingest_post():
     success_files = []
     
     for file in uploaded_files:
+        if session.get('cancel_ingestion'):
+            flash("⛔ Vector indexing was cancelled by user.")
+            break
         try:
             from io import BytesIO
             data = file.read()
@@ -1921,6 +1931,7 @@ def exams_submit():
     emp_id = session.get('user_info', {}).get('employee_id', 'demo')
     
     # ── Agile Sprint Integration: Log QA Errors & Advance to Day 6 ──
+    is_sprint_gateway = False
     try:
         from src.sprints import get_sprint, log_qa_error, update_sprint_day, clear_qa_errors
         sprint = get_sprint(emp_id)
@@ -1941,16 +1952,26 @@ def exams_submit():
             
             # Automatically advance to Day 6 (Stakeholder Demo)
             update_sprint_day(emp_id, 6)
+            is_sprint_gateway = True
     except Exception as e:
         print(f"Error in sprint exam submission integration: {e}")
 
+    if not is_sprint_gateway:
+        exam_st = detail.get("exam_settings", {}) or {}
+        assign_st = detail.get("settings", {}) or {}
+        if exam_st.get("is_sprint_gateway") or assign_st.get("is_sprint_gateway") or "Gateway Exam" in str(detail.get("title", "")) or "Day 5" in str(detail.get("title", "")):
+            is_sprint_gateway = True
+
     if submit_exam_answers(assignment_id, responses, total_earned_score, json.dumps(overall_feedback)):
-        flash("Test submitted and graded successfully!")
+        flash("Day 5 Gateway Exam completed and graded successfully! Advanced to Day 6." if is_sprint_gateway else "Test submitted and graded successfully!")
     else:
         flash("Failed to save submissions to database.")
         
     session.pop('taking_assignment_id', None)
     session.pop('exam_started', None)
+
+    if is_sprint_gateway:
+        return redirect(url_for('sprint_page'))
     return redirect(url_for('exams'))
 
 # AI ASSISTANT & SSE CHAT STREAMING
@@ -3822,9 +3843,44 @@ def sprint_page():
     )
     
     user_sprint = get_sprint(emp_id)
-    week_num = user_sprint.get('current_week', 1)
-    assigned_plan_id = user_sprint.get('assigned_plan_id')
-    study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=assigned_plan_id)
+    current_active_week = user_sprint.get('current_week', 1)
+    current_active_day = user_sprint.get('current_day', 1)
+    req_week = request.args.get('week', type=int)
+
+    # Fetch all system study plans
+    system_plans = get_all_study_plans()
+    all_week_numbers = sorted(list(set(p.get('week_number', 1) for p in system_plans))) if system_plans else [1]
+    if 1 not in all_week_numbers:
+        all_week_numbers.insert(0, 1)
+
+    week_plans_summary = []
+    for w in all_week_numbers:
+        is_unlocked = (w == 1) or (w <= current_active_week)
+        matching_plan = next((p for p in system_plans if p.get('week_number') == w and (p.get('domain', '').lower() == domain.lower() or p.get('domain', '').lower() == 'general')), None)
+        if not matching_plan:
+            matching_plan = next((p for p in system_plans if p.get('week_number') == w), None)
+            
+        plan_title = matching_plan.get('title') if matching_plan else f"Week {w} Study Plan"
+        plan_domain = matching_plan.get('domain') if matching_plan else domain
+        plan_id = matching_plan.get('plan_id') if matching_plan else f"default-w{w}"
+
+        week_plans_summary.append({
+            'week_number': w,
+            'title': plan_title,
+            'domain': plan_domain,
+            'plan_id': plan_id,
+            'is_locked': not is_unlocked,
+            'is_current': (w == current_active_week)
+        })
+
+    view_week_num = req_week if (req_week and req_week in all_week_numbers) else current_active_week
+    req_summary = next((wp for wp in week_plans_summary if wp['week_number'] == view_week_num), None)
+    if req_summary and req_summary['is_locked']:
+        flash(f"🔒 Week {view_week_num} is locked! Please view the Day 7 Performance Retrospective for Week {view_week_num - 1} first to unlock Week {view_week_num}.")
+        return redirect(url_for('sprint_page', week=current_active_week))
+
+    assigned_plan_id = user_sprint.get('assigned_plan_id') if view_week_num == current_active_week else None
+    study_plan = get_study_plan(domain=domain, week_number=view_week_num, plan_id=assigned_plan_id)
     
     tasks = {}
     try:
@@ -3832,11 +3888,11 @@ def sprint_page():
     except Exception:
         tasks = {}
 
-    qa_errors = get_qa_errors(emp_id, week_num)
-    eval_report = get_interview_evaluation(emp_id, week_num)
+    qa_errors = get_qa_errors(emp_id, view_week_num)
+    eval_report = get_interview_evaluation(emp_id, view_week_num)
     
     all_schedules = get_all_sprint_schedules() if user_role == 'admin' else []
-    all_plans = get_all_study_plans() if user_role == 'admin' else []
+    all_plans = system_plans if user_role == 'admin' else []
 
     all_docs = []
     try:
@@ -3894,80 +3950,132 @@ def sprint_page():
         all_schedules=all_schedules,
         all_plans=all_plans,
         all_docs=all_docs,
-        user_role=user_role
+        user_role=user_role,
+        week_plans_summary=week_plans_summary,
+        view_week_num=view_week_num
     )
 
-@app.route('/study_plans/assign', methods=['POST'])
-@login_required
-def study_plans_assign():
-    if session.get('user_role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    data = request.get_json(silent=True) or {}
-    plan_id = data.get('plan_id', '')
-    user_ids = data.get('user_ids', [])
-    single_user = data.get('user_id', '')
-    assign_all = data.get('assign_all', False)
-    
-    if single_user and single_user not in user_ids:
-        if isinstance(user_ids, list):
-            user_ids.append(single_user)
-        else:
-            user_ids = [single_user]
 
-    from src.sprints import assign_study_plan_to_user, get_study_plan
-    count = 0
-    assigned_emails = []
-
-    try:
-        conn = sqlite3.connect(str(_DB_PATH))
-        c = conn.cursor()
-
-        if assign_all:
-            c.execute("SELECT employee_id, email FROM users WHERE role = 'trainee'")
-            trainees = c.fetchall()
-            for u_id, email in trainees:
-                if assign_study_plan_to_user(u_id, plan_id):
-                    count += 1
-                    if email:
-                        assigned_emails.append(email)
-        else:
-            if isinstance(user_ids, str):
-                user_ids = [user_ids]
-            for u_id in user_ids:
-                if assign_study_plan_to_user(u_id, plan_id):
-                    count += 1
-                    c.execute("SELECT email FROM users WHERE employee_id = ?", (u_id,))
-                    row = c.fetchone()
-                    if row and row[0]:
-                        assigned_emails.append(row[0])
-        
-        conn.close()
-    except Exception as e:
-        print(f"Error assigning trainees: {e}")
-
-    # Send Email Notifications to Assigned Trainees
-    try:
-        plan = get_study_plan(plan_id=plan_id)
-        if plan and assigned_emails:
-            from src.mail import send_study_plan_assignment_email
-            send_study_plan_assignment_email(
-                emails=assigned_emails,
-                plan_title=plan.get('title', 'Agile Study Plan'),
-                domain=plan.get('domain', 'General'),
-                week_number=plan.get('week_number', 1)
-            )
-    except Exception as mail_err:
-        print(f"Error sending assignment email: {mail_err}")
-
-    return jsonify({'status': 'success', 'assigned_count': count})
 
 
 @app.route('/documents/view/<path:filename>')
 @login_required
 def view_document_pdf(filename):
     from src.config import DOCUMENTS_DIR
-    doc_dir = Path(DOCUMENTS_DIR).resolve()
-    return send_from_directory(doc_dir, filename, as_attachment=False)
+    try:
+        doc_dir = Path(DOCUMENTS_DIR).resolve()
+        target_file = (doc_dir / filename).resolve()
+        
+        if str(target_file).startswith(str(doc_dir)) and target_file.is_file():
+            if target_file.suffix.lower() in ['.txt', '.md', '.log']:
+                txt_content = target_file.read_text(encoding='utf-8', errors='ignore')
+                import html
+                safe_txt = html.escape(txt_content)
+                return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{html.escape(filename)}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1.25rem;
+            margin: 0;
+            line-height: 1.6;
+        }}
+        .badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }}
+        .content-card {{
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.25rem;
+            white-space: pre-wrap;
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: 0.86rem;
+            color: #cbd5e1;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }}
+    </style>
+</head>
+<body>
+    <div class="badge">📄 Custom Text Learning Document</div>
+    <div class="content-card">{safe_txt}</div>
+</body>
+</html>"""
+            return send_from_directory(doc_dir, filename, as_attachment=False)
+    except Exception as e:
+        print(f"Document view error: {e}")
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background: #0b0f19;
+                color: #94a3b8;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+                padding: 1.5rem;
+                box-sizing: border-box;
+            }}
+            .card {{
+                background: #111625;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 2rem;
+                max-width: 480px;
+                box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            }}
+            .icon {{
+                font-size: 2.5rem;
+                margin-bottom: 0.75rem;
+            }}
+            .title {{
+                color: #f8fafc;
+                font-size: 1.1rem;
+                font-weight: 700;
+                margin-bottom: 0.5rem;
+            }}
+            .desc {{
+                font-size: 0.85rem;
+                color: #94a3b8;
+                line-height: 1.5;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">📝</div>
+            <div class="title">Custom Text Learning Module</div>
+            <div class="desc">
+                No external PDF document file was uploaded for this study module. The learning curriculum and topic specifications are fully provided in the main workspace view.
+            </div>
+        </div>
+    </body>
+    </html>
+    """, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 
 @app.route('/sprint/ask_ai_coach', methods=['POST'])
@@ -4013,6 +4121,29 @@ def sprint_ask_ai_coach():
     except Exception as e:
         print(f"Error in ask_ai_coach: {e}")
         return jsonify({'status': 'error', 'error': f'Failed to process query: {str(e)}'}), 500
+
+@app.route('/sprint/complete_retro', methods=['POST'])
+@login_required
+def sprint_complete_retro():
+    user_info = session.get('user_info', {}) or {}
+    emp_id = user_info.get('employee_id', 'demo')
+    
+    from src.sprints import get_sprint, update_sprint_week, update_sprint_day, update_sprint_progress
+    user_sprint = get_sprint(emp_id)
+    curr_week = user_sprint.get('current_week', 1)
+    
+    data = request.get_json(silent=True) or {}
+    retro_week = data.get('week_number', curr_week)
+    
+    if retro_week >= curr_week:
+        next_week = curr_week + 1
+        update_sprint_week(emp_id, next_week)
+        update_sprint_day(emp_id, 1)
+        update_sprint_progress(emp_id, 0.0)
+        flash(f"🎉 Week {curr_week} Retrospective Completed! Week {next_week} Study Plan is now unlocked!")
+        return jsonify({'status': 'success', 'next_week': next_week})
+        
+    return jsonify({'status': 'success', 'next_week': curr_week + 1})
 
 @app.route('/sprint/advance_day', methods=['POST'])
 @login_required
@@ -4131,11 +4262,13 @@ def sprint_chunk_document():
     week_num = int(data.get('week_number', 1))
     title_input = data.get('title', '').strip()
 
+    from src.llm import generate_chat_answer, clean_json_response
     from src.vectorstore import get_collection
     from src.sprints import run_sprint_orchestrator, save_study_plan
     from src.exams import add_exam_and_get_id, assign_exam_to_all_students
 
     docs_contents = []
+    source_files_list = []
     
     if doc_names:
         try:
@@ -4143,8 +4276,9 @@ def sprint_chunk_document():
             for dn in doc_names:
                 res = coll.get(where={"source": dn}, include=["documents"])
                 d_list = res.get("documents") or []
-                c_text = "\n\n".join(d_list[:20]) if d_list else f"Reference Content for {dn}"
+                c_text = "\n\n".join(d_list[:25]) if d_list else f"Reference Content for {dn}"
                 docs_contents.append({"source": dn, "text": c_text})
+                source_files_list.append(dn)
         except Exception as e:
             print(f"Error fetching vectorstore docs: {e}")
 
@@ -4154,58 +4288,157 @@ def sprint_chunk_document():
     if not docs_contents:
         return jsonify({'error': 'No document text or files found to process.'}), 400
 
-    num_files = len(docs_contents)
-    tasks = {}
-
-    # REQUIREMENT: If exactly 4 documents found, assign each document to each day. Or else, split content equally to 4 days.
-    if num_files == 4:
-        tasks = {
-            "day1": [f"[{docs_contents[0]['source']}] {docs_contents[0]['text'][:400]}"],
-            "day2": [f"[{docs_contents[1]['source']}] {docs_contents[1]['text'][:400]}"],
-            "day3": [f"[{docs_contents[2]['source']}] {docs_contents[2]['text'][:400]}"],
-            "day4": [f"[{docs_contents[3]['source']}] {docs_contents[3]['text'][:400]}"]
-        }
+    num_files = len(source_files_list)
+    combined_text = "\n\n".join(d["text"] for d in docs_contents)
+    
+    # Reference file mapping across 4 Days
+    ref_files_4days = []
+    if source_files_list:
+        if num_files == 1:
+            ref_files_4days = [source_files_list[0]] * 4
+        elif num_files == 2:
+            ref_files_4days = [source_files_list[0], source_files_list[0], source_files_list[1], source_files_list[1]]
+        elif num_files == 3:
+            ref_files_4days = [source_files_list[0], source_files_list[1], source_files_list[2], source_files_list[2]]
+        else:
+            ref_files_4days = source_files_list[:4]
     else:
-        combined_text = "\n\n".join(d["text"] for d in docs_contents)
-        state_payload = {
-            "Current_State": {"phase": 1, "state": "Preparation & Chunking"},
-            "week_id": f"week_{week_num}",
-            "uploaded_documentation": combined_text[:4000]
-        }
-        orchestrator_res = run_sprint_orchestrator(state_payload)
+        ref_files_4days = [] # Custom text mode
+
+    # Split content equally across Days 1..4 with AI enrichment
+    tasks = {}
+    split_prompt = (
+        f"You are an expert Agile Learning Curriculum Architect.\n"
+        f"Your task is to take the provided learning materials/custom text for {domain.capitalize()} Week {week_num} and split the content EQUALLY into 4 distinct, sequential daily study modules for Day 1, Day 2, Day 3, and Day 4.\n\n"
+        f"CRITICAL REQUIREMENTS:\n"
+        f"1. Divide the overall material evenly across 4 days so each day (Day 1, Day 2, Day 3, Day 4) receives a comprehensive 1/4th portion of the learning content.\n"
+        f"2. For each day, provide detailed key concepts, definitions, technical rules, and actionable checkpoints.\n"
+        f"3. Do NOT leave any day empty or with generic single-line placeholders.\n\n"
+        f"Source Material Content:\n{combined_text[:7000]}\n\n"
+        f"You MUST return ONLY a JSON object with this exact structure:\n"
+        f"{{\n"
+        f"  \"day1\": [\"Detailed learning outcome / concept 1 for Day 1\", \"Detailed concept 2 for Day 1\", \"Checkpoint task for Day 1\"],\n"
+        f"  \"day2\": [\"Detailed learning outcome / concept 1 for Day 2\", \"Detailed concept 2 for Day 2\", \"Checkpoint task for Day 2\"],\n"
+        f"  \"day3\": [\"Detailed learning outcome / concept 1 for Day 3\", \"Detailed concept 2 for Day 3\", \"Checkpoint task for Day 3\"],\n"
+        f"  \"day4\": [\"Detailed learning outcome / concept 1 for Day 4\", \"Detailed concept 2 for Day 4\", \"Checkpoint task for Day 4\"]\n"
+        f"}}"
+    )
+
+    try:
+        resp = generate_chat_answer(prompt=split_prompt, model_name="llama-3.3-70b-versatile", system_instruction="Output ONLY valid JSON object with keys day1, day2, day3, day4.")
+        cleaned = clean_json_response(resp)
+        parsed_tasks = json.loads(cleaned)
+        if isinstance(parsed_tasks, dict) and all(k in parsed_tasks for k in ['day1', 'day2', 'day3', 'day4']):
+            tasks = parsed_tasks
+    except Exception as e:
+        print(f"Error in AI splitup: {e}")
+
+    # Fallback if AI split failed or incomplete
+    if not tasks or not tasks.get('day1'):
+        lines = [line.strip() for line in combined_text.split('\n') if line.strip()]
+        total_lines = len(lines)
+        chunk_sz = max(1, total_lines // 4)
         tasks = {
-            "day1": [orchestrator_res.get('day_1_material', 'Module 1 Checkpoint')],
-            "day2": [orchestrator_res.get('day_2_material', 'Module 2 Checkpoint')],
-            "day3": [orchestrator_res.get('day_3_material', 'Module 3 Checkpoint')],
-            "day4": [orchestrator_res.get('day_4_material', 'Module 4 Checkpoint')]
+            "day1": lines[:chunk_sz] if lines[:chunk_sz] else ["Module 1 Fundamentals"],
+            "day2": lines[chunk_sz:chunk_sz*2] if lines[chunk_sz:chunk_sz*2] else ["Module 2 Intermediate Principles"],
+            "day3": lines[chunk_sz*2:chunk_sz*3] if lines[chunk_sz*2:chunk_sz*3] else ["Module 3 Advanced Patterns"],
+            "day4": lines[chunk_sz*3:] if lines[chunk_sz*3:] else ["Module 4 Architecture & Integration"]
         }
 
-    # REQUIREMENT: Create exam automatically based on uploaded materials (3 questions per file uploaded).
-    target_q_count = max(3, num_files * 3)
-    from src.llm import generate_chat_answer, clean_json_response
+    # Generate plain text document files for Custom Text input mode
+    if not source_files_list:
+        from src.config import DOCUMENTS_DIR
+        ref_files_4days = []
+        doc_dir = Path(DOCUMENTS_DIR).resolve()
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        
+        for d in range(1, 5):
+            day_key = f"day{d}"
+            txt_filename = f"Custom_{domain.capitalize()}_Week{week_num}_Day{d}.txt"
+            day_items = tasks.get(day_key, [])
+            
+            body_lines = [
+                f"============================================================",
+                f"WEEK {week_num} ({domain.upper()}) - DAY {d} STUDY SPECIFICATION",
+                f"============================================================\n",
+                f"LEARNING OBJECTIVES & TOPIC BREAKDOWN:"
+            ]
+            for item in day_items:
+                body_lines.append(f"• {item}")
+                
+            txt_path = doc_dir / txt_filename
+            try:
+                txt_path.write_text("\n".join(body_lines), encoding="utf-8")
+            except Exception as e:
+                print(f"Error writing custom text document: {e}")
+                
+            ref_files_4days.append(txt_filename)
+
+    # Format file tags into tasks if ref_files_4days present
+    if ref_files_4days and len(ref_files_4days) == 4:
+        for idx, day_key in enumerate(['day1', 'day2', 'day3', 'day4']):
+            f_name = ref_files_4days[idx]
+            day_list = tasks.get(day_key, [])
+            if day_list and isinstance(day_list, list):
+                if not any(f"[{f_name}]" in str(item) for item in day_list):
+                    day_list.insert(0, f"[{f_name}] Core Specification Module")
+            tasks[day_key] = day_list
+
+    # Multi-Section Exam Generation (2 MCQs, 2 Short Answer, 2 Fill in Blank, 2 Match per file)
+    target_q_count = max(8, len(docs_contents) * 8)
     
     exam_prompt = (
-        f"Generate an exam based on the following training materials for {domain.capitalize()} Week {week_num}.\n"
-        f"Generate EXACTLY {target_q_count} multiple-choice questions (3 questions per uploaded reference file).\n\n"
-        f"Materials Summary:\n"
+        f"You are a Senior Technical Examiner creating a comprehensive Day 5 Gateway Exam for {domain.capitalize()} Week {week_num}.\n"
+        f"Generate multi-section questions based strictly on the training materials provided below.\n\n"
+        f"CRITICAL REQUIREMENTS:\n"
+        f"For EACH of the {len(docs_contents)} reference source document(s), generate EXACTLY 2 questions of EACH of the following 4 question types (8 questions per document total):\n"
+        f"  1. 'mcq': Multiple Choice Question (4 distinct, realistic, technical answer choices, correct_answer)\n"
+        f"  2. 'short_answer': Short Answer Question (conceptual/technical question requiring 2-3 sentences, correct_answer model solution)\n"
+        f"  3. 'fill_in_blank': Fill in the Blanks Question (technical statement containing '___', exact term in correct_answer)\n"
+        f"  4. 'match': Match the Following Question (question prompt, match_pairs array of 4 {{left, right}} items, correct_answer string summary)\n\n"
+        f"Training Materials Summary:\n"
     )
     for idx, d in enumerate(docs_contents):
-        exam_prompt += f"--- File {idx+1} ({d['source']}) ---\n{d['text'][:1500]}\n\n"
+        exam_prompt += f"--- Source File {idx+1} ({d['source']}) ---\n{d['text'][:2500]}\n\n"
 
     exam_prompt += (
-        f"CRITICAL REQUIREMENTS FOR QUESTION & OPTION UNIQUENESS:\n"
-        f"1. Every single question MUST be unique and test a completely different concept from the documents. Do NOT repeat questions or question stems.\n"
-        f"2. For every question, provide 4 distinct, realistic, technical answer choices derived directly from the document content.\n"
-        f"3. Do NOT reuse the same set of option choices across different questions. Each question must have its own unique answer choices.\n"
-        f"4. Do NOT use bare placeholder strings like 'Option A', 'Option B', 'Correct Concept', or 'Incorrect Option'. Write out full technical answer choices.\n\n"
-        f"You MUST return ONLY a valid JSON list of objects with no surrounding text. Structure:\n"
+        f"DO NOT generate generic templates like 'Section 1' or 'Primary Standard Specification'. Test actual technical definitions, formulas, and concepts from the text.\n\n"
+        f"You MUST return ONLY a valid JSON list of objects matching this structure:\n"
         f"[\n"
         f"  {{\n"
-        f"    \"question\": \"Detailed technical question text based on file contents?\",\n"
+        f"    \"question\": \"Detailed technical question text based on document contents?\",\n"
         f"    \"type\": \"mcq\",\n"
+        f"    \"section\": \"Section A: Multiple Choice Questions\",\n"
         f"    \"marks\": 10,\n"
-        f"    \"options\": [\"Technical Choice 1\", \"Technical Choice 2\", \"Technical Choice 3\", \"Technical Choice 4\"],\n"
-        f"    \"correct_answer\": \"Technical Choice 1\"\n"
+        f"    \"options\": [\"Technical Option 1\", \"Technical Option 2\", \"Technical Option 3\", \"Technical Option 4\"],\n"
+        f"    \"correct_answer\": \"Technical Option 1\"\n"
+        f"  }},\n"
+        f"  {{\n"
+        f"    \"question\": \"Explain the principle of X in detail.\",\n"
+        f"    \"type\": \"short_answer\",\n"
+        f"    \"section\": \"Section B: Short Answer Questions\",\n"
+        f"    \"marks\": 10,\n"
+        f"    \"correct_answer\": \"Model answer explaining principle X...\"\n"
+        f"  }},\n"
+        f"  {{\n"
+        f"    \"question\": \"The process of Y is defined as ___.\",\n"
+        f"    \"type\": \"fill_in_blank\",\n"
+        f"    \"section\": \"Section C: Fill in the Blanks\",\n"
+        f"    \"marks\": 10,\n"
+        f"    \"correct_answer\": \"exact term\"\n"
+        f"  }},\n"
+        f"  {{\n"
+        f"    \"question\": \"Match each term in Column A with its definition in Column B.\",\n"
+        f"    \"type\": \"match\",\n"
+        f"    \"section\": \"Section D: Match the Following\",\n"
+        f"    \"marks\": 10,\n"
+        f"    \"match_pairs\": [\n"
+        f"      {{\"left\": \"Term 1\", \"right\": \"Definition 1\"}},\n"
+        f"      {{\"left\": \"Term 2\", \"right\": \"Definition 2\"}},\n"
+        f"      {{\"left\": \"Term 3\", \"right\": \"Definition 3\"}},\n"
+        f"      {{\"left\": \"Term 4\", \"right\": \"Definition 4\"}}\n"
+        f"    ],\n"
+        f"    \"correct_answer\": \"Term 1 -> Definition 1; Term 2 -> Definition 2\"\n"
         f"  }}\n"
         f"]"
     )
@@ -4222,11 +4455,40 @@ def sprint_chunk_document():
     if not isinstance(questions_list, list) or not questions_list:
         questions_list = [
             {
-                "question": f"What is a core technical requirement for {domain.capitalize()} covered in Section {i+1}?",
+                "question": f"What is a core technical requirement for {domain.capitalize()}?",
                 "type": "mcq",
-                "marks": 10
+                "section": "Section A: Multiple Choice Questions",
+                "marks": 10,
+                "options": [f"Core Specification for {domain.capitalize()}", "Standard Implementation", "Alternative Method", "Legacy Model"],
+                "correct_answer": f"Core Specification for {domain.capitalize()}"
+            },
+            {
+                "question": f"Summarize the key architectural principles of {domain.capitalize()} covered in the study plan.",
+                "type": "short_answer",
+                "section": "Section B: Short Answer Questions",
+                "marks": 10,
+                "correct_answer": f"Comprehensive architectural principles covering design patterns and implementation guidelines for {domain.capitalize()}."
+            },
+            {
+                "question": f"The primary design rule in {domain.capitalize()} is ___.",
+                "type": "fill_in_blank",
+                "section": "Section C: Fill in the Blanks",
+                "marks": 10,
+                "correct_answer": "modularity"
+            },
+            {
+                "question": f"Match each term in Column A with its definition in Column B for {domain.capitalize()}.",
+                "type": "match",
+                "section": "Section D: Match the Following",
+                "marks": 10,
+                "match_pairs": [
+                    {"left": "Module Design", "right": "High cohesion and low coupling"},
+                    {"left": "Error Handling", "right": "Graceful degradation"},
+                    {"left": "Data Validation", "right": "Input sanitization"},
+                    {"left": "Performance", "right": "Resource optimization"}
+                ],
+                "correct_answer": "Module Design -> High cohesion and low coupling; Error Handling -> Graceful degradation"
             }
-            for i in range(target_q_count)
         ]
 
     from src.exams import sanitize_exam_questions
@@ -4234,15 +4496,12 @@ def sprint_chunk_document():
     exam_title = f"Day 5 Gateway Exam: {plan_title}"
     questions_list = sanitize_exam_questions(questions_list, exam_title=exam_title)
 
-    plan_title = title_input or f"Week {week_num} ({domain.capitalize()}) AI Study Plan"
-    exam_title = f"Day 5 Gateway Exam: {plan_title}"
     total_marks = len(questions_list) * 10
-    exam_id = add_exam_and_get_id(exam_title, f"Gateway Exam for {plan_title} ({num_files} reference files).", total_marks, questions_list)
+    exam_settings = {"is_sprint_gateway": True, "results_release": "immediate"}
     
-    if exam_id:
-        assign_exam_to_all_students(exam_id)
+    from src.exams import add_exam_and_get_id
+    exam_id = add_exam_and_get_id(exam_title, f"Day 5 Gateway Exam for {plan_title}.", total_marks, questions_list, settings=exam_settings)
 
-    ref_files = [d['source'] for d in docs_contents]
     save_study_plan(
         domain=domain,
         week_number=week_num,
@@ -4250,7 +4509,7 @@ def sprint_chunk_document():
         tasks_json=json.dumps(tasks),
         day5_exam_id=str(exam_id) if exam_id else "",
         day6_interview_prompt=f"Defend the core architecture and key principles from {plan_title}.",
-        reference_files_json=json.dumps(ref_files)
+        reference_files_json=json.dumps(ref_files_4days)
     )
 
     return jsonify({

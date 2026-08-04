@@ -131,15 +131,11 @@ def init_exams_db() -> None:
 
 
 def sanitize_exam_questions(questions: list, exam_title: str = "") -> list:
-    """Ensure all exam questions and option choices are unique, contain no bare placeholders, and no two questions share identical options or text."""
+    """Ensure all exam questions and option choices are formatted cleanly while preserving original domain technical questions and multi-section types."""
     if not isinstance(questions, list):
         return []
 
-    clean_title = exam_title.replace("Day 5 Gateway Exam:", "").replace("Gateway Exam:", "").replace("Combined Exam", "").strip(" ()")
-    domain = clean_title if clean_title else "Engineering"
-
     seen_questions = set()
-    seen_option_sets = set()
     cleaned = []
 
     for idx, q in enumerate(questions):
@@ -149,77 +145,51 @@ def sanitize_exam_questions(questions: list, exam_title: str = "") -> list:
         q_text = str(q.get("question", "")).strip()
         q_type = str(q.get("type", "mcq")).lower()
         q_marks = q.get("marks", 10)
+        q_section = str(q.get("section", "General Knowledge")).strip()
 
-        # Check question text uniqueness
+        if not q_text:
+            continue
+
         norm_q = q_text.lower()
-        if not norm_q or norm_q in seen_questions:
-            q_text = f"Question {idx + 1}: What is a key technical requirement for {domain} in Topic {idx + 1}?"
-            norm_q = q_text.lower()
-
         if norm_q in seen_questions:
-            q_text = f"{q_text} (Variant {idx + 1})"
+            q_text = f"{q_text} ({idx + 1})"
             norm_q = q_text.lower()
 
         seen_questions.add(norm_q)
 
-        opts = q.get("options", [])
-        if not isinstance(opts, list):
-            opts = []
-
-        cleaned_opts = []
-        for opt in opts:
-            opt_str = str(opt).strip()
-            opt_lower = opt_str.lower()
-            is_bare_placeholder = opt_lower in [
-                "option a", "option b", "option c", "option d",
-                "option 1", "option 2", "option 3", "option 4",
-                "correct concept", "incorrect option"
-            ]
-            if opt_str and not is_bare_placeholder and opt_str not in cleaned_opts:
-                cleaned_opts.append(opt_str)
-
-        # If options are fewer than 4 or contained placeholders, create unique options for this question
-        if len(cleaned_opts) < 4:
-            cleaned_opts = [
-                f"Primary Standard Specification for {domain} (Part {idx + 1}.1)",
-                f"Secondary Methodological Approach (Part {idx + 1}.2)",
-                f"Alternative Operational Variant (Part {idx + 1}.3)",
-                f"Legacy Non-Compliant Standard (Part {idx + 1}.4)"
-            ]
-
-        # Ensure option sets are unique across questions
-        opt_key = "||".join(sorted(o.lower() for o in cleaned_opts))
-        if opt_key in seen_option_sets:
-            cleaned_opts = [
-                f"{cleaned_opts[0]} [Spec {idx + 1}-A]",
-                f"{cleaned_opts[1]} [Spec {idx + 1}-B]",
-                f"{cleaned_opts[2]} [Spec {idx + 1}-C]",
-                f"{cleaned_opts[3]} [Spec {idx + 1}-D]"
-            ]
-            opt_key = "||".join(sorted(o.lower() for o in cleaned_opts))
-
-        seen_option_sets.add(opt_key)
-
-        correct_ans = str(q.get("correct_answer", "")).strip()
-        if correct_ans not in cleaned_opts:
-            correct_ans = cleaned_opts[0]
-
-        cleaned.append({
+        item = {
             "question": q_text,
             "type": q_type,
             "marks": q_marks,
-            "options": cleaned_opts,
-            "correct_answer": correct_ans,
-            "section": q.get("section", "General")
-        })
+            "section": q_section,
+            "correct_answer": str(q.get("correct_answer", "")).strip()
+        }
+
+        if q_type == "mcq":
+            opts = q.get("options", [])
+            cleaned_opts = []
+            if isinstance(opts, list):
+                for opt in opts:
+                    opt_str = str(opt).strip()
+                    if opt_str and opt_str not in cleaned_opts:
+                        cleaned_opts.append(opt_str)
+            item["options"] = cleaned_opts
+            if not item["correct_answer"] and cleaned_opts:
+                item["correct_answer"] = cleaned_opts[0]
+        elif q_type == "match":
+            pairs = q.get("match_pairs", [])
+            if isinstance(pairs, list):
+                item["match_pairs"] = pairs
+
+        cleaned.append(item)
 
     return cleaned
 
 
 # --- Exams operations ---
 
-def get_all_exams() -> list[dict[str, Any]]:
-    """Fetch all created exams."""
+def get_all_exams(include_gateway: bool = False) -> list[dict[str, Any]]:
+    """Fetch all created exams. By default excludes private Day 5 Gateway exams created for weekly sprint plans."""
     init_exams_db()
     try:
         conn = sqlite3.connect(str(_DB_PATH))
@@ -241,6 +211,11 @@ def get_all_exams() -> list[dict[str, Any]]:
                 d["settings"] = json.loads(d["settings"]) if d.get("settings") else {}
             except Exception:
                 d["settings"] = {}
+
+            is_gateway = d["settings"].get("is_sprint_gateway") or d.get("title", "").startswith("Day 5 Gateway Exam")
+            if not include_gateway and is_gateway:
+                continue
+
             result.append(d)
         return result
     except Exception:
@@ -469,10 +444,10 @@ def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
         cursor.execute(
             """
             SELECT a.assignment_id, a.exam_id, a.trainee_id, a.due_date, a.status, a.score, 
-                   a.answers, a.ai_feedback, a.assigned_at, a.completed_at, a.settings, e.title, e.description, e.questions, e.total_marks, u.full_name
+                   a.answers, a.ai_feedback, a.assigned_at, a.completed_at, a.settings, e.title, e.description, e.questions, e.total_marks, e.settings AS exam_settings, u.full_name
             FROM assignments a
             JOIN exams e ON a.exam_id = e.exam_id
-            JOIN users u ON a.trainee_id = u.employee_id
+            LEFT JOIN users u ON a.trainee_id = u.employee_id
             WHERE a.assignment_id = ?
             """,
             (assignment_id,),
@@ -494,6 +469,10 @@ def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
                 d["settings"] = json.loads(d["settings"]) if d.get("settings") else {}
             except Exception:
                 d["settings"] = {}
+            try:
+                d["exam_settings"] = json.loads(d["exam_settings"]) if d.get("exam_settings") else {}
+            except Exception:
+                d["exam_settings"] = {}
             return d
     except Exception:
         pass

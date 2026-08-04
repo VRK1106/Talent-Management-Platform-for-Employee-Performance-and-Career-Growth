@@ -843,13 +843,25 @@
                 
                 {% for q in taking_assignment.questions %}
                 {% set question_index = loop.index0 %}
+                
+                {% if loop.first or q.section != taking_assignment.questions[loop.index0 - 1].section %}
+                <div style="font-size: 1.05rem; font-weight: 700; color: var(--ts-primary); margin-top: 1.5rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--ts-primary); display: flex; align-items: center; gap: 0.4rem;">
+                    <span>📌</span> {{ q.section or 'Assessment Questions' }}
+                </div>
+                {% endif %}
+
                 <div class="question-card">
-                    <div style="font-weight: 600; color: var(--ts-text); margin-bottom: 0.8rem; font-size: 1rem;">
-                        Q{{ loop.index }}: {{ q.question }} <span style="font-weight: normal; font-size: 0.8rem; color: var(--ts-text-secondary);">({{ q.marks }} marks)</span>
+                    <div style="font-weight: 600; color: var(--ts-text); margin-bottom: 0.8rem; font-size: 1rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                        <div>
+                            <span style="color: var(--ts-primary); font-weight: 700;">Q{{ loop.index }}.</span> {{ q.question }}
+                        </div>
+                        <span style="font-weight: 600; font-size: 0.78rem; color: var(--ts-text-secondary); background: rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap;">
+                            {{ q.marks }} Marks
+                        </span>
                     </div>
                     
                     {% if q.type == 'mcq' %}
-                        <div style="display: flex; flex-direction: column;">
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                             {% for opt in q.options %}
                             <label class="mcq-option-label">
                                 <input type="radio" name="answer_{{ question_index }}" value="{{ opt }}" required style="accent-color: var(--ts-primary);">
@@ -857,8 +869,36 @@
                             </label>
                             {% endfor %}
                         </div>
+                    {% elif q.type == 'fill_in_blank' %}
+                        <div style="margin-top: 0.5rem;">
+                            <input type="text" name="answer_{{ question_index }}" placeholder="Type exact missing word/term..." required
+                                   style="width: 100%; max-width: 400px; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--ts-border); background-color: var(--ts-input-bg); color: var(--ts-text); outline: none; font-size: 0.9rem;">
+                        </div>
+                    {% elif q.type == 'match' %}
+                        <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                            {% if q.match_pairs %}
+                                {% for pair in q.match_pairs %}
+                                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(0,0,0,0.15); padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--ts-border);">
+                                    <div style="flex: 1; font-weight: 600; color: var(--ts-text); font-size: 0.88rem;">{{ pair.left }}</div>
+                                    <div style="color: var(--ts-primary);">➔</div>
+                                    <div style="flex: 1;">
+                                        <select name="answer_{{ question_index }}_pair_{{ loop.index0 }}" required
+                                                style="width: 100%; padding: 0.45rem 0.6rem; border-radius: 6px; border: 1px solid var(--ts-border); background: var(--ts-input-bg); color: var(--ts-text); font-size: 0.85rem;">
+                                            <option value="">-- Select Matching Item --</option>
+                                            {% for p_target in q.match_pairs %}
+                                            <option value="{{ p_target.right }}">{{ p_target.right }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <textarea name="answer_{{ question_index }}" placeholder="Write matching pairs (e.g. A->1, B->2)..." rows="3" required
+                                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background-color: var(--ts-input-bg); color: var(--ts-text); outline: none; font-family: sans-serif; box-sizing: border-box;"></textarea>
+                            {% endif %}
+                        </div>
                     {% else %}
-                        <textarea name="answer_{{ loop.index0 }}" placeholder="Type answer here..." rows="4" required
+                        <textarea name="answer_{{ question_index }}" placeholder="Type technical explanation or short answer here..." rows="4" required
                                   style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--ts-border); background-color: var(--ts-input-bg); color: var(--ts-text); outline: none; font-family: sans-serif; box-sizing: border-box;"></textarea>
                     {% endif %}
                 </div>

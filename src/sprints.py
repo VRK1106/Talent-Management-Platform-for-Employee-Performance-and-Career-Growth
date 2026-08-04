@@ -331,7 +331,7 @@ def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str =
     
     row = None
     if plan_id:
-        cursor.execute("SELECT * FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        cursor.execute("SELECT * FROM weekly_study_plans WHERE plan_id = ? AND week_number = ?", (plan_id, week_number))
         row = cursor.fetchone()
         
     if not row:
@@ -341,18 +341,11 @@ def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str =
         )
         row = cursor.fetchone()
 
-    # Fallback 1: Any custom plan created for this week number
+    # Fallback 1: Any custom plan created for this exact week number
     if not row:
         cursor.execute(
             "SELECT * FROM weekly_study_plans WHERE week_number = ? ORDER BY rowid DESC",
             (week_number,)
-        )
-        row = cursor.fetchone()
-
-    # Fallback 2: Latest custom study plan created by admin in the system
-    if not row:
-        cursor.execute(
-            "SELECT * FROM weekly_study_plans ORDER BY rowid DESC"
         )
         row = cursor.fetchone()
 
@@ -455,10 +448,45 @@ def run_sprint_orchestrator(state_payload: dict, model_name: str = "llama-3.3-70
         return {"error": f"Failed to execute orchestrator: {str(e)}"}
 
 def delete_study_plan(plan_id: str) -> bool:
-    """Delete a study plan by ID and wipe all associated trainee sprint schedules so it is deleted on user side too."""
+    """Delete a study plan by ID, wipe associated sprint schedules, clean up generated custom text files, and cascade delete Day 5 Gateway Exam."""
     try:
+        from src.config import DOCUMENTS_DIR
+        from src.exams import delete_exam
+        import json
         conn = sqlite3.connect(str(_DB_PATH))
         cursor = conn.cursor()
+        
+        # Fetch day5_exam_id and reference_files_json to clean up exam and files
+        cursor.execute("SELECT day5_exam_id, reference_files_json FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
+        row = cursor.fetchone()
+        if row:
+            exam_id_str = row[0]
+            ref_files_json = row[1]
+            
+            # Cascade delete Day 5 Gateway Exam and assignments
+            if exam_id_str and str(exam_id_str).isdigit():
+                try:
+                    delete_exam(int(exam_id_str))
+                except Exception as ex_err:
+                    print(f"Error deleting associated gateway exam {exam_id_str}: {ex_err}")
+
+            # Clean up custom text files
+            if ref_files_json:
+                try:
+                    ref_files = json.loads(ref_files_json) if isinstance(ref_files_json, str) else ref_files_json
+                    if isinstance(ref_files, list):
+                        doc_dir = Path(DOCUMENTS_DIR).resolve()
+                        for fname in ref_files:
+                            if fname and isinstance(fname, str) and fname.startswith("Custom_"):
+                                file_path = doc_dir / fname
+                                if file_path.is_file():
+                                    try:
+                                        file_path.unlink()
+                                    except Exception as del_err:
+                                        print(f"Error unlinking custom file {fname}: {del_err}")
+                except Exception as parse_err:
+                    print(f"Error parsing reference files for deletion: {parse_err}")
+
         cursor.execute("DELETE FROM weekly_study_plans WHERE plan_id = ?", (plan_id,))
         cursor.execute("DELETE FROM sprint_schedules WHERE assigned_plan_id = ?", (plan_id,))
         conn.commit()
@@ -489,20 +517,21 @@ def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
         if "assigned_plan_id" not in cols:
             cursor.execute("ALTER TABLE sprint_schedules ADD COLUMN assigned_plan_id TEXT")
         
-        cursor.execute("SELECT user_id FROM sprint_schedules WHERE user_id = ?", (user_id,))
-        if cursor.fetchone():
+        cursor.execute("SELECT current_week FROM sprint_schedules WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if row:
             cursor.execute(
                 """
                 UPDATE sprint_schedules 
-                SET assigned_plan_id = ?, current_week = ?, current_day = 1, sprint_progress = 0.0, last_updated = CURRENT_TIMESTAMP 
+                SET assigned_plan_id = ?, last_updated = CURRENT_TIMESTAMP 
                 WHERE user_id = ?
                 """,
-                (plan_id, plan_week, user_id)
+                (plan_id, user_id)
             )
         else:
             cursor.execute(
-                "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, ?, 1, 0.0, ?)",
-                (str(uuid.uuid4()), user_id, plan_week, plan_id)
+                "INSERT INTO sprint_schedules (sprint_id, user_id, current_week, current_day, sprint_progress, assigned_plan_id) VALUES (?, ?, 1, 1, 0.0, ?)",
+                (str(uuid.uuid4()), user_id, plan_id)
             )
         
         # Clear prior QA errors and interview evaluations for this week so trainee starts clean
