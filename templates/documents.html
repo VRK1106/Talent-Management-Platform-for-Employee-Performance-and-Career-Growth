@@ -109,17 +109,27 @@
                 </div>
             </div>
 
-            <div style="margin-bottom: 2rem;">
+            <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
                 {% if pdf_exists %}
                     <a href="/documents/download/{{ selected_doc }}" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.6rem 1.2rem; display: inline-flex;">
                         📥 Open / Download PDF Document
                     </a>
                 {% else %}
-                    <div class="ts-info-banner" style="padding: 1rem; border-radius: 8px; margin: 0;">
+                    <div class="ts-info-banner" style="padding: 1rem; border-radius: 8px; margin: 0; flex-grow: 1;">
                         <div class="ts-info-body" style="font-size: 0.88rem;">
-                            ℹ️ The original PDF file copy is not available in the server's 'documents/' directory. Please copy the PDF file to that folder to enable downloading.
+                            ℹ️ The original PDF file copy is not available in the server's 'documents/' directory.
                         </div>
                     </div>
+                {% endif %}
+
+                {% if session.get('user_role') == 'admin' %}
+                    <form action="/ingest/delete" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this ingested document ({{ selected_doc }})? This action will remove its vector index and file permanently.')" style="margin: 0;">
+                        <input type="hidden" name="doc_name" value="{{ selected_doc }}">
+                        <input type="hidden" name="redirect_target" value="documents">
+                        <button type="submit" class="btn-ts btn-ts-secondary" style="width: auto; padding: 0.6rem 1.2rem; display: inline-flex; color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); font-weight: 600;">
+                            🗑️ Remove Ingested Document
+                        </button>
+                    </form>
                 {% endif %}
             </div>
 

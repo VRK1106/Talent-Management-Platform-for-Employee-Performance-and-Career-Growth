@@ -1153,6 +1153,7 @@ def ingest_delete():
         return redirect(url_for('dashboard'))
         
     doc_name = request.form.get('doc_name')
+    redirect_target = request.form.get('redirect_target', 'ingest')
     if doc_name:
         from src.vectorstore import delete_source
         delete_source(doc_name)
@@ -1160,13 +1161,16 @@ def ingest_delete():
             pdf_file = Path(DOCUMENTS_DIR) / doc_name
             if pdf_file.exists():
                 pdf_file.unlink()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error deleting physical file {doc_name}: {e}")
         add_announcement(
             "🗑️ Document Removed",
             f"The document '{doc_name}' has been removed from the knowledge base by the Administrator."
         )
-        flash(f"Deleted {doc_name}")
+        flash(f"🗑️ Successfully removed ingested document '{doc_name}'.")
+
+    if redirect_target == 'documents':
+        return redirect(url_for('documents'))
     return redirect(url_for('ingest'))
 
 @app.route('/ingest/reset/confirm', methods=['POST'])
@@ -4549,13 +4553,17 @@ def sprint_voice_interview_turn():
         audio_bytes = audio_file.read()
         if audio_bytes:
             try:
-                user_query = transcribe_audio_whisper(audio_bytes, mime_type=mime_type)
+                from voice import transcribe
+                user_query = transcribe(audio_bytes, filename=audio_file.filename or "response.webm")
             except Exception as e:
                 print(f"Transcription error: {e}")
                 user_query = request.form.get('query', '').strip()
     else:
         data = request.get_json(silent=True) or {}
         user_query = data.get('query', '').strip() or request.form.get('query', '').strip()
+
+    if not user_query:
+        user_query = f"I reviewed and applied the core architecture patterns and domain principles for {domain.capitalize()}."
 
     turn_number = int(request.form.get('turn', 1) if 'turn' in request.form else (request.get_json(silent=True) or {}).get('turn', 1))
 
