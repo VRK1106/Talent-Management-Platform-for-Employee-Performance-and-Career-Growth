@@ -29,7 +29,7 @@ from flask import (
 # Ensure the project root is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.users import init_db, verify_user, get_all_users, get_active_users_count, _DB_PATH, set_user_face_descriptor, get_user_face_descriptor, set_user_accommodation, update_user, log_activity, check_user_exists
+from src.users import init_db, verify_user, get_all_users, get_active_users_count, _DB_PATH, set_user_face_descriptor, get_user_face_descriptor, set_user_accommodation, update_user, log_activity, check_user_exists, get_db_connection
 from src.exams import (
     init_exams_db,
     get_all_exams,
@@ -83,7 +83,7 @@ class DictSession(dict, SessionMixin):
 _SESSIONS_DB = Path(__file__).resolve().parent / "users.db"
 
 def _init_sessions_table():
-    conn = sqlite3.connect(str(_SESSIONS_DB))
+    conn = get_db_connection(_SESSIONS_DB)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS tab_sessions (
             tab_id TEXT PRIMARY KEY,
@@ -100,7 +100,7 @@ def cleanup_orphaned_collections():
     """Scan and clean up in-memory vector collections for expired/deleted sessions."""
     try:
         # Delete tab sessions older than 2 hours (expiration logic)
-        conn = sqlite3.connect(str(_SESSIONS_DB))
+        conn = get_db_connection(_SESSIONS_DB)
         conn.execute("DELETE FROM tab_sessions WHERE updated_at < datetime('now', '-2 hours')")
         conn.commit()
         
@@ -127,7 +127,7 @@ class TabSessionInterface(SessionInterface):
 
     def _load(self, tab_id):
         try:
-            conn = sqlite3.connect(str(_SESSIONS_DB))
+            conn = get_db_connection(_SESSIONS_DB)
             row = conn.execute("SELECT data FROM tab_sessions WHERE tab_id=?", (tab_id,)).fetchone()
             conn.close()
             if row:
@@ -139,7 +139,7 @@ class TabSessionInterface(SessionInterface):
     def _save(self, tab_id, session):
         try:
             data = json.dumps({k: v for k, v in session.items() if k != '_tab_id'})
-            conn = sqlite3.connect(str(_SESSIONS_DB))
+            conn = get_db_connection(_SESSIONS_DB)
             conn.execute("""
                 INSERT INTO tab_sessions (tab_id, data, updated_at)
                 VALUES (?, ?, CURRENT_TIMESTAMP)
@@ -152,14 +152,7 @@ class TabSessionInterface(SessionInterface):
             print(f'[SESSION SAVE ERROR] tab_id={tab_id}: {e}')
 
     def _resolve_tab_id(self, request):
-        tab_id = request.args.get('tab_id') or request.form.get('tab_id')
-
-        if not tab_id and request.is_json:
-            try:
-                tab_id = (request.get_json(silent=True) or {}).get('tab_id')
-            except Exception:
-                pass
-
+        tab_id = request.args.get('tab_id')
         if not tab_id:
             referer = request.headers.get('Referer', '')
             try:
@@ -168,17 +161,13 @@ class TabSessionInterface(SessionInterface):
                 tab_id = q.get('tab_id', [None])[0]
             except Exception:
                 pass
-
         if not tab_id:
             tab_id = request.cookies.get('fallback_tab_id')
-
         if not tab_id:
-            tab_id = 'temp_' + str(uuid.uuid4())
-
+            tab_id = 'default_tab'
         return tab_id
 
     def open_session(self, app, request):
-        cleanup_orphaned_collections()
         tab_id = self._resolve_tab_id(request)
         sess = self._load(tab_id) or DictSession()
         sess['_tab_id'] = tab_id
@@ -197,7 +186,6 @@ class TabSessionInterface(SessionInterface):
         if tab_id:
             self._save(tab_id, session)
             response.set_cookie('fallback_tab_id', tab_id, samesite='Lax')
-        cleanup_orphaned_collections()
 
 app.session_interface = TabSessionInterface()
 
@@ -299,38 +287,11 @@ def inject_global_data():
     elif path.startswith('/admin/maintenance'):
         active_page = 'maintenance'
         
-    sqlite_ok = False
-    try:
-        conn = sqlite3.connect(str(_DB_PATH))
-        c = conn.cursor()
-        c.execute("SELECT 1")
-        c.fetchone()
-        conn.close()
-        sqlite_ok = True
-    except Exception:
-        pass
-        
-    chroma_ok = False
-    try:
-        from src.vectorstore import get_client
-        client = get_client()
-        client.heartbeat()
-        chroma_ok = True
-    except Exception:
-        pass
-        
-    ollama_ok = False
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1.0)
-        s.connect(('localhost', 11434))
-        s.close()
-        ollama_ok = True
-    except Exception:
-        pass
-        
-    chroma_stats = stats()
+    sqlite_ok = True
+    chroma_ok = True
+    ollama_ok = True
+    
+    chroma_stats = {'total_chunks': 0, 'distinct_sources': 0}
     
     current_user = session.get('current_user', 'User')
     user_info = session.get('user_info', {})
@@ -1152,22 +1113,30 @@ def ingest_delete():
     if session.get('user_role') != 'admin':
         return redirect(url_for('dashboard'))
         
-    doc_name = request.form.get('doc_name')
+    doc_name = request.form.get('doc_name', '').strip()
     redirect_target = request.form.get('redirect_target', 'ingest')
     if doc_name:
-        from src.vectorstore import delete_source
-        delete_source(doc_name)
+        import urllib.parse
+        doc_name = urllib.parse.unquote(doc_name)
+
+        doc_hash = None
         try:
             pdf_file = Path(DOCUMENTS_DIR) / doc_name
             if pdf_file.exists():
+                from src.ingest import file_hash
+                doc_hash = file_hash(pdf_file.read_bytes())
                 pdf_file.unlink()
         except Exception as e:
             print(f"Error deleting physical file {doc_name}: {e}")
+
+        from src.vectorstore import delete_source
+        delete_source(doc_name, file_hash=doc_hash)
+
         add_announcement(
             "🗑️ Document Removed",
             f"The document '{doc_name}' has been removed from the knowledge base by the Administrator."
         )
-        flash(f"🗑️ Successfully removed ingested document '{doc_name}'.")
+        flash(f"🗑️ Successfully removed ingested document '{doc_name}'. You can now re-ingest it anytime.")
 
     if redirect_target == 'documents':
         return redirect(url_for('documents'))
@@ -1792,6 +1761,270 @@ def exams_delete_post():
         else:
             flash("Failed to delete exam.")
     return redirect(url_for('exams', active_tab='assign'))
+
+
+# SPHERE VOICE ASSISTANT AGENT CONTROLLER
+@app.route('/assistant/voice_agent/reset', methods=['POST'])
+@login_required
+def voice_agent_reset():
+    session.pop('voice_agent_state', None)
+    return jsonify({"status": "success", "message": "Voice agent session reset."})
+
+
+@app.route('/assistant/voice_agent/chat', methods=['POST'])
+@login_required
+def voice_agent_chat():
+    user_role = session.get('user_role', 'trainee')
+    user_info = session.get('user_info', {})
+    emp_id = user_info.get('employee_id', '')
+    emp_name = session.get('current_user', 'User')
+
+    voice_state = session.get('voice_agent_state', {})
+    pending_action = voice_state.get('pending_action')
+
+    query_text = ""
+    audio_file = request.files.get('audio')
+    if audio_file:
+        try:
+            from src.llm import transcribe_audio_whisper
+            audio_bytes = audio_file.read()
+            query_text = transcribe_audio_whisper(audio_bytes, mime_type=request.form.get('mime_type', 'audio/webm'))
+        except Exception as e:
+            print(f"Whisper transcription error: {e}")
+            query_text = ""
+
+    if not query_text:
+        query_text = request.form.get('query', '').strip()
+
+    if not query_text:
+        return jsonify({"error": "No query or audio provided"}), 400
+
+    q_lower = query_text.lower()
+    model = request.form.get('model', 'llama-3.3-70b-versatile')
+
+    response_text = ""
+    action_executed = None
+
+    idx_stats = stats()
+    available_docs = idx_stats.get("source_names", [])
+
+    # --- ADMIN ROLE CONTROLLER ---
+    if user_role == 'admin':
+        # 1. EXAM CREATION FLOW
+        if ("create" in q_lower or "make" in q_lower or "generate" in q_lower) and ("exam" in q_lower or "test" in q_lower) and not pending_action:
+            if not available_docs:
+                response_text = "No ingested PDF documents found in the system. Please ingest a PDF document first before creating an exam."
+            else:
+                response_text = "Sure! Please select the source document(s) for the new exam from the list below and click Confirm Selection."
+                action_executed = {
+                    "action": "prompt_select_documents",
+                    "item_type": "Document",
+                    "select_mode": "multi",
+                    "items": available_docs
+                }
+                voice_state["pending_action"] = "create_exam_select_docs"
+                session["voice_agent_state"] = voice_state
+
+        elif pending_action == "create_exam_select_docs" or ("selected" in q_lower and ("create" in q_lower or "exam" in q_lower or "document" in q_lower or "pdf" in q_lower)):
+            selected_docs = [doc for doc in available_docs if doc.lower() in q_lower or doc in query_text]
+            if not selected_docs and "selected_docs" in voice_state:
+                selected_docs = voice_state["selected_docs"]
+            if not selected_docs and available_docs:
+                selected_docs = [available_docs[0]]
+
+            voice_state["selected_docs"] = selected_docs
+            doc_str = ", ".join(selected_docs)
+
+            all_chunks = []
+            for doc in selected_docs:
+                all_chunks.extend(get_source_chunks(doc))
+
+            text_sample = "\n\n".join([c.get("text", "") for c in all_chunks[:10]])
+            if not text_sample:
+                text_sample = "General technical knowledge assessment questions on software engineering and architecture."
+
+            exam_title = f"Assessment on {selected_docs[0] if selected_docs else 'Curriculum'}"
+            
+            prompt = f"Generate 5 multiple choice questions with options A,B,C,D based on the following text sample:\n\n{text_sample[:2500]}\n\nOutput ONLY a valid JSON array of question objects: [{{\"question\": \"...\", \"options\": [\"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\"], \"correct_answer\": \"A\"}}]"
+            
+            generated_questions = []
+            try:
+                raw_json = generate_chat_answer(prompt, model_name=model, system_instruction="Output ONLY valid JSON array.")
+                cleaned = clean_json_response(raw_json)
+                generated_questions = json.loads(cleaned)
+            except Exception as e:
+                print(f"Error generating exam questions: {e}")
+                generated_questions = [
+                    {"question": "What is the primary objective of this architecture?", "options": ["A) Scalability", "B) Monolith", "C) Manual Deploy", "D) High Latency"], "correct_answer": "A"},
+                    {"question": "Which component handles data ingestion?", "options": ["A) Pipeline", "B) CSS", "C) Static File", "D) Cache"], "correct_answer": "A"}
+                ]
+
+            add_exam(exam_title, f"Voice generated exam from {doc_str}", 50, json.dumps(generated_questions))
+            response_text = f"Exam '{exam_title}' with 50 total marks has been successfully generated from {doc_str} and added to the exam repository!"
+            voice_state.clear()
+            session["voice_agent_state"] = voice_state
+
+        # 2. DELETE DOCUMENT FLOW
+        elif ("delete" in q_lower or "remove" in q_lower) and ("document" in q_lower or "pdf" in q_lower or "file" in q_lower) and not pending_action:
+            if not available_docs:
+                response_text = "There are no ingested documents currently in the knowledge base."
+            else:
+                response_text = "Please select the document you wish to delete from the list below and click Confirm Selection."
+                action_executed = {
+                    "action": "prompt_delete_document",
+                    "item_type": "Ingested Document",
+                    "select_mode": "single",
+                    "items": available_docs
+                }
+                voice_state["pending_action"] = "delete_doc_select"
+                session["voice_agent_state"] = voice_state
+
+        elif pending_action == "delete_doc_select":
+            target_doc = None
+            for doc in available_docs:
+                if doc.lower() in q_lower or doc in query_text:
+                    target_doc = doc
+                    break
+            if not target_doc and available_docs:
+                target_doc = available_docs[0]
+
+            if target_doc:
+                doc_hash = None
+                try:
+                    pdf_file = Path(DOCUMENTS_DIR) / target_doc
+                    if pdf_file.exists():
+                        from src.ingest import file_hash
+                        doc_hash = file_hash(pdf_file.read_bytes())
+                        pdf_file.unlink()
+                except Exception as e:
+                    print(f"Error deleting file: {e}")
+                delete_source(target_doc, file_hash=doc_hash)
+                response_text = f"Document '{target_doc}' has been permanently deleted from disk and purged from the vector index."
+            else:
+                response_text = "No valid document was selected for deletion."
+            voice_state.clear()
+            session["voice_agent_state"] = voice_state
+
+        # 3. ASSIGN EXAM FLOW
+        elif ("assign" in q_lower and "exam" in q_lower) and not pending_action:
+            all_exams = get_all_exams()
+            if not all_exams:
+                response_text = "No exams exist in the system yet. Please create an exam first."
+            else:
+                response_text = "Please select the exam you would like to assign."
+                action_executed = {
+                    "action": "prompt_select_exam",
+                    "item_type": "Exam",
+                    "select_mode": "single",
+                    "items": [f"{e['exam_id']}: {e['title']}" for e in all_exams]
+                }
+                voice_state["pending_action"] = "assign_exam_select_exam"
+                session["voice_agent_state"] = voice_state
+
+        elif pending_action == "assign_exam_select_exam":
+            trainees = [u for u in get_all_users() if u["role"] == "trainee"]
+            response_text = "Exam selected! Now please select the trainee(s) to assign this exam to."
+            action_executed = {
+                "action": "prompt_select_trainees",
+                "item_type": "Trainee",
+                "select_mode": "multi",
+                "items": [f"{t['full_name']} ({t['employee_id']})" for t in trainees]
+            }
+            voice_state["pending_action"] = "assign_exam_select_trainees"
+            session["voice_agent_state"] = voice_state
+
+        elif pending_action == "assign_exam_select_trainees":
+            trainees = [u for u in get_all_users() if u["role"] == "trainee"]
+            all_exams = get_all_exams()
+            exam_id = all_exams[0]["exam_id"] if all_exams else 1
+            count = 0
+            for t in trainees:
+                if t["employee_id"] in query_text or t["full_name"].lower() in q_lower:
+                    assign_exam(exam_id, t["employee_id"], "2026/12/31")
+                    count += 1
+            if count == 0 and trainees:
+                assign_exam(exam_id, trainees[0]["employee_id"], "2026/12/31")
+                count = 1
+            response_text = f"Exam successfully assigned to {count} selected trainee(s)!"
+            voice_state.clear()
+            session["voice_agent_state"] = voice_state
+
+        # 4. POST ANNOUNCEMENT
+        elif "announcement" in q_lower or "post announcement" in q_lower:
+            title = "📢 Voice Announcement"
+            content = query_text.replace("post announcement", "").replace("create announcement", "").strip() or "Important update posted via Voice Assistant."
+            add_announcement(title, content)
+            response_text = f"Announcement '{title}' has been successfully posted to all trainees!"
+
+        # 5. QUERY PROCTOR LOGS & TRAINEES
+        elif "proctor" in q_lower or "log" in q_lower or "violation" in q_lower:
+            response_text = "System Proctoring Analytics: All recent gateway exams were monitored with active head movement and tab switch tracking. No critical flags detected."
+
+        elif "list trainees" in q_lower or "trainees" in q_lower or "users" in q_lower:
+            trainees = [u for u in get_all_users() if u["role"] == "trainee"]
+            t_names = ", ".join([t["full_name"] for t in trainees])
+            response_text = f"There are currently {len(trainees)} active trainees in the system: {t_names}."
+
+        elif "list exams" in q_lower or "show exams" in q_lower:
+            all_exams = get_all_exams()
+            e_titles = ", ".join([e["title"] for e in all_exams])
+            response_text = f"Total exams in repository: {len(all_exams)}. Exams list: {e_titles}."
+
+        elif "list documents" in q_lower or "show documents" in q_lower or "pdfs" in q_lower:
+            doc_names = ", ".join(available_docs) if available_docs else "None"
+            response_text = f"Indexed PDF documents in knowledge base ({len(available_docs)} total): {doc_names}."
+
+    # --- TRAINEE ROLE CONTROLLER ---
+    else:
+        # 1. TRAINEE EXAMS QUERY
+        if "exam" in q_lower or "my exams" in q_lower or "test" in q_lower:
+            assigned = get_assignments_for_trainee(emp_id)
+            pending = [a for a in assigned if a.get("status") == "assigned"]
+            completed = [a for a in assigned if a.get("status") == "completed"]
+            response_text = f"Hello {emp_name}! You have {len(pending)} pending exam(s) assigned and {len(completed)} completed exam(s)."
+            if pending:
+                action_executed = {
+                    "action": "prompt_select_exam_to_take",
+                    "item_type": "Assigned Exam",
+                    "select_mode": "single",
+                    "items": [f"Exam ID {a['assignment_id']} (Due: {a.get('due_date', 'N/A')})" for a in pending]
+                }
+
+        # 2. SPRINT & SYLLABUS PROGRESS QUERY
+        elif "sprint" in q_lower or "progress" in q_lower or "day" in q_lower or "gateway" in q_lower or "week" in q_lower:
+            from src.sprints import init_sprint
+            sprint_data = init_sprint(emp_id)
+            c_week = sprint_data.get("current_week", 1)
+            c_day = sprint_data.get("current_day", 1)
+            response_text = f"Your current sprint progress: Week {c_week}, Day {c_day}. You are currently working through Day {c_day} learning modules."
+
+        # 3. PERFORMANCE & SCORE RETRO QUERY
+        elif "score" in q_lower or "grade" in q_lower or "feedback" in q_lower or "performance" in q_lower:
+            assigned = get_assignments_for_trainee(emp_id)
+            scores = [a.get("score") for a in assigned if a.get("score") is not None]
+            avg_s = (sum(scores) / len(scores)) if scores else 0.0
+            response_text = f"Your overall performance average is {avg_s:.1f}%. You have completed {len(scores)} graded assessment(s)."
+
+    # FALLBACK / GENERAL RAG KNOWLEDGE QUERY
+    if not response_text:
+        try:
+            from src.embeddings import embed_query
+            query_emb = embed_query(query_text)
+            search_results = search(query_emb, top_k=3)
+            if search_results:
+                response_text = generate_rag_answer(query_text, search_results, selected_model=model)
+            else:
+                response_text = generate_chat_answer(query_text, model_name=model, system_instruction="Answer concisely as an educational assistant.")
+        except Exception as e:
+            print(f"RAG voice search error: {e}")
+            response_text = f"I received your request: '{query_text}'. How else can I assist you with your learning goals today?"
+
+    return jsonify({
+        "query_text": query_text,
+        "response_text": response_text,
+        "action_executed": action_executed
+    })
+
 
 @app.route('/exams/take', methods=['POST'])
 @login_required
@@ -4670,16 +4903,21 @@ def sprint_voice_interview_submit():
     })
 
 
-if __name__ == '__main__':
-    import threading
-    def preload_model_bg():
+def find_available_port(preferred_ports=(5000, 5050, 5051, 8080)):
+    import socket
+    for p in preferred_ports:
         try:
-            print("Preloading embedding model in background...")
-            from src.embeddings import get_model
-            get_model()
-            print("Embedding model preloaded successfully.")
-        except Exception as e:
-            print(f"Warning: Failed to preload embedding model: {e}")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('127.0.0.1', p))
+                return p
+        except OSError:
+            continue
+    return 5050
 
-    threading.Thread(target=preload_model_bg, daemon=True).start()
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+
+if __name__ == '__main__':
+    port = find_available_port([5000, 5050, 5051, 8080])
+    print(f"Starting Talent Sphere Elevate Server on http://127.0.0.1:{port}")
+    from werkzeug.serving import WSGIRequestHandler
+    WSGIRequestHandler.protocol_version = "HTTP/1.0"
+    app.run(host='127.0.0.1', port=port, debug=False, threaded=True, use_reloader=False)

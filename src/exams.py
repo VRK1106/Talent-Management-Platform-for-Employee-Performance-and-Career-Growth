@@ -7,12 +7,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from src.users import get_db_connection
+
 _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 
 
 def init_exams_db() -> None:
     """Initialize SQLite tables for exams, assignments, and announcements."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     cursor = conn.cursor()
     
     # 1. Create exams table

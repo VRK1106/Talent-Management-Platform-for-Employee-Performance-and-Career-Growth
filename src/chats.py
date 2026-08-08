@@ -7,12 +7,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from src.users import get_db_connection
+
 _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 
 
 def init_chats_db() -> None:
     """Initialize persistent chat tables in the SQLite database."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     cursor = conn.cursor()
     
     # 1. Create chat_sessions table
@@ -61,9 +63,8 @@ def init_chats_db() -> None:
 
 def create_chat_session(session_id: str, user_id: str, title: str, week_number: int = 1) -> bool:
     """Create a new chat session."""
-    init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO chat_sessions (session_id, user_id, title, week_number) VALUES (?, ?, ?, ?)",
@@ -78,9 +79,8 @@ def create_chat_session(session_id: str, user_id: str, title: str, week_number: 
 
 def add_chat_message(session_id: str, role: str, content: str, sources: list[dict[str, Any]] | None = None) -> bool:
     """Add a message to an active chat session."""
-    init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
         cursor = conn.cursor()
         sources_str = json.dumps(sources) if sources else None
         cursor.execute(
@@ -96,9 +96,8 @@ def add_chat_message(session_id: str, role: str, content: str, sources: list[dic
 
 def get_chat_sessions_for_user(user_id: str, week_number: int = None) -> list[dict[str, Any]]:
     """Retrieve all chat sessions created by a specific user, optionally filtered by week."""
-    init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         if week_number is not None:

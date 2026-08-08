@@ -1,11 +1,11 @@
 import sqlite3
 import uuid
 from pathlib import Path
-from src.users import _DB_PATH
+from src.users import _DB_PATH, get_db_connection
 
 def init_sprint(user_id: str) -> dict:
     """Initialize sprint schedule for user if not exists."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     

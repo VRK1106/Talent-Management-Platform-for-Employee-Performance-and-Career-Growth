@@ -35,7 +35,7 @@ _AGGREGATE_SIGNALS = {
 def _get_all_trainee_names_and_ids() -> list[tuple[str, str]]:
     """Return list of (full_name, employee_id) for all trainees."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         rows = conn.execute(
             "SELECT full_name, employee_id FROM users WHERE role != 'admin'"
         ).fetchall()

@@ -19,12 +19,14 @@ _model_instance = None
 
 
 def _auto_device() -> str:
-    """Return ``"cuda"`` when a GPU is available, otherwise ``"cpu"``."""
+    """Return "cuda" when a GPU is available, otherwise "cpu"."""
     try:
         import torch
-        return "cuda" if torch.cuda.is_available() else "cpu"
+        if torch.cuda.is_available():
+            return "cuda"
     except Exception:
-        return "cpu"
+        pass
+    return "cpu"
 
 
 def get_model() -> SentenceTransformer:

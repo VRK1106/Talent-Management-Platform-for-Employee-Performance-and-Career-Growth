@@ -10,6 +10,17 @@ from typing import Any
 _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 
 
+def get_db_connection(db_path: Path | str = _DB_PATH, timeout: float = 15.0) -> sqlite3.Connection:
+    """Return a WAL-enabled, lock-resistant SQLite database connection."""
+    conn = sqlite3.connect(str(db_path), timeout=timeout)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=10000;")
+    except Exception:
+        pass
+    return conn
+
+
 def _hash_password(password: str) -> str:
     """Return a SHA-256 hex digest of the password."""
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
@@ -17,7 +28,7 @@ def _hash_password(password: str) -> str:
 
 def init_db() -> None:
     """Initialize the SQLite database and create users table if it does not exist."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Create users table

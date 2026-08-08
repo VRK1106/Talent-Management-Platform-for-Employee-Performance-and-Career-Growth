@@ -18,32 +18,59 @@ from src.config import CHROMA_COLLECTION, CHROMA_DB_PATH
 _client_instance = None
 
 def get_client() -> ClientAPI:
-    """Return a cached, disk-persistent Chroma client."""
+    """Return a cached, disk-persistent Chroma client with self-healing recovery."""
     global _client_instance
     if _client_instance is None:
-        _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        try:
+            _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        except Exception as e:
+            print(f"[WARN] ChromaDB init error: {e}. Executing self-healing index reset...")
+            import shutil, time, pathlib
+            backup_dir = f"{CHROMA_DB_PATH}_corrupt_{int(time.time())}"
+            try:
+                if pathlib.Path(CHROMA_DB_PATH).exists():
+                    shutil.move(CHROMA_DB_PATH, backup_dir)
+            except Exception as ex:
+                print(f"[WARN] Failed to move corrupt DB dir: {ex}")
+            _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     return _client_instance
 
 
-def get_collection() -> Collection:
+def get_collection() -> Collection | None:
     """Return (creating if needed) the cosine-space document collection."""
-    client = get_client()
-    return client.get_or_create_collection(
-        name=CHROMA_COLLECTION,
-        metadata={"hnsw:space": "cosine"},
-    )
+    global _client_instance
+    try:
+        client = get_client()
+        return client.get_or_create_collection(
+            name=CHROMA_COLLECTION,
+            metadata={"hnsw:space": "cosine"},
+        )
+    except Exception as e:
+        print(f"[WARN] Error accessing collection: {e}. Resetting client...")
+        _client_instance = None
+        try:
+            client = get_client()
+            return client.get_or_create_collection(
+                name=CHROMA_COLLECTION,
+                metadata={"hnsw:space": "cosine"},
+            )
+        except Exception as ex:
+            print(f"[ERROR] Failed to obtain vector collection: {ex}")
+            return None
 
 
 def ingested_hashes() -> set[str]:
     """Return the set of file hashes already present in the index."""
     collection = get_collection()
+    if not collection:
+        return set()
     try:
         result = collection.get(include=["metadatas"])
-    except Exception:  # noqa: BLE001 - empty/new collection
+    except Exception:
         return set()
 
     hashes: set[str] = set()
-    for meta in result.get("metadatas") or []:
+    for meta in (result.get("metadatas") or []):
         file_hash = (meta or {}).get("file_hash")
         if file_hash:
             hashes.add(file_hash)
@@ -51,16 +78,7 @@ def ingested_hashes() -> set[str]:
 
 
 def add_chunks(chunks: list[dict], embeddings: list[list[float]], file_hash: str) -> int:
-    """Upsert chunks and their embeddings into the collection.
-
-    Args:
-        chunks: Chunk dicts from :func:`src.ingest.chunk_pages`.
-        embeddings: Parallel list of embedding vectors.
-        file_hash: sha256 of the source file, stamped on every chunk for de-dup.
-
-    Returns:
-        The number of chunks added.
-    """
+    """Upsert chunks and their embeddings into the collection."""
     if not chunks:
         return 0
 
@@ -73,13 +91,19 @@ def add_chunks(chunks: list[dict], embeddings: list[list[float]], file_hash: str
         metadatas.append(meta)
 
     collection = get_collection()
-    collection.upsert(
-        ids=ids,
-        documents=documents,
-        metadatas=metadatas,
-        embeddings=embeddings,
-    )
-    return len(ids)
+    if not collection:
+        return 0
+    try:
+        collection.upsert(
+            ids=ids,
+            documents=documents,
+            metadatas=metadatas,
+            embeddings=embeddings,
+        )
+        return len(ids)
+    except Exception as e:
+        print(f"[ERROR] Failed to upsert chunks: {e}")
+        return 0
 
 
 def search(
@@ -88,40 +112,33 @@ def search(
     source_filters: list[str] | None = None,
     threshold: float = 0.0,
 ) -> list[dict]:
-    """Run a cosine similarity search and return ranked results.
-
-    Args:
-        query_embedding: The query's embedding vector.
-        top_k: Number of results to return.
-        source_filters: Optional list of source filenames to restrict the search.
-        threshold: Minimum similarity score (1 - distance) required.
-
-    Returns:
-        A list of ``{text, source, page, chunk_index, score}`` dicts sorted by
-        descending similarity, where ``score = 1 - distance``.
-    """
+    """Run a cosine similarity search and return ranked results."""
     collection = get_collection()
-    total_count = collection.count()
-    if total_count == 0:
+    if not collection:
         return []
+    try:
+        total_count = collection.count()
+        if total_count == 0:
+            return []
 
-    # Build where clause for metadata filters
-    where_clause = None
-    if source_filters:
-        if len(source_filters) == 1:
-            where_clause = {"source": source_filters[0]}
-        elif len(source_filters) > 1:
-            where_clause = {"$or": [{"source": src} for src in source_filters]}
+        where_clause = None
+        if source_filters:
+            if len(source_filters) == 1:
+                where_clause = {"source": source_filters[0]}
+            elif len(source_filters) > 1:
+                where_clause = {"$or": [{"source": src} for src in source_filters]}
 
-    # Query for slightly more results to ensure we have top_k after thresholding
-    query_k = min(max(top_k * 2, 20), total_count)
+        query_k = min(max(top_k * 2, 20), total_count)
 
-    result = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=query_k,
-        where=where_clause,
-        include=["documents", "metadatas", "distances"],
-    )
+        result = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=query_k,
+            where=where_clause,
+            include=["documents", "metadatas", "distances"],
+        )
+    except Exception as e:
+        print(f"[ERROR] Vector search failed: {e}")
+        return []
 
     documents = (result.get("documents") or [[]])[0]
     metadatas = (result.get("metadatas") or [[]])[0]
@@ -146,15 +163,50 @@ def search(
     return hits[:top_k]
 
 
-def delete_source(source_name: str) -> None:
-    """Delete all chunks associated with a specific source document."""
+def delete_source(source_name: str, file_hash: str | None = None) -> None:
+    """Delete all chunks associated with a specific source document or file_hash."""
     collection = get_collection()
-    collection.delete(where={"source": source_name})
+    if not collection:
+        return
+    import urllib.parse
+    names_to_delete = {source_name, urllib.parse.unquote(source_name), urllib.parse.quote(source_name)}
+    
+    hashes_to_delete = set()
+    if file_hash:
+        hashes_to_delete.add(file_hash)
+        
+    try:
+        # Collect all file_hashes associated with the target source name(s)
+        res = collection.get(include=["metadatas"])
+        for meta in res.get("metadatas") or []:
+            meta = meta or {}
+            if meta.get("source") in names_to_delete:
+                h = meta.get("file_hash")
+                if h:
+                    hashes_to_delete.add(h)
+    except Exception as e:
+        print(f"Error querying metadatas for deletion: {e}")
+
+    # Delete all matching source names
+    for name in names_to_delete:
+        try:
+            collection.delete(where={"source": name})
+        except Exception as e:
+            print(f"Error deleting source '{name}' from Chroma: {e}")
+            
+    # Delete all matching file_hashes so re-ingesting is never skipped as duplicate
+    for h in hashes_to_delete:
+        try:
+            collection.delete(where={"file_hash": h})
+        except Exception as e:
+            print(f"Error deleting file_hash '{h}' from Chroma: {e}")
 
 
 def get_source_chunks(source_name: str) -> list[dict]:
     """Retrieve all chunks for a specific source filename (for the chunk browser)."""
     collection = get_collection()
+    if not collection:
+        return []
     try:
         result = collection.get(
             where={"source": source_name},
@@ -182,13 +234,14 @@ def get_source_chunks(source_name: str) -> list[dict]:
 
 def stats() -> dict:
     """Return index stats: total chunks, distinct source names, and detail cards."""
-    collection = get_collection()
-    total = collection.count()
+    total = 0
     sources_dict: dict[str, int] = {}
     source_pages: dict[str, set[int]] = {}
 
-    if total:
-        try:
+    try:
+        collection = get_collection()
+        total = collection.count()
+        if total:
             result = collection.get(include=["metadatas"])
             for meta in result.get("metadatas") or []:
                 meta = meta or {}
@@ -200,8 +253,8 @@ def stats() -> dict:
                         if source not in source_pages:
                             source_pages[source] = set()
                         source_pages[source].add(page)
-        except Exception:  # noqa: BLE001 - best-effort stats
-            pass
+    except Exception as e:
+        print(f"Error reading vectorstore stats: {e}")
 
     source_details = []
     for src in sorted(sources_dict.keys()):
