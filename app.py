@@ -2187,6 +2187,8 @@ def exams_take():
         session['exam_started'] = False
     return redirect(url_for('exams'))
 
+
+
 @app.route('/exams/cancel')
 @login_required
 def exams_cancel():
@@ -3671,18 +3673,19 @@ def assistant_wizard_generate():
                 key=lambda doc: (sect_qty * weights.get(doc, 0)) - base_counts[doc],
                 reverse=True
             )
-            for i in range(remainder):
-                base_counts[sorted_docs_by_fraction[i]] += 1
+            if sorted_docs_by_fraction:
+                for i in range(remainder):
+                    base_counts[sorted_docs_by_fraction[i % len(sorted_docs_by_fraction)]] += 1
                 
             for doc in doc_list:
                 count_to_generate = base_counts[doc]
                 if count_to_generate <= 0:
                     continue
                     
-                res = coll.get(where={"source": doc}, include=["documents"])
-                chunks = res.get("documents") or []
+                chunks_data = get_source_chunks(doc)
+                chunks = [c.get("text", "") for c in chunks_data]
                 if not chunks:
-                    continue
+                    chunks = [f"Technical content excerpt from document {doc}"]
                 context_text = "\n\n".join(chunks[:3])
                 
                 blooms_str = ", ".join(blooms) if blooms else "None specific"
