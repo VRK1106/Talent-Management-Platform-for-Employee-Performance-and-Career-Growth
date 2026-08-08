@@ -5055,21 +5055,9 @@ def sprint_voice_interview_submit():
     })
 
 
-def find_available_port(preferred_ports=(5050, 5000, 5051, 8080)):
-    import socket
-    for p in preferred_ports:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('127.0.0.1', p))
-                return p
-        except OSError:
-            continue
-    return 5050
-
-
 if __name__ == '__main__':
-    port = find_available_port([5050, 5000, 5051, 8080])
-    print(f"Starting Talent Sphere Elevate Server on http://127.0.0.1:{port}")
+    port = 5050
+    print(f"Starting Talent Sphere Elevate Server strictly on http://127.0.0.1:{port}")
     from werkzeug.serving import WSGIRequestHandler
     WSGIRequestHandler.protocol_version = "HTTP/1.0"
     app.run(host='127.0.0.1', port=port, debug=False, threaded=True, use_reloader=False)
