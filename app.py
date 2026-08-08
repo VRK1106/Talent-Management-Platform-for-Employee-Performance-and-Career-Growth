@@ -1801,6 +1801,15 @@ def voice_agent_chat():
 
     q_lower = query_text.lower()
     model = request.form.get('model', 'llama-3.3-70b-versatile')
+    selected_lang = request.form.get('language', 'en-US')
+
+    lang_instructions = {
+        'hi-IN': "Respond strictly in fluent Hindi (हिंदी). All text and explanations must be in Hindi.",
+        'es-ES': "Respond strictly in fluent Spanish (Español). All text and explanations must be in Spanish.",
+        'fr-FR': "Respond strictly in fluent French (Français). All text and explanations must be in French.",
+        'en-US': "Respond in clear English."
+    }
+    sys_lang_prompt = lang_instructions.get(selected_lang, lang_instructions['en-US'])
 
     response_text = ""
     action_executed = None
@@ -2013,8 +2022,10 @@ def voice_agent_chat():
             search_results = search(query_emb, top_k=3)
             if search_results:
                 response_text = generate_rag_answer(query_text, search_results, selected_model=model)
+                if selected_lang != 'en-US':
+                    response_text = generate_chat_answer(f"Translate the following response into the target language requested ({selected_lang}):\n\n{response_text}", model_name=model, system_instruction=sys_lang_prompt)
             else:
-                response_text = generate_chat_answer(query_text, model_name=model, system_instruction="Answer concisely as an educational assistant.")
+                response_text = generate_chat_answer(query_text, model_name=model, system_instruction=f"Answer concisely as an educational assistant. {sys_lang_prompt}")
         except Exception as e:
             print(f"RAG voice search error: {e}")
             response_text = f"I received your request: '{query_text}'. How else can I assist you with your learning goals today?"

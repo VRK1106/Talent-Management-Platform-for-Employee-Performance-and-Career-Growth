@@ -463,8 +463,13 @@
             if (voiceAgentSynth) voiceAgentSynth.cancel();
 
             voiceAgentUtterance = new SpeechSynthesisUtterance(text);
+            const langSelect = document.getElementById('languageSelect');
+            const selectedLang = langSelect ? langSelect.value : 'en-US';
+            voiceAgentUtterance.lang = selectedLang;
+
             const voices = voiceAgentSynth.getVoices();
-            const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Desktop'))) || voices.find(v => v.lang.startsWith('en'));
+            const langPrefix = selectedLang.split('-')[0];
+            const preferredVoice = voices.find(v => v.lang.startsWith(langPrefix) || v.lang.includes(langPrefix)) || voices.find(v => v.lang.startsWith('en'));
             if (preferredVoice) voiceAgentUtterance.voice = preferredVoice;
 
             voiceAgentUtterance.onstart = () => { setVoiceAgentState('speaking'); };
@@ -603,6 +608,8 @@
             const modelSelect = document.getElementById('chatModel');
             const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
             formData.append('model', model);
+            const langSelect = document.getElementById('languageSelect');
+            formData.append('language', langSelect ? langSelect.value : 'en-US');
 
             const response = await fetch('/assistant/voice_agent/chat', {
                 method: 'POST',
@@ -631,6 +638,8 @@
         const modelSelect = document.getElementById('chatModel');
         const model = modelSelect ? modelSelect.value : 'llama-3.3-70b-versatile';
         formData.append('model', model);
+        const langSelect = document.getElementById('languageSelect');
+        formData.append('language', langSelect ? langSelect.value : 'en-US');
 
         try {
             const response = await fetch('/assistant/voice_agent/chat', {
@@ -707,43 +716,62 @@
     <span style="font-size: 0.85rem; color: var(--ts-text-secondary); font-weight: 500;">Interactive Learning Coach</span>
 </div>
 
-<!-- ── Slim Top Strip: model selector + actions ── -->
+<!-- ── Slim Top Strip: model selector + 4-Language picker + actions ── -->
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-            padding: 0.45rem 0.75rem; border-radius: 10px; margin-top: 0.4rem; flex-shrink: 0;
-            background: rgba(255,255,255,0.03); border: 1px solid var(--ts-border);">
+            padding: 0.5rem 0.85rem; border-radius: 12px; margin-top: 0.4rem; flex-shrink: 0;
+            background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); border: 1px solid var(--ts-border, rgba(255,255,255,0.12)); box-shadow: 0 4px 16px rgba(0,0,0,0.15);">
 
-    <!-- Left: model picker -->
-    <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1;">
-        <span style="font-size: 0.78rem; font-weight: 600; color: var(--ts-text-secondary); white-space: nowrap;">🤖 Model</span>
-        {% if not groq_api_key %}
-            <span style="font-size: 0.78rem; color: #f87171;">⚠️ Groq API key missing</span>
-        {% else %}
-            <select id="chatModel"
-                    style="padding: 0.28rem 0.5rem; border-radius: 6px; border: 1px solid var(--ts-border);
-                           background: var(--ts-input-bg); color: var(--ts-text); font-size: 0.82rem;
-                           outline: none; max-width: 240px; flex: 1;">
-                {% for m in ollama_models %}
-                    <option value="{{ m }}" {% if "llama" in m.lower() %}selected{% endif %}>{{ m }}</option>
-                {% endfor %}
+    <!-- Left: model picker & 4-Language selector -->
+    <div style="display: flex; align-items: center; gap: 0.8rem; min-width: 0; flex: 1; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: var(--ts-primary, #6366f1); white-space: nowrap;">🤖 Model</span>
+            {% if not groq_api_key %}
+                <span style="font-size: 0.78rem; color: #f87171;">⚠️ Groq API key missing</span>
+            {% else %}
+                <select id="chatModel"
+                        style="padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--ts-border, rgba(255,255,255,0.2));
+                               background: var(--ts-input-bg, rgba(255,255,255,0.06)); color: var(--ts-text, #F8FAFC); font-size: 0.82rem;
+                               outline: none; max-width: 220px; font-weight: 600; cursor: pointer;">
+                    {% for m in ollama_models %}
+                        <option value="{{ m }}" {% if "llama" in m.lower() %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
+        </div>
+
+        <!-- 4-Language Selector Dropdown -->
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #34D399; white-space: nowrap;">🌐 Language</span>
+            <select id="languageSelect" onchange="if(typeof onLanguageChange === 'function') onLanguageChange();"
+                    style="padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid rgba(52, 211, 153, 0.4);
+                           background: rgba(52, 211, 153, 0.08); color: #34D399; font-size: 0.82rem;
+                           outline: none; font-weight: 700; cursor: pointer;">
+                <option value="en-US" selected>🇬🇧 English</option>
+                <option value="hi-IN">🇮🇳 Hindi (हिंदी)</option>
+                <option value="es-ES">🇪🇸 Spanish (Español)</option>
+                <option value="fr-FR">🇫🇷 French (Français)</option>
             </select>
-        {% endif %}
+        </div>
     </div>
 
-    <!-- Right: action buttons -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+    <!-- Right: modern action buttons -->
+    <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
         <button type="button" onclick="startTotallyVoiceChat()"
-                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.75rem;
-                       border-radius: 20px; border: 1px solid rgba(96,165,250,0.4);
-                       background: rgba(96,165,250,0.1); color: #60A5FA;
-                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
-            🎙️ Totally Voice Chat
+                style="display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.95rem;
+                       border-radius: 20px; border: none;
+                       background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff;
+                       font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+                       box-shadow: 0 4px 14px rgba(16,185,129,0.35); transition: all 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(16,185,129,0.45)';"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(16,185,129,0.35)';">
+            🎙️ Sphere Voice Assistant
         </button>
         {% if session.get('user_role') != 'admin' %}
         <button type="button" id="ephemeralToggleBtn" onclick="toggleEphemeralDrawer()"
-                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.7rem;
-                       border-radius: 6px; border: 1px solid rgba(99,102,241,0.4);
-                       background: rgba(99,102,241,0.08); color: var(--ts-primary,#6366f1);
-                       font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                style="display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.85rem;
+                       border-radius: 20px; border: 1px solid rgba(99,102,241,0.4);
+                       background: rgba(99,102,241,0.12); color: #818cf8;
+                       font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
             📎 <span id="ephemeralBtnLabel">Session Docs</span>
             <span id="ephemeralChevron" style="transition: transform 0.25s ease;">▾</span>
         </button>
@@ -751,10 +779,12 @@
         <form action="/assistant/clear" method="POST"
               onsubmit="return confirm('Clear this conversation?')" style="margin: 0;">
             <button type="submit"
-                    style="display: flex; align-items: center; gap: 0.3rem; padding: 0.28rem 0.7rem;
-                           border-radius: 6px; border: 1px solid var(--ts-border);
-                           background: transparent; color: var(--ts-text-secondary); font-size: 0.8rem;
-                           cursor: pointer; white-space: nowrap;">
+                    style="display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem;
+                           border-radius: 20px; border: 1px solid var(--ts-border, rgba(255,255,255,0.2));
+                           background: rgba(255,255,255,0.05); color: var(--ts-text-secondary, #94A3B8); font-size: 0.82rem;
+                           font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;"
+                    onmouseover="this.style.background='rgba(239,68,68,0.12)'; this.style.color='#f87171'; this.style.borderColor='rgba(239,68,68,0.3)';"
+                    onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--ts-text-secondary, #94A3B8)'; this.style.borderColor='var(--ts-border, rgba(255,255,255,0.2))';">
                 🧹 Clear
             </button>
         </form>
@@ -823,77 +853,17 @@
 <div class="chat-container">
     <div class="chat-messages" id="chatMessages">
         {% if not active_messages %}
-            <div style="margin: auto; max-width: 680px; width: 100%; padding: 2rem 1rem; text-align: center; display: flex; flex-direction: column; gap: 1.8rem; align-items: center;">
+            <div style="margin: auto; max-width: 680px; width: 100%; padding: 3rem 1rem; text-align: center; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
                 
-                <!-- Animated Hero Greeting -->
-                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2rem; border-radius: 16px; box-shadow: var(--ts-shadow); width: 100%;">
-                    <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
-                        Hello, {{ session.get('user_info', {}).get('full_name', 'Trainee') }}!
+                <!-- Modern Glassmorphic Hero Greeting -->
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%); backdrop-filter: blur(16px); border: 1px solid rgba(99, 102, 241, 0.3); padding: 2.5rem 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%;">
+                    <div style="font-size: 2.4rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.6rem; letter-spacing: -0.5px;">
+                        Hello, {{ session.get('user_info', {}).get('full_name', 'User') }}! 👋
                     </div>
-                    <div style="font-size: 1rem; color: var(--ts-text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.5;">
-                        I am your unified AI Study Coach. I can help you analyze documents, review exam topics, and track performance.
+                    <div style="font-size: 1.05rem; color: var(--ts-text-secondary, #94A3B8); max-width: 520px; margin: 0 auto; line-height: 1.6; font-weight: 500;">
+                        I am your unified AI Assistant & Study Coach. Ask any technical question, upload study PDFs, or click <strong style="color:#10b981;">Sphere Voice Assistant</strong> to speak directly.
                     </div>
                 </div>
-                
-                <!-- Quick Action Cards Grid -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; width: 100%;">
-                    {% if session.get('user_role') != 'admin' %}
-                    <!-- Card 1: Attach Document (Trainee only) -->
-                    <div class="welcome-action-card" onclick="toggleUploadCard()" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📎</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Session Documents</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Upload a temporary PDF to ask questions directly from it.</div>
-                    </div>
-                    {% else %}
-                    <!-- Card 1: Review student (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is trainee RK performing?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">👥</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Trainee Insights</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Instantly query trainee scores, session logs, and webcam proctor flags.</div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if session.get('user_role') != 'admin' %}
-                    <!-- Card 2: Performance Summary (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('How is my performance?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📊</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">My Progress</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Review your study actions, session stats, and overall exam completion.</div>
-                    </div>
-                    {% else %}
-                    <!-- Card 2: Create Exam Assessment (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me create a new exam.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📝</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Create Exam</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Design and compile a new exam using our structured, interactive AI wizard.</div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if session.get('user_role') != 'admin' %}
-                    <!-- Card 3: Weakness analysis (Trainee only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('What are my weakest areas and how do I study them?')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">💡</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Weak Area Review</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Identify subjects where you scored under 70% in exams.</div>
-                    </div>
-                    {% else %}
-                    <!-- Card 3: Create Announcement (Admin only) -->
-                    <div class="welcome-action-card" onclick="sendFollowupText('Help me write a new announcement.')" style="cursor: pointer; background: var(--ts-card-bg); border: 1px solid var(--ts-border); padding: 1.5rem; border-radius: 12px; transition: all 0.3s ease; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; height: 100%;">
-                        <div style="font-size: 1.5rem;">📢</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--ts-text-heading);">Write Announcement</div>
-                        <div style="font-size: 0.78rem; color: var(--ts-text-secondary); line-height: 1.4;">Draft custom announcements with targeted distributions for specific courses.</div>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <!-- Hover effect styles -->
-                <style>
-                    .welcome-action-card:hover {
-                        transform: translateY(-4px);
-                        border-color: var(--ts-primary) !important;
-                        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
-                    }
-                </style>
             </div>
         {% else %}
             {% for msg in active_messages %}
@@ -965,23 +935,28 @@
     </div>
 
     <!-- Active Input / Form -->
-    <div class="chat-input-area">
+    <div class="chat-input-area" style="padding: 0.85rem 1rem; background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border-top: 1px solid var(--ts-border, rgba(255,255,255,0.12)); border-radius: 16px;">
         <div id="wizardContainer" style="display: none; width: 100%; max-height: 380px; overflow-y: auto; padding-right: 6px;"></div>
-        <!-- Dynamic Chat Suggestions Container -->
-        <div id="chatSuggestionsContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; justify-content: center; width: 100%;"></div>
-        <div class="chat-input-row" id="chatInputRow">
-            <textarea id="queryInput" placeholder="Ask a question to your AI Coach..." class="chat-input-field" 
+        <div class="chat-input-row" id="chatInputRow" style="gap: 0.65rem;">
+            <textarea id="queryInput" placeholder="Ask a technical question or command..." class="chat-input-field" 
+                      style="border-radius: 12px; border: 1px solid var(--ts-border, rgba(255,255,255,0.18)); font-size: 0.92rem; padding: 0.75rem 1rem;"
                       onkeydown="handleKeyPress(event)" {% if not groq_api_key %}disabled{% endif %}></textarea>
-            <!-- Mic button for voice input (Groq Whisper Large V3) -->
-            <button id="micBtn" onclick="toggleVoiceRecording()" title="Hold to record voice message (Whisper Large V3)"
+            <!-- Mic button for voice input -->
+            <button id="micBtn" onclick="toggleVoiceRecording()" title="Hold to record voice message"
+                    style="width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(16,185,129,0.4); background: rgba(16,185,129,0.12); color: #34D399; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;"
+                    onmouseover="this.style.transform='scale(1.08)';" onmouseout="this.style.transform='scale(1)';"
                     {% if not groq_api_key %}disabled style="opacity:0.4;cursor:not-allowed;"{% endif %}>
                 🎙️
             </button>
-            <button id="sendBtn" class="btn-ts btn-ts-primary" style="width: auto; padding: 0 1.5rem; height: 44px;" 
+            <button id="sendBtn" class="btn-ts btn-ts-primary" 
+                    style="width: auto; padding: 0 1.6rem; height: 48px; border-radius: 24px; border: none; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 16px rgba(99,102,241,0.35); transition: all 0.2s ease; cursor: pointer;"
+                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(99,102,241,0.45)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(99,102,241,0.35)';"
                     onclick="submitMessage()" {% if not groq_api_key %}disabled{% endif %}>
                 🚀 Send
             </button>
-            <button id="stopBtn" class="btn-ts" style="width: auto; padding: 0 1.5rem; height: 44px; display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);"
+            <button id="stopBtn" class="btn-ts" 
+                    style="width: auto; padding: 0 1.5rem; height: 48px; border-radius: 24px; display: none; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08); font-weight: 700;"
                     onclick="stopGeneration()">
                 ⏹️ Stop
             </button>
