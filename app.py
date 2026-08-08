@@ -1819,22 +1819,34 @@ def voice_agent_chat():
 
     # --- ADMIN ROLE CONTROLLER ---
     if user_role == 'admin':
-        # 1. EXAM CREATION FLOW
+        # 1. MULTI-STEP VOICE EXAM CREATION WIZARD
         if ("create" in q_lower or "make" in q_lower or "generate" in q_lower) and ("exam" in q_lower or "test" in q_lower) and not pending_action:
+            response_text = "Sure! What title would you like to give to this exam?"
+            voice_state["pending_action"] = "wiz_exam_title"
+            session["voice_agent_state"] = voice_state
+
+        elif pending_action == "wiz_exam_title":
+            exam_title = query_text.strip().strip('"').strip("'")
+            if not exam_title or len(exam_title) < 2:
+                exam_title = "Voice Generated Assessment"
+            
+            voice_state["exam_title"] = exam_title
+            
             if not available_docs:
-                response_text = "No ingested PDF documents found in the system. Please ingest a PDF document first before creating an exam."
+                response_text = f"Got it, title set to '{exam_title}'. However, there are no ingested PDF documents found in the system. Please ingest a PDF document first."
+                voice_state.clear()
             else:
-                response_text = "Sure! Please select the source document(s) for the new exam from the list below and click Confirm Selection."
+                response_text = f"Title set to '{exam_title}'. Now, please select the source document(s) to generate questions from and click Confirm Selection."
                 action_executed = {
                     "action": "prompt_select_documents",
                     "item_type": "Document",
                     "select_mode": "multi",
                     "items": available_docs
                 }
-                voice_state["pending_action"] = "create_exam_select_docs"
-                session["voice_agent_state"] = voice_state
+                voice_state["pending_action"] = "wiz_select_docs"
+            session["voice_agent_state"] = voice_state
 
-        elif pending_action == "create_exam_select_docs" or ("selected" in q_lower and ("create" in q_lower or "exam" in q_lower or "document" in q_lower or "pdf" in q_lower)):
+        elif pending_action == "wiz_select_docs" or (pending_action and pending_action.startswith("wiz_") and "selected_docs" not in voice_state and ("selected" in q_lower or "confirm" in q_lower)):
             selected_docs = [doc for doc in available_docs if doc.lower() in q_lower or doc in query_text]
             if not selected_docs and "selected_docs" in voice_state:
                 selected_docs = voice_state["selected_docs"]
@@ -1843,33 +1855,162 @@ def voice_agent_chat():
 
             voice_state["selected_docs"] = selected_docs
             doc_str = ", ".join(selected_docs)
+            
+            response_text = f"Selected document(s): {doc_str}. How many questions should be included in this exam? (e.g. 5, 10, or 15 questions)"
+            voice_state["pending_action"] = "wiz_question_count"
+            session["voice_agent_state"] = voice_state
 
+        elif pending_action == "wiz_question_count":
+            import re
+            digits = re.findall(r'\d+', query_text)
+            q_count = int(digits[0]) if digits else 5
+            if q_count <= 0 or q_count > 50:
+                q_count = 5
+            
+            voice_state["question_count"] = q_count
+            response_text = f"Understood, {q_count} questions. How many marks should each question be worth? (e.g. 5 or 10 marks per question)"
+            voice_state["pending_action"] = "wiz_marks_per_question"
+            session["voice_agent_state"] = voice_state
+
+        elif pending_action == "wiz_marks_per_question":
+            import re
+            digits = re.findall(r'\d+', query_text)
+            m_per_q = int(digits[0]) if digits else 10
+            if m_per_q <= 0 or m_per_q > 100:
+                m_per_q = 10
+                
+            voice_state["marks_per_question"] = m_per_q
+            
+            response_text = f"Marks set to {m_per_q} per question. Now please select the difficulty level for this exam."
+            action_executed = {
+                "action": "prompt_select_difficulty",
+                "item_type": "Difficulty Level",
+                "select_mode": "single",
+                "items": ["Easy", "Medium", "Hard", "Mixed"]
+            }
+            voice_state["pending_action"] = "wiz_select_difficulty"
+            session["voice_agent_state"] = voice_state
+
+        elif pending_action == "wiz_select_difficulty":
+            diff = "Medium"
+            for d in ["Easy", "Medium", "Hard", "Mixed"]:
+                if d.lower() in q_lower:
+                    diff = d
+                    break
+                    
+            voice_state["difficulty"] = diff
+            
+            trainees = [u for u in get_all_users() if u["role"] == "trainee"]
+            trainee_items = [f"{t['full_name']} ({t['employee_id']})" for t in trainees]
+            trainee_items.insert(0, "All Trainees")
+            
+            response_text = f"Difficulty set to {diff}. Finally, please select the trainee(s) to assign this exam to and click Confirm Selection."
+            action_executed = {
+                "action": "prompt_select_trainees",
+                "item_type": "Trainee",
+                "select_mode": "multi",
+                "items": trainee_items
+            }
+            voice_state["pending_action"] = "wiz_select_trainees"
+            session["voice_agent_state"] = voice_state
+
+        elif pending_action == "wiz_select_trainees":
+            exam_title = voice_state.get("exam_title", "Voice Generated Assessment")
+            selected_docs = voice_state.get("selected_docs", available_docs[:1])
+            q_count = voice_state.get("question_count", 5)
+            m_per_q = voice_state.get("marks_per_question", 10)
+            diff = voice_state.get("difficulty", "Medium")
+            
+            doc_str = ", ".join(selected_docs)
             all_chunks = []
             for doc in selected_docs:
                 all_chunks.extend(get_source_chunks(doc))
-
-            text_sample = "\n\n".join([c.get("text", "") for c in all_chunks[:10]])
+                
+            text_sample = "\n\n".join([c.get("text", "") for c in all_chunks[:15]])
             if not text_sample:
-                text_sample = "General technical knowledge assessment questions on software engineering and architecture."
+                text_sample = f"Technical concepts from {doc_str}."
+                
+            total_marks = q_count * m_per_q
+            
+            prompt = f"""Generate exactly {q_count} multiple choice questions (MCQs) for an exam titled '{exam_title}' based on the text sample below:
 
-            exam_title = f"Assessment on {selected_docs[0] if selected_docs else 'Curriculum'}"
-            
-            prompt = f"Generate 5 multiple choice questions with options A,B,C,D based on the following text sample:\n\n{text_sample[:2500]}\n\nOutput ONLY a valid JSON array of question objects: [{{\"question\": \"...\", \"options\": [\"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\"], \"correct_answer\": \"A\"}}]"
-            
+Text Sample:
+{text_sample[:3000]}
+
+Difficulty level: {diff}
+Marks per question: {m_per_q}
+
+Output ONLY a valid JSON array of objects. Do NOT output any markdown commentary or text outside the JSON array.
+Format required:
+[
+  {{
+    "question": "Question text...",
+    "type": "mcq",
+    "marks": {m_per_q},
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correct_answer": "Option A"
+  }}
+]
+"""
             generated_questions = []
             try:
-                raw_json = generate_chat_answer(prompt, model_name=model, system_instruction="Output ONLY valid JSON array.")
-                cleaned = clean_json_response(raw_json)
+                raw_resp = generate_chat_answer(prompt, model_name=model, system_instruction="Output strictly a valid JSON array of question objects without any markdown commentary.")
+                cleaned = clean_json_response(raw_resp)
                 generated_questions = json.loads(cleaned)
             except Exception as e:
-                print(f"Error generating exam questions: {e}")
-                generated_questions = [
-                    {"question": "What is the primary objective of this architecture?", "options": ["A) Scalability", "B) Monolith", "C) Manual Deploy", "D) High Latency"], "correct_answer": "A"},
-                    {"question": "Which component handles data ingestion?", "options": ["A) Pipeline", "B) CSS", "C) Static File", "D) Cache"], "correct_answer": "A"}
-                ]
+                print(f"Error parsing LLM questions: {e}")
+                for i in range(q_count):
+                    chunk_t = all_chunks[i % len(all_chunks)].get("text", "") if all_chunks else "Core technical concept"
+                    snippet = chunk_t[:70].strip() or f"Question {i+1}"
+                    generated_questions.append({
+                        "question": f"Based on {doc_str}: What is the core principle of {snippet}?",
+                        "type": "mcq",
+                        "marks": m_per_q,
+                        "options": [
+                            f"Primary specification of {snippet[:30]}",
+                            "Secondary auxiliary configuration parameter",
+                            "Deprecated legacy interface",
+                            "None of the above"
+                        ],
+                        "correct_answer": f"Primary specification of {snippet[:30]}"
+                    })
 
-            add_exam(exam_title, f"Voice generated exam from {doc_str}", 50, json.dumps(generated_questions))
-            response_text = f"Exam '{exam_title}' with 50 total marks has been successfully generated from {doc_str} and added to the exam repository!"
+            # Save Exam into SQLite database `exams` table with list of question dicts
+            from src.exams import add_exam_and_get_id
+            exam_id = add_exam_and_get_id(
+                title=exam_title,
+                description=f"Voice created assessment based on {doc_str}. Difficulty: {diff}.",
+                total_marks=total_marks,
+                questions=generated_questions
+            )
+
+            # Assign to Selected Trainees
+            trainees = [u for u in get_all_users() if u["role"] == "trainee"]
+            assigned_count = 0
+            
+            if "all" in q_lower or "all trainees" in q_lower or not trainees:
+                for t in trainees:
+                    if exam_id:
+                        assign_exam(exam_id, t["employee_id"], "2026/12/31")
+                        assigned_count += 1
+            else:
+                for t in trainees:
+                    if t["employee_id"] in query_text or t["full_name"].lower() in q_lower or t["employee_id"] in str(voice_state):
+                        if exam_id:
+                            assign_exam(exam_id, t["employee_id"], "2026/12/31")
+                            assigned_count += 1
+                if assigned_count == 0 and trainees:
+                    for t in trainees:
+                        if exam_id:
+                            assign_exam(exam_id, t["employee_id"], "2026/12/31")
+                            assigned_count += 1
+
+            add_announcement(
+                f"📝 New Exam Assigned: {exam_title}",
+                f"The Administrator has published a new exam '{exam_title}' ({total_marks} marks, {q_count} questions) generated from {doc_str}."
+            )
+
+            response_text = f"Exam '{exam_title}' with {q_count} questions ({total_marks} total marks, {diff} difficulty) has been successfully created and assigned to {assigned_count} trainee(s)!"
             voice_state.clear()
             session["voice_agent_state"] = voice_state
 
