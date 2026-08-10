@@ -5059,6 +5059,12 @@ def sprint_voice_interview_submit():
 
 
 if __name__ == '__main__':
+    import sys
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(line_buffering=True)
+        except Exception:
+            pass
     port = 5050
     print(f"Starting Talent Sphere Elevate Server strictly on http://127.0.0.1:{port}")
     from werkzeug.serving import WSGIRequestHandler

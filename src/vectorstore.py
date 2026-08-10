@@ -232,8 +232,21 @@ def get_source_chunks(source_name: str) -> list[dict]:
         return []
 
 
+_stats_cache = None
+_stats_cache_time = 0.0
+
+def invalidate_stats_cache():
+    global _stats_cache_time
+    _stats_cache_time = 0.0
+
 def stats() -> dict:
-    """Return index stats: total chunks, distinct source names, and detail cards."""
+    """Return index stats: total chunks, distinct source names, and detail cards (cached 5s)."""
+    global _stats_cache, _stats_cache_time
+    import time
+    now = time.time()
+    if _stats_cache is not None and (now - _stats_cache_time) < 5.0:
+        return _stats_cache
+
     total = 0
     sources_dict: dict[str, int] = {}
     source_pages: dict[str, set[int]] = {}
@@ -268,12 +281,15 @@ def stats() -> dict:
             }
         )
 
-    return {
+    res = {
         "total_chunks": total,
         "sources": len(sources_dict),
         "source_names": sorted(sources_dict.keys()),
         "source_details": source_details,
     }
+    _stats_cache = res
+    _stats_cache_time = now
+    return res
 
 
 def reset_collection() -> None:
