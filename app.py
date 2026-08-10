@@ -5059,13 +5059,27 @@ def sprint_voice_interview_submit():
 
 
 if __name__ == '__main__':
-    import sys
+    import sys, socket, subprocess, time
+
+    port = 5050
+    # Auto-release port 5050 if occupied by a stale zombie process
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', port))
+    except OSError:
+        try:
+            cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :{port} ^| findstr LISTENING\') do taskkill /F /PID %a'
+            subprocess.run(cmd, shell=True, capture_output=True)
+            time.sleep(1)
+        except Exception:
+            pass
+
     if hasattr(sys.stdout, 'reconfigure'):
         try:
             sys.stdout.reconfigure(line_buffering=True)
         except Exception:
             pass
-    port = 5050
+
     print(f"Starting Talent Sphere Elevate Server strictly on http://127.0.0.1:{port}")
     from werkzeug.serving import WSGIRequestHandler
     WSGIRequestHandler.protocol_version = "HTTP/1.0"
