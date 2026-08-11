@@ -5058,21 +5058,25 @@ def sprint_voice_interview_submit():
     })
 
 
-if __name__ == '__main__':
-    import sys, socket, subprocess, time
-
-    port = 5050
-    # Auto-release port 5050 if occupied by a stale zombie process
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('127.0.0.1', port))
-    except OSError:
+def find_available_port(preferred_ports=(8080, 5000, 5050, 5051, 8000)):
+    import socket
+    for p in preferred_ports:
         try:
-            cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :{port} ^| findstr LISTENING\') do taskkill /F /PID %a'
-            subprocess.run(cmd, shell=True, capture_output=True)
-            time.sleep(1)
-        except Exception:
-            pass
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('127.0.0.1', p))
+                return p
+        except OSError:
+            continue
+    return 8080
+
+
+if __name__ == '__main__':
+    import sys, socket, time
+
+    if len(sys.argv) > 1 and sys.argv[1].isdigit():
+        port = int(sys.argv[1])
+    else:
+        port = find_available_port([8080, 5000, 5050, 5051, 8000])
 
     if hasattr(sys.stdout, 'reconfigure'):
         try:
@@ -5080,7 +5084,7 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    print(f"Starting Talent Sphere Elevate Server strictly on http://127.0.0.1:{port}")
+    print(f"Starting Talent Sphere Elevate Server on http://127.0.0.1:{port}")
     from werkzeug.serving import WSGIRequestHandler
     WSGIRequestHandler.protocol_version = "HTTP/1.0"
     app.run(host='127.0.0.1', port=port, debug=False, threaded=True, use_reloader=False)
