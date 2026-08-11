@@ -126,23 +126,40 @@ def cleanup_orphaned_collections():
         print(f"Error cleaning up orphaned ephemeral collections: {e}")
 
 
+import threading
+
+_session_lock = threading.Lock()
+_in_memory_tab_sessions = {}
+
 class TabSessionInterface(SessionInterface):
-    """SQLite-backed per-tab session store. Survives server restarts."""
+    """SQLite-backed per-tab session store with thread-safe in-memory caching."""
 
     def _load(self, tab_id):
+        with _session_lock:
+            if tab_id in _in_memory_tab_sessions:
+                return DictSession(_in_memory_tab_sessions[tab_id])
         try:
             conn = get_db_connection(_SESSIONS_DB)
             row = conn.execute("SELECT data FROM tab_sessions WHERE tab_id=?", (tab_id,)).fetchone()
             conn.close()
             if row:
-                return DictSession(json.loads(row[0]))
+                d = json.loads(row[0])
+                with _session_lock:
+                    _in_memory_tab_sessions[tab_id] = dict(d)
+                return DictSession(d)
         except Exception:
             pass
         return None
 
     def _save(self, tab_id, session):
         try:
-            data = json.dumps({k: v for k, v in session.items() if k != '_tab_id'})
+            clean_dict = {k: v for k, v in session.items() if k != '_tab_id'}
+            with _session_lock:
+                if _in_memory_tab_sessions.get(tab_id) == clean_dict:
+                    return
+                _in_memory_tab_sessions[tab_id] = dict(clean_dict)
+
+            data = json.dumps(clean_dict)
             conn = get_db_connection(_SESSIONS_DB)
             conn.execute("""
                 INSERT INTO tab_sessions (tab_id, data, updated_at)
@@ -152,8 +169,7 @@ class TabSessionInterface(SessionInterface):
             conn.commit()
             conn.close()
         except Exception as e:
-            import traceback; traceback.print_exc()
-            print(f'[SESSION SAVE ERROR] tab_id={tab_id}: {e}')
+            pass
 
     def _resolve_tab_id(self, request):
         tab_id = request.args.get('tab_id')
@@ -172,20 +188,22 @@ class TabSessionInterface(SessionInterface):
         return tab_id
 
     def open_session(self, app, request):
+        if request.path.startswith('/assets') or request.path.endswith(('.css', '.js', '.png', '.jpg', '.ico', '.svg')):
+            return DictSession()
         tab_id = self._resolve_tab_id(request)
         sess = self._load(tab_id) or DictSession()
         sess['_tab_id'] = tab_id
         return sess
 
     def should_set_cookie(self, app, session):
-        # Always persist — we manage our own storage
         return True
 
     def is_null_session(self, obj):
-        # Never treat our session as null
         return False
 
     def save_session(self, app, session, response):
+        if request.path.startswith('/assets') or request.path.endswith(('.css', '.js', '.png', '.jpg', '.ico', '.svg')):
+            return
         tab_id = session.get('_tab_id')
         if tab_id:
             self._save(tab_id, session)
