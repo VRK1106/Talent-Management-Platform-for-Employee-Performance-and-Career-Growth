@@ -11,7 +11,6 @@ Design notes (these materially affect retrieval quality):
 
 from __future__ import annotations
 
-from sentence_transformers import SentenceTransformer
 from src.config import EMBEDDING_MODEL, QUERY_INSTRUCTION
 
 _BATCH_SIZE = 32
@@ -29,10 +28,11 @@ def _auto_device() -> str:
     return "cpu"
 
 
-def get_model() -> SentenceTransformer:
+def get_model():
     """Load and cache the sentence-transformer model (once per process singleton)."""
     global _model_instance
     if _model_instance is None:
+        from sentence_transformers import SentenceTransformer
         _model_instance = SentenceTransformer(EMBEDDING_MODEL, device=_auto_device())
     return _model_instance
 
