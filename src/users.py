@@ -192,7 +192,7 @@ def add_user(
 ) -> tuple[bool, str]:
     """Add a new user to the database. Returns (success, message)."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute(
@@ -227,7 +227,7 @@ def add_user(
 def delete_user(employee_id: str) -> bool:
     """Delete a user from the database by Employee ID."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE employee_id = ?", (employee_id,))
         rows_affected = cursor.rowcount
@@ -241,7 +241,7 @@ def delete_user(employee_id: str) -> bool:
 def get_all_users() -> list[dict[str, Any]]:
     """Return all users in the database (excluding administrators)."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id, email, full_name, domain, role, password_plain, last_active, accommodation_proctoring FROM users WHERE role != 'admin'")
@@ -256,7 +256,7 @@ def verify_user(username_or_email: str, password_plain: str) -> dict[str, Any] |
     """Verify user credentials. Returns user dict if valid, else None."""
     try:
         init_db()  # Ensure DB is ready
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -286,7 +286,7 @@ def verify_user(username_or_email: str, password_plain: str) -> dict[str, Any] |
 def update_user_activity(employee_id: str) -> None:
     """Update the last_active timestamp for a user to CURRENT_TIMESTAMP."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE users SET last_active = datetime('now', 'localtime') WHERE employee_id = ?",
@@ -301,7 +301,7 @@ def update_user_activity(employee_id: str) -> None:
 def get_active_users_count(hours: int = 1) -> int:
     """Count the number of users who have been active within the last N hours."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT COUNT(*) FROM users WHERE last_active >= datetime('now', 'localtime', ?)",
@@ -318,7 +318,7 @@ def get_active_users_count(hours: int = 1) -> int:
 def set_user_face_descriptor(employee_id: str, descriptor_json: str) -> bool:
     """Set the 128-float face descriptor for a user."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET face_descriptor = ? WHERE employee_id = ?", (descriptor_json, employee_id))
         conn.commit()
@@ -332,7 +332,7 @@ def set_user_face_descriptor(employee_id: str, descriptor_json: str) -> bool:
 def get_user_face_descriptor(employee_id: str) -> str | None:
     """Get the 128-float face descriptor for a user."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT face_descriptor FROM users WHERE employee_id = ?", (employee_id,))
         row = cursor.fetchone()
@@ -345,7 +345,7 @@ def get_user_face_descriptor(employee_id: str) -> str | None:
 def set_user_accommodation(employee_id: str, enabled: int) -> bool:
     """Set the proctoring accommodation flag (0 or 1) for a user."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET accommodation_proctoring = ? WHERE employee_id = ?", (enabled, employee_id))
         conn.commit()
@@ -359,7 +359,7 @@ def set_user_accommodation(employee_id: str, enabled: int) -> bool:
 def clear_all_trainee_users() -> bool:
     """Delete all users in the database where role == 'trainee'."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Get list of trainee employee IDs to delete their chat sessions/messages too
@@ -391,7 +391,7 @@ def clear_all_trainee_users() -> bool:
 def check_user_exists(employee_id: str) -> bool:
     """Check if a user with the given employee_id exists."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM users WHERE LOWER(employee_id) = ?", (employee_id.strip().lower(),))
         exists = cursor.fetchone() is not None
@@ -404,7 +404,7 @@ def check_user_exists(employee_id: str) -> bool:
 def log_activity(employee_id: str, method: str, path: str) -> None:
     """Log an activity request for an authenticated user."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO activity_logs (employee_id, method, path) VALUES (?, ?, ?)",
@@ -419,7 +419,7 @@ def log_activity(employee_id: str, method: str, path: str) -> None:
 def update_user(employee_id: str, full_name: str, email: str, domain: str, role: str, password_plain: str = None) -> tuple[bool, str]:
     """Update an existing user's details, including optional password change."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         if password_plain and password_plain.strip():
