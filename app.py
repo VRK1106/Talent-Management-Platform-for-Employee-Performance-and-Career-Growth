@@ -5093,7 +5093,7 @@ def find_available_port(preferred_ports=(8080, 5000, 5050, 5051, 8000)):
 
 
 if __name__ == '__main__':
-    import sys, socket, time
+    import sys
 
     if len(sys.argv) > 1 and sys.argv[1].isdigit():
         port = int(sys.argv[1])
@@ -5106,7 +5106,12 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    print(f"Starting Talent Sphere Elevate Server on http://127.0.0.1:{port}")
-    from werkzeug.serving import WSGIRequestHandler
-    WSGIRequestHandler.protocol_version = "HTTP/1.0"
-    app.run(host='127.0.0.1', port=port, debug=False, threaded=True, use_reloader=False)
+    print(f"Starting Talent Sphere Elevate Production Server on http://127.0.0.1:{port} (all interfaces 0.0.0.0:{port})")
+    try:
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=port, threads=8)
+    except Exception as e:
+        print(f"[WARN] Waitress start error: {e}. Falling back to WSGI...")
+        from werkzeug.serving import WSGIRequestHandler
+        WSGIRequestHandler.protocol_version = "HTTP/1.0"
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
