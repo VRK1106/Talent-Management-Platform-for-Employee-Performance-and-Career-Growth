@@ -239,35 +239,27 @@ def invalidate_stats_cache():
     global _stats_cache_time
     _stats_cache_time = 0.0
 
-def stats() -> dict:
-    """Return index stats: total chunks, distinct source names, and detail cards (cached 5s)."""
-    global _stats_cache, _stats_cache_time
-    import time
-    now = time.time()
-    if _stats_cache is not None and (now - _stats_cache_time) < 5.0:
-        return _stats_cache
+def _fetch_stats_raw() -> dict:
+    collection = get_collection()
+    if not collection:
+        return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
+    total = collection.count()
+    if not total:
+        return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
 
-    total = 0
     sources_dict: dict[str, int] = {}
     source_pages: dict[str, set[int]] = {}
-
-    try:
-        collection = get_collection()
-        total = collection.count()
-        if total:
-            result = collection.get(include=["metadatas"])
-            for meta in result.get("metadatas") or []:
-                meta = meta or {}
-                source = meta.get("source")
-                if source:
-                    sources_dict[source] = sources_dict.get(source, 0) + 1
-                    page = meta.get("page")
-                    if page is not None:
-                        if source not in source_pages:
-                            source_pages[source] = set()
-                        source_pages[source].add(page)
-    except Exception as e:
-        print(f"Error reading vectorstore stats: {e}")
+    result = collection.get(include=["metadatas"])
+    for meta in result.get("metadatas") or []:
+        meta = meta or {}
+        source = meta.get("source")
+        if source:
+            sources_dict[source] = sources_dict.get(source, 0) + 1
+            page = meta.get("page")
+            if page is not None:
+                if source not in source_pages:
+                    source_pages[source] = set()
+                source_pages[source].add(page)
 
     source_details = []
     for src in sorted(sources_dict.keys()):
@@ -281,15 +273,40 @@ def stats() -> dict:
             }
         )
 
-    res = {
+    return {
         "total_chunks": total,
         "sources": len(sources_dict),
         "source_names": sorted(sources_dict.keys()),
         "source_details": source_details,
     }
-    _stats_cache = res
-    _stats_cache_time = now
-    return res
+
+
+def stats() -> dict:
+    """Return index stats with strict 0.5s non-blocking thread timeout protection."""
+    global _stats_cache, _stats_cache_time
+    import time
+    now = time.time()
+    if _stats_cache is not None and (now - _stats_cache_time) < 30.0:
+        return _stats_cache
+
+    fallback = {
+        "total_chunks": 0,
+        "sources": 0,
+        "source_names": [],
+        "source_details": [],
+    }
+
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+    try:
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(_fetch_stats_raw)
+        res = future.result(timeout=0.5)
+        _stats_cache = res
+        _stats_cache_time = now
+        return res
+    except (TimeoutError, Exception) as e:
+        print(f"[WARN] Non-blocking stats fallback triggered: {e}")
+        return _stats_cache if _stats_cache is not None else fallback
 
 
 def reset_collection() -> None:
