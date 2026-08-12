@@ -5085,15 +5085,24 @@ def find_available_port(preferred_ports=(8080, 5000, 5050, 5051, 8000)):
     for p in preferred_ports:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('127.0.0.1', p))
+                s.bind(('0.0.0.0', p))
                 return p
         except OSError:
             continue
+    try:
+        import subprocess, time
+        cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8080 ^| findstr LISTENING\') do taskkill /F /PID %a'
+        subprocess.run(cmd, shell=True, capture_output=True)
+        time.sleep(1)
+    except Exception:
+        pass
     return 8080
 
 
 if __name__ == '__main__':
-    import sys
+    import sys, uvicorn
+    from fastapi import FastAPI
+    from fastapi.middleware.wsgi import WSGIMiddleware
 
     if len(sys.argv) > 1 and sys.argv[1].isdigit():
         port = int(sys.argv[1])
@@ -5106,12 +5115,10 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    print(f"Starting Talent Sphere Elevate Production Server on http://127.0.0.1:{port} (all interfaces 0.0.0.0:{port})")
-    try:
-        from waitress import serve
-        serve(app, host='0.0.0.0', port=port, threads=8)
-    except Exception as e:
-        print(f"[WARN] Waitress start error: {e}. Falling back to WSGI...")
-        from werkzeug.serving import WSGIRequestHandler
-        WSGIRequestHandler.protocol_version = "HTTP/1.0"
-        app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
+    print(f"Starting Talent Sphere Elevate FastAPI/Uvicorn Server on http://127.0.0.1:{port} (0.0.0.0:{port})")
+
+    # Create FastAPI ASGI Application wrapping Flask app cleanly
+    fastapi_app = FastAPI(title="Talent Sphere Elevate ASGI Server", docs_url=None, redoc_url=None)
+    fastapi_app.mount("/", WSGIMiddleware(app))
+
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=port, log_level="warning", access_log=False)
