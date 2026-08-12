@@ -5099,15 +5099,23 @@ def find_available_port(preferred_ports=(8000, 8080, 3000, 5000)):
     return 8000
 
 
-if __name__ == '__main__':
-    import sys, uvicorn
+try:
+    from a2wsgi import WSGIMiddleware
+    asgi_app = WSGIMiddleware(app)
+except Exception:
     from fastapi import FastAPI
     from fastapi.middleware.wsgi import WSGIMiddleware
+    asgi_app = FastAPI(title="Talent Sphere Elevate ASGI Server", docs_url=None, redoc_url=None)
+    asgi_app.mount("/", WSGIMiddleware(app))
+
+
+if __name__ == '__main__':
+    import sys, uvicorn
 
     if len(sys.argv) > 1 and sys.argv[1].isdigit():
         port = int(sys.argv[1])
     else:
-        port = find_available_port([8080, 5000, 5050, 5051, 8000])
+        port = find_available_port([8000, 8080, 3000, 5000])
 
     if hasattr(sys.stdout, 'reconfigure'):
         try:
@@ -5116,9 +5124,4 @@ if __name__ == '__main__':
             pass
 
     print(f"Starting Talent Sphere Elevate FastAPI/Uvicorn Server on http://127.0.0.1:{port} (0.0.0.0:{port})")
-
-    # Create FastAPI ASGI Application wrapping Flask app cleanly
-    fastapi_app = FastAPI(title="Talent Sphere Elevate ASGI Server", docs_url=None, redoc_url=None)
-    fastapi_app.mount("/", WSGIMiddleware(app))
-
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=port, log_level="warning", access_log=False)
+    uvicorn.run("app:asgi_app", host="0.0.0.0", port=port, log_level="warning", access_log=False)
