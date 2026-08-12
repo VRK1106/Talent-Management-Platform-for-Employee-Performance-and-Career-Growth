@@ -76,14 +76,14 @@ init_exams_db()
 init_chats_db()
 
 def get_all_available_documents() -> list[str]:
-    """Return all document filenames from disk in DOCUMENTS_DIR and vectorstore stats."""
+    """Return external user document filenames from disk in DOCUMENTS_DIR and vectorstore stats (filtering out internal Custom_ files)."""
     docs_set = set()
     try:
         from src.config import DOCUMENTS_DIR
         doc_dir = Path(DOCUMENTS_DIR)
         if doc_dir.exists():
             for f in doc_dir.iterdir():
-                if f.is_file() and not f.name.startswith('.'):
+                if f.is_file() and not f.name.startswith('.') and not f.name.startswith('Custom_'):
                     docs_set.add(f.name)
     except Exception as ex:
         print(f"Error scanning documents dir: {ex}")
@@ -91,7 +91,7 @@ def get_all_available_documents() -> list[str]:
     try:
         st = stats()
         for src in st.get("source_names", []):
-            if src:
+            if src and not src.startswith('Custom_'):
                 docs_set.add(src)
     except Exception as ex:
         print(f"Error fetching stats source names: {ex}")

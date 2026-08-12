@@ -255,7 +255,7 @@ def _fetch_stats_raw() -> dict:
     for meta in result.get("metadatas") or []:
         meta = meta or {}
         source = meta.get("source")
-        if source:
+        if source and not source.startswith("Custom_"):
             sources_dict[source] = sources_dict.get(source, 0) + 1
             page = meta.get("page")
             if page is not None:
