@@ -5080,7 +5080,7 @@ def sprint_voice_interview_submit():
     })
 
 
-def find_available_port(preferred_ports=(8080, 5000, 5050, 5051, 8000)):
+def find_available_port(preferred_ports=(8000, 8080, 3000, 5000)):
     import socket
     for p in preferred_ports:
         try:
@@ -5091,12 +5091,12 @@ def find_available_port(preferred_ports=(8080, 5000, 5050, 5051, 8000)):
             continue
     try:
         import subprocess, time
-        cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8080 ^| findstr LISTENING\') do taskkill /F /PID %a'
+        cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8000 ^| findstr LISTENING\') do taskkill /F /PID %a'
         subprocess.run(cmd, shell=True, capture_output=True)
         time.sleep(1)
     except Exception:
         pass
-    return 8080
+    return 8000
 
 
 if __name__ == '__main__':
