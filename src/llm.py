@@ -109,7 +109,7 @@ def generate_rag_answer(query: str, chunks: list[dict[str, Any]], model_name: st
     context_str = "\n\n".join(context_parts)
 
     system_instruction = (
-        "You are an expert AI assistant for 'Talent Sphere Elevate', a smart document retrieval and QA platform. "
+        "You are an expert AI assistant for 'Talent Management Platform for Employee Performance and Career Growth', a smart document retrieval and QA platform. "
         "Your task is to answer the user's query truthfully using ONLY the provided document context below. "
         "If the answer cannot be found in the context, state that you do not know based on the provided documents. "
         "Do not make up facts. "
@@ -229,7 +229,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
     context_str = "\n\n".join(context_parts)
 
     system_instruction = (
-        "You are an expert AI assistant for 'Talent Sphere Elevate', a smart document retrieval and QA platform. "
+        "You are an expert AI assistant for 'Talent Management Platform for Employee Performance and Career Growth', a smart document retrieval and QA platform. "
         "Your task is to answer the user's query truthfully using ONLY the provided document context below. "
         "If the answer cannot be found in the context, state that you do not know based on the provided documents. "
         "Do not make up facts. "
@@ -552,7 +552,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
 
     if is_admin:
         system_instruction = (
-            "You are a helpful learning coach for 'Talent Sphere Elevate'. Answer the user's query. "
+            "You are a helpful learning coach for 'Talent Management Platform for Employee Performance and Career Growth'. Answer the user's query. "
             "Use the provided context passages below to guide your answer, but you are allowed to supplement "
             "it or fall back to your general model knowledge if the context is insufficient or if the query requires it.\n"
             "Cite your sources using bracketed numbers corresponding to the context passages (e.g. [1], [2]) where appropriate.\n"
@@ -562,7 +562,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
         )
     else:
         system_instruction = (
-            "You are a strict retrieval-only Q&A assistant for 'Talent Sphere Elevate'. Your task is to answer the user's query using ONLY the provided document context below.\n"
+            "You are a strict retrieval-only Q&A assistant for 'Talent Management Platform for Employee Performance and Career Growth'. Your task is to answer the user's query using ONLY the provided document context below.\n"
             "If the answer cannot be found in the context, you MUST respond exactly with: 'I am sorry, but the answer to your question is not present in the provided document.'\n"
             "Do NOT make up facts, and do NOT fall back to your general model knowledge under any circumstances. Keep your answer factual, direct, and fully based on the context.\n"
             "Cite your sources using bracketed numbers corresponding to the context passages (e.g. [1], [2]) where appropriate.\n"
@@ -621,7 +621,7 @@ def generate_study_plan(prompt: str, domain: str, week_number: int, model_name: 
         return {"error": "Groq API Key is not configured."}
         
     system_instruction = (
-        "You are an expert technical curriculum designer for 'Talent Sphere Elevate'. "
+        "You are an expert technical curriculum designer for 'Talent Management Platform for Employee Performance and Career Growth'. "
         "Your task is to generate a structured 4-day learning sprint and a Day 6 mock interview prompt based on the user's request. "
         "You MUST return ONLY a valid, parseable JSON object with NO markdown formatting, NO backticks, and NO surrounding text. "
         "The JSON keys MUST be exactly:\n"

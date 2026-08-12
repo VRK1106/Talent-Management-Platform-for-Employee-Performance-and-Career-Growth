@@ -645,7 +645,7 @@ def render_sidebar(index: dict[str, Any], show_chat_history: bool = False) -> No
             <div class="ts-sidebar-header-sticky">
                 <span style='font-size: 2.3rem;'>🚀</span>
                 <div style='font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #34D399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 0.3rem;'>
-                    Talent Sphere
+                    Talent Management Platform
                 </div>
                 <div style='font-size: 0.72rem; letter-spacing: 0.15em; color: var(--ts-text-secondary); text-transform: uppercase; font-weight: 700; margin-top: 0.2rem;'>
                     ELEVATE PLATFORM

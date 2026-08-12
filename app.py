@@ -5140,7 +5140,7 @@ if __name__ == '__main__':
             pass
 
     print("\n" + "="*65)
-    print("  TALENT SPHERE ELEVATE SERVER IS LIVE & READY FOR PRESENTATION!")
+    print("  TALENT MANAGEMENT PLATFORM SERVER IS LIVE & READY FOR PRESENTATION!")
     print(f"  OPEN IN YOUR BROWSER: http://127.0.0.1:{port}")
     print(f"  ALTERNATIVE URL:      http://localhost:{port}")
     print("="*65 + "\n")

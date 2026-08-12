@@ -1,4 +1,4 @@
-"""Email notifications service for Talent Sphere Elevate."""
+"""Email notifications service for Talent Management Platform for Employee Performance and Career Growth."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ SMTP_SERVER = os.getenv("SMTP_SERVER", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_SENDER = os.getenv("SMTP_SENDER", "Talent Sphere Elevate <noreply@company.com>")
+SMTP_SENDER = os.getenv("SMTP_SENDER", "Talent Management Platform for Employee Performance and Career Growth <noreply@company.com>")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "True").lower() in ("true", "1", "yes")
 
 
@@ -132,7 +132,7 @@ def broadcast_announcement(title: str, content: str) -> None:
     else:
         app_url = app_url.rstrip('/')
 
-    subject = f"📢 Talent Sphere: {title}"
+    subject = f"📢 Talent Management Platform: {title}"
     announcements_url = f"{app_url}/announcements"
 
     # Generate styled HTML email body
@@ -220,7 +220,7 @@ def broadcast_announcement(title: str, content: str) -> None:
     <body>
         <div class="email-container">
             <div class="email-header">
-                <h1>📢 Talent Sphere Elevate</h1>
+                <h1>📢 Talent Management Platform for Employee Performance and Career Growth</h1>
             </div>
             <div class="email-body">
                 <p>Hello,</p>
@@ -235,11 +235,11 @@ def broadcast_announcement(title: str, content: str) -> None:
                     <a href="{announcements_url}" class="btn-action">Open Dashboard</a>
                 </p>
                 
-                <p style="margin-top: 30px; font-size: 14px;">Best regards,<br><b>Talent Sphere Support Team</b></p>
+                <p style="margin-top: 30px; font-size: 14px;">Best regards,<br><b>Talent Management Platform Support Team</b></p>
             </div>
             <div class="email-footer">
                 This is an automated notification. Please do not reply directly to this email.<br>
-                &copy; 2026 Talent Sphere Elevate. All rights reserved.
+                &copy; 2026 Talent Management Platform for Employee Performance and Career Growth. All rights reserved.
             </div>
         </div>
     </body>
@@ -248,7 +248,7 @@ def broadcast_announcement(title: str, content: str) -> None:
 
     # Generate plain text email body for compatibility
     text_body = (
-        f"Talent Sphere Elevate — New Announcement\n\n"
+        f"Talent Management Platform for Employee Performance and Career Growth — New Announcement\n\n"
         f"Title: {title}\n\n"
         f"Content:\n{content}\n\n"
         f"Open Dashboard to view: {announcements_url}"
@@ -355,7 +355,7 @@ def send_user_credentials(email: str, name: str, employee_id: str, password_plai
     else:
         app_url = app_url.rstrip('/')
 
-    subject = "🔑 Welcome to Talent Sphere Elevate: Your Login Credentials"
+    subject = "🔑 Welcome to Talent Management Platform for Employee Performance and Career Growth: Your Login Credentials"
     login_url = f"{app_url}/login"
 
     # Generate styled HTML email body
@@ -442,7 +442,7 @@ def send_user_credentials(email: str, name: str, employee_id: str, password_plai
             </div>
             <div class="email-body">
                 <p>Hello {name},</p>
-                <p>An account has been created for you on the Talent Sphere Elevate training portal. You can now log in using the credentials below:</p>
+                <p>An account has been created for you on the Talent Management Platform for Employee Performance and Career Growth training portal. You can now log in using the credentials below:</p>
                 
                 <div class="credentials-card">
                     <div class="credentials-item"><b>Login URL:</b> <a href="{login_url}">{login_url}</a></div>
@@ -454,11 +454,11 @@ def send_user_credentials(email: str, name: str, employee_id: str, password_plai
                     <a href="{login_url}" class="btn-action">Log In Now</a>
                 </p>
                 
-                <p style="margin-top: 30px; font-size: 14px;">Best regards,<br><b>Talent Sphere Support Team</b></p>
+                <p style="margin-top: 30px; font-size: 14px;">Best regards,<br><b>Talent Management Platform Support Team</b></p>
             </div>
             <div class="email-footer">
                 This is an automated notification. Please do not reply directly to this email.<br>
-                &copy; 2026 Talent Sphere Elevate. All rights reserved.
+                &copy; 2026 Talent Management Platform for Employee Performance and Career Growth. All rights reserved.
             </div>
         </div>
     </body>
@@ -467,7 +467,7 @@ def send_user_credentials(email: str, name: str, employee_id: str, password_plai
 
     # Generate plain text email body for compatibility
     text_body = (
-        f"Welcome to Talent Sphere Elevate!\n\n"
+        f"Welcome to Talent Management Platform for Employee Performance and Career Growth!\n\n"
         f"An account has been created for you. Here are your credentials:\n"
         f"- Login URL: {login_url}\n"
         f"- Employee ID: {employee_id}\n"

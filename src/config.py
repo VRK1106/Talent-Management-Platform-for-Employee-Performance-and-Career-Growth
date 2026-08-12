@@ -1,4 +1,4 @@
-"""Central configuration for Talent Sphere Elevate (Milestone 1).
+"""Central configuration for Talent Management Platform for Employee Performance and Career Growth (Milestone 1).
 
 All settings are loaded from a ``.env`` file (via ``python-dotenv``) with
 sensible defaults. No hardcoded absolute paths — every path is relative and
