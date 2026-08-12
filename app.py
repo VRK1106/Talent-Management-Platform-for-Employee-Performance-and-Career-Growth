@@ -75,6 +75,29 @@ init_db()
 init_exams_db()
 init_chats_db()
 
+def get_all_available_documents() -> list[str]:
+    """Return all document filenames from disk in DOCUMENTS_DIR and vectorstore stats."""
+    docs_set = set()
+    try:
+        from src.config import DOCUMENTS_DIR
+        doc_dir = Path(DOCUMENTS_DIR)
+        if doc_dir.exists():
+            for f in doc_dir.iterdir():
+                if f.is_file() and not f.name.startswith('.'):
+                    docs_set.add(f.name)
+    except Exception as ex:
+        print(f"Error scanning documents dir: {ex}")
+        
+    try:
+        st = stats()
+        for src in st.get("source_names", []):
+            if src:
+                docs_set.add(src)
+    except Exception as ex:
+        print(f"Error fetching stats source names: {ex}")
+        
+    return sorted(list(docs_set))
+
 app = Flask(__name__, static_folder='assets', static_url_path='/assets')
 app.secret_key = os.environ.get('SECRET_KEY', 'talent-sphere-elevate-secret-key-12345')
 
@@ -859,7 +882,7 @@ def dashboard():
 @login_required
 def documents():
     index_stats = stats()
-    source_names = index_stats["source_names"]
+    source_names = get_all_available_documents()
     
     selected_doc = request.args.get('selected_doc')
     if not selected_doc and source_names:
@@ -874,6 +897,9 @@ def documents():
                 doc_details = doc
                 break
         
+        if not doc_details:
+            doc_details = {"name": selected_doc, "chunks": 0, "pages": 1}
+            
         pdf_path = Path(DOCUMENTS_DIR) / selected_doc
         pdf_exists = pdf_path.exists()
         
@@ -3519,7 +3545,7 @@ def assistant_wizard_docs():
     if session.get('user_role') != 'admin':
         return jsonify({"error": "Admin role required"}), 403
     try:
-        docs = stats().get("source_names", [])
+        docs = get_all_available_documents()
         return jsonify({"documents": docs})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -4118,11 +4144,7 @@ def study_plans_page():
     all_plans = get_all_study_plans()
     all_schedules = get_all_sprint_schedules()
 
-    all_docs = []
-    try:
-        all_docs = stats().get("source_names", [])
-    except Exception:
-        all_docs = []
+    all_docs = get_all_available_documents()
 
     all_trainees = []
     try:
@@ -4300,11 +4322,7 @@ def sprint_page():
     all_schedules = get_all_sprint_schedules() if user_role == 'admin' else []
     all_plans = system_plans if user_role == 'admin' else []
 
-    all_docs = []
-    try:
-        all_docs = stats().get("source_names", [])
-    except Exception:
-        all_docs = []
+    all_docs = get_all_available_documents()
 
     ref_files = []
     try:

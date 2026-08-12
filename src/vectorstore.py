@@ -204,6 +204,8 @@ def delete_source(source_name: str, file_hash: str | None = None) -> None:
 
 def get_source_chunks(source_name: str) -> list[dict]:
     """Retrieve all chunks for a specific source filename (for the chunk browser)."""
+    if _client_instance is None:
+        return []
     collection = get_collection()
     if not collection:
         return []
