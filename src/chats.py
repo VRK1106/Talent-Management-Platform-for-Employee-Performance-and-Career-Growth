@@ -64,7 +64,7 @@ def init_chats_db() -> None:
 def create_chat_session(session_id: str, user_id: str, title: str, week_number: int = 1) -> bool:
     """Create a new chat session."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO chat_sessions (session_id, user_id, title, week_number) VALUES (?, ?, ?, ?)",
@@ -80,7 +80,7 @@ def create_chat_session(session_id: str, user_id: str, title: str, week_number: 
 def add_chat_message(session_id: str, role: str, content: str, sources: list[dict[str, Any]] | None = None) -> bool:
     """Add a message to an active chat session."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         sources_str = json.dumps(sources) if sources else None
         cursor.execute(
@@ -97,7 +97,7 @@ def add_chat_message(session_id: str, role: str, content: str, sources: list[dic
 def get_chat_sessions_for_user(user_id: str, week_number: int = None) -> list[dict[str, Any]]:
     """Retrieve all chat sessions created by a specific user, optionally filtered by week."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH), timeout=10.0)
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         if week_number is not None:
@@ -121,7 +121,7 @@ def get_chat_messages(session_id: str) -> list[dict[str, Any]]:
     """Retrieve all messages in chronological order for a chat session."""
     init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -151,7 +151,7 @@ def get_chat_messages(session_id: str) -> list[dict[str, Any]]:
 def update_last_chat_message_followups(session_id: str, followups: list[str]) -> bool:
     """Update the followups column of the most recent message in the session."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         followups_str = json.dumps(followups) if followups else None
         cursor.execute(
@@ -178,7 +178,7 @@ def delete_chat_session(session_id: str) -> bool:
     """Delete a chat session and all cascading messages."""
     init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
@@ -193,7 +193,7 @@ def rename_chat_session(session_id: str, new_title: str) -> bool:
     """Rename an existing chat session."""
     init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE chat_sessions SET title = ? WHERE session_id = ?",
@@ -211,7 +211,7 @@ def get_global_chat_stats() -> dict[str, Any]:
     """Compile global statistics across all chat conversations (for Admin view)."""
     init_chats_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # 1. Total chat sessions
