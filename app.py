@@ -4422,62 +4422,76 @@ def view_document_pdf(filename):
     except Exception as e:
         print(f"Document view error: {e}")
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                background: #0b0f19;
-                color: #94a3b8;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                margin: 0;
-                text-align: center;
-                padding: 1.5rem;
-                box-sizing: border-box;
-            }}
-            .card {{
-                background: #111625;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 16px;
-                padding: 2rem;
-                max-width: 480px;
-                box-shadow: 0 12px 32px rgba(0,0,0,0.3);
-            }}
-            .icon {{
-                font-size: 2.5rem;
-                margin-bottom: 0.75rem;
-            }}
-            .title {{
-                color: #f8fafc;
-                font-size: 1.1rem;
-                font-weight: 700;
-                margin-bottom: 0.5rem;
-            }}
-            .desc {{
-                font-size: 0.85rem;
-                color: #94a3b8;
-                line-height: 1.5;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <div class="icon">📝</div>
-            <div class="title">Custom Text Learning Module</div>
-            <div class="desc">
-                No external PDF document file was uploaded for this study module. The learning curriculum and topic specifications are fully provided in the main workspace view.
-            </div>
+    import html as py_html
+    safe_fn = py_html.escape(filename)
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #0b0f19;
+            color: #94a3b8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }}
+        .card {{
+            background: #111625;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 480px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }}
+        .icon {{
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }}
+        .title {{
+            color: #f8fafc;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }}
+        .desc {{
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+        }}
+        .btn-upload {{
+            background: #6366f1;
+            color: #ffffff;
+            border: none;
+            padding: 0.55rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">📝</div>
+        <div class="title">Custom Text Learning Module</div>
+        <div class="desc">
+            The reference document <strong style="color:#818cf8;">"{safe_fn}"</strong> is assigned to this day module, but the physical file has not been uploaded to the document repository yet.
         </div>
-    </body>
-    </html>
-    """, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        <a href="/documents" target="_top" class="btn-upload">📄 Upload Document via Document Explorer</a>
+    </div>
+</body>
+</html>""", 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 
 @app.route('/sprint/ask_ai_coach', methods=['POST'])
