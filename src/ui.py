@@ -39,7 +39,7 @@ def load_css() -> None:
     # Update active user's timestamp
     if st.session_state.get("authenticated", False) and st.session_state.get("user_info"):
         try:
-            from src.users import update_user_activity
+            from src.users import get_db_connection, update_user_activity
             emp_id = st.session_state.user_info.get("employee_id")
             if emp_id:
                 update_user_activity(emp_id)
@@ -676,8 +676,8 @@ def render_sidebar(index: dict[str, Any], show_chat_history: bool = False) -> No
                 # For Admin, count completed assignments vs total assignments system-wide
                 try:
                     import sqlite3
-                    from src.users import _DB_PATH
-                    conn = sqlite3.connect(str(_DB_PATH))
+                    from src.users import get_db_connection, _DB_PATH
+                    conn = get_db_connection(_DB_PATH)
                     c = conn.cursor()
                     c.execute("SELECT COUNT(*) FROM assignments")
                     total = c.fetchone()[0]
@@ -877,8 +877,8 @@ def render_sidebar(index: dict[str, Any], show_chat_history: bool = False) -> No
         sqlite_ok = True
         try:
             import sqlite3
-            from src.users import _DB_PATH
-            conn = sqlite3.connect(str(_DB_PATH))
+            from src.users import get_db_connection, _DB_PATH
+            conn = get_db_connection(_DB_PATH)
             conn.execute("SELECT 1")
             conn.close()
         except Exception:

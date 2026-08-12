@@ -1,0 +1,8 @@
+============================================================
+WEEK 3 (GENERAL) - DAY 1 STUDY SPECIFICATION
+============================================================
+
+LEARNING OBJECTIVES & TOPIC BREAKDOWN:
+• Fundamental Design Paradigms: Brute Force
+• Brute Force: Exhaustively evaluates every potential candidate in the search space until a valid solution is found. It guarantees finding an optimal solution if one exists, but scales poorly (often $O(n!)$ or $O(2^n)$), making it impractical for large input sizes.
+• Checkpoint task: Identify the limitations of Brute Force algorithm and provide an example where it would not be suitable for large input sizes.

@@ -94,3 +94,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+*.mp4
+*.mpeg
+*.avi
+*.mkv
+*.mov

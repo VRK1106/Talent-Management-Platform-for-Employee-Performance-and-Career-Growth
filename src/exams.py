@@ -194,7 +194,7 @@ def get_all_exams(include_gateway: bool = False) -> list[dict[str, Any]]:
     """Fetch all created exams. By default excludes private Day 5 Gateway exams created for weekly sprint plans."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT exam_id, title, description, total_marks, questions, created_at, settings FROM exams ORDER BY exam_id DESC")
@@ -228,7 +228,7 @@ def get_exam_by_id(exam_id: int) -> dict[str, Any] | None:
     """Fetch a single exam by ID."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT exam_id, title, description, total_marks, questions, created_at, settings FROM exams WHERE exam_id = ?", (exam_id,))
@@ -261,7 +261,7 @@ def add_exam_and_get_id(title: str, description: str, total_marks: int, question
     """Add a new exam containing a list of questions and return its created exam_id."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -283,7 +283,7 @@ def assign_exam_to_all_students(exam_id: int) -> int:
     init_exams_db()
     count = 0
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
@@ -300,7 +300,7 @@ def delete_exam(exam_id: int) -> bool:
     """Delete an exam and cascade delete its assignments."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         # Enable FK cascade support explicitly in SQLite
         cursor.execute("PRAGMA foreign_keys = ON")
@@ -318,7 +318,7 @@ def assign_exam(exam_id: int, trainee_id: str, due_date: str | None) -> bool:
     """Assign an exam to a trainee."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Check if already assigned
@@ -364,7 +364,7 @@ def get_assignments_for_exam(exam_id: int) -> list[dict[str, Any]]:
     """Get all trainee assignments for a specific exam."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -402,7 +402,7 @@ def get_assignments_for_trainee(trainee_id: str) -> list[dict[str, Any]]:
     """Get all exam assignments for a specific trainee."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -440,7 +440,7 @@ def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
     """Fetch a single assignment details."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -485,7 +485,7 @@ def submit_exam_answers(assignment_id: int, answers: dict[str, Any], score: floa
     """Submit trainee exam responses and save grade results."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -510,7 +510,7 @@ def delete_assignment(assignment_id: int) -> bool:
     """Delete a trainee assignment by ID."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM assignments WHERE assignment_id = ?", (assignment_id,))
         conn.commit()
@@ -526,7 +526,7 @@ def get_all_announcements() -> list[dict[str, Any]]:
     """Fetch all announcements."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT announcement_id, title, content, created_at FROM announcements ORDER BY announcement_id DESC")
@@ -554,7 +554,7 @@ def add_announcement(title: str, content: str, send_email: bool = True) -> bool:
         title = re.sub(pat, current_dt_str, title, flags=re.IGNORECASE)
         content = re.sub(pat, current_dt_str, content, flags=re.IGNORECASE)
 
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -583,7 +583,7 @@ def delete_announcement(announcement_id: int) -> bool:
     """Delete an announcement by ID."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM announcements WHERE announcement_id = ?", (announcement_id,))
         conn.commit()
@@ -597,7 +597,7 @@ def add_exam_template(name: str, config: dict) -> bool:
     """Add or replace an exam template configuration."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -617,7 +617,7 @@ def get_exam_templates() -> list[dict[str, Any]]:
     """Fetch all saved exam templates."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT template_id, name, config, created_at FROM exam_templates ORDER BY template_id DESC")
@@ -641,7 +641,7 @@ def add_email_log(recipient: str, subject: str, status: str, error_message: str 
     """Insert a new email delivery log and return the row ID."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -662,7 +662,7 @@ def add_email_log(recipient: str, subject: str, status: str, error_message: str 
 def update_email_log(log_id: int, status: str, error_message: str | None = None) -> bool:
     """Update the status of an existing email delivery log."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -684,7 +684,7 @@ def get_all_email_logs(limit: int = 50) -> list[dict[str, Any]]:
     """Retrieve the most recent email delivery logs."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -702,7 +702,7 @@ def get_system_setting(key: str, default: str = "") -> str:
     """Retrieve a system setting value by key."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
         row = cursor.fetchone()
@@ -716,7 +716,7 @@ def set_system_setting(key: str, value: str) -> bool:
     """Set/update a system setting value."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -738,7 +738,7 @@ def add_proctor_log(assignment_id: int, trigger_reason: str, groq_label: str, sn
     """Insert a new proctoring violation log."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -760,7 +760,7 @@ def get_proctor_logs_for_assignment(assignment_id: int) -> list[dict[str, Any]]:
     """Fetch all proctoring logs for a given assignment."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT log_id, assignment_id, trigger_reason, groq_label, snapshot_data, score, timestamp FROM proctor_logs WHERE assignment_id = ? ORDER BY timestamp ASC", (assignment_id,))
@@ -774,7 +774,7 @@ def get_proctor_logs_for_assignment(assignment_id: int) -> list[dict[str, Any]]:
 def publish_assignment_results(assignment_id: int) -> bool:
     """Publish results for a completed manual-release assignment."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT settings FROM assignments WHERE assignment_id = ?", (assignment_id,))
         row = cursor.fetchone()
@@ -801,7 +801,7 @@ def get_all_assignments() -> list[dict[str, Any]]:
     """Get all trainee assignments across every exam, ordered newest first."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -836,7 +836,7 @@ def clear_all_exams() -> bool:
     """Delete all exams, templates, assignments, and proctor logs."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         # Enable foreign key cascading
         cursor.execute("PRAGMA foreign_keys = ON")
@@ -856,7 +856,7 @@ def clear_all_announcements() -> bool:
     """Delete all announcements and email logs."""
     init_exams_db()
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM announcements")
         cursor.execute("DELETE FROM email_logs")

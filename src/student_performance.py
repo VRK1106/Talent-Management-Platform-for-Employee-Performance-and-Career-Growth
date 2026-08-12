@@ -122,7 +122,7 @@ def detect_performance_query(query: str) -> str | None:
 
 def get_trainee_log_analytics(emp_id: str) -> dict:
     """Query activity logs for a student and calculate estimated study hours."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     analytics = {"total_activities": 0, "study_hours": 0.0, "avg_session_mins": 0.0}
     try:
         analytics["total_activities"] = conn.execute(
@@ -166,7 +166,7 @@ def get_student_performance_context(identifier: str, requester_role: str, reques
     Fetch individual trainee profile + exams + analytics.
     Returns a formatted context string for the LLM.
     """
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
@@ -311,7 +311,7 @@ def get_aggregate_performance_context(requester_role: str) -> str:
     if requester_role != "admin":
         return "Unauthorized. Aggregate performance data is only available to administrators."
 
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 

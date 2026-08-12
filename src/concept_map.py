@@ -83,7 +83,7 @@ CONCEPT_SUGGESTIONS = {
 def get_completed_assignments(trainee_id: str) -> list[dict]:
     """Fetch completed exam assignments with questions and grading feedback."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -150,7 +150,7 @@ def get_personalized_suggestions(trainee_id: str) -> list[str]:
     if len(suggestions) < 3:
         domain = "python"
         try:
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             c = conn.cursor()
             c.execute("SELECT domain FROM users WHERE employee_id = ?", (trainee_id,))
             row = c.fetchone()

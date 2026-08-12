@@ -37,7 +37,7 @@ def update_sprint_day(user_id: str, day: int) -> bool:
     """Update sprint day (1-6) for user."""
     init_sprint(user_id)
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE sprint_schedules SET current_day = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
@@ -53,7 +53,7 @@ def update_sprint_week(user_id: str, week: int) -> bool:
     """Update active sprint week for user."""
     init_sprint(user_id)
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE sprint_schedules SET current_week = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
@@ -69,7 +69,7 @@ def update_sprint_progress(user_id: str, progress: float) -> bool:
     """Update sprint study progress percentage."""
     init_sprint(user_id)
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE sprint_schedules SET sprint_progress = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
@@ -84,7 +84,7 @@ def update_sprint_progress(user_id: str, progress: float) -> bool:
 def log_qa_error(user_id: str, week_number: int, topic: str, question_text: str) -> bool:
     """Log an incorrect topic/question from Day 5 QA Review."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         error_id = str(uuid.uuid4())
         cursor.execute(
@@ -102,7 +102,7 @@ def log_qa_error(user_id: str, week_number: int, topic: str, question_text: str)
 
 def get_qa_errors(user_id: str, week_number: int) -> list[dict]:
     """Get qa errors logged for a user's week."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute(
@@ -117,7 +117,7 @@ def get_qa_errors(user_id: str, week_number: int) -> list[dict]:
 def clear_qa_errors(user_id: str, week_number: int) -> bool:
     """Clear qa errors for a user's week (e.g., on sprint reset)."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM qa_errors WHERE user_id = ? AND week_number = ?", (user_id, week_number))
         conn.commit()
@@ -129,7 +129,7 @@ def clear_qa_errors(user_id: str, week_number: int) -> bool:
 def log_interview_evaluation(user_id: str, week_number: int, tech_score: float, conf_score: float, filler_count: int, wpm: float, feedback: str) -> bool:
     """Save Day 6 mock interview results."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Delete prior evaluation for this week if exists to allow clean re-takes
@@ -152,7 +152,7 @@ def log_interview_evaluation(user_id: str, week_number: int, tech_score: float, 
 
 def get_interview_evaluation(user_id: str, week_number: int) -> dict:
     """Get interview evaluation details."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute(
@@ -167,7 +167,7 @@ def get_interview_evaluation(user_id: str, week_number: int) -> dict:
 def clear_interview_evaluations(user_id: str, week_number: int) -> bool:
     """Clear interview evaluations for a user."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM interview_evaluations WHERE user_id = ? AND week_number = ?", (user_id, week_number))
         conn.commit()
@@ -178,7 +178,7 @@ def clear_interview_evaluations(user_id: str, week_number: int) -> bool:
 
 def get_all_sprint_schedules() -> list[dict]:
     """Retrieve sprint details for trainees who have active sprint schedules."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute(
@@ -205,7 +205,7 @@ def get_all_sprint_schedules() -> list[dict]:
 def add_weekly_document(user_id: str, week_number: int, day_number: int, filename: str) -> bool:
     """Log an uploaded reference document for a user's specific sprint week and day."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         doc_id = str(uuid.uuid4())
         cursor.execute(
@@ -224,7 +224,7 @@ def add_weekly_document(user_id: str, week_number: int, day_number: int, filenam
 
 def get_weekly_documents(user_id: str, week_number: int) -> list[str]:
     """Retrieve filenames of uploaded documents for a trainee's specific week."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
         "SELECT filename FROM weekly_documents WHERE user_id = ? AND week_number = ?",
@@ -238,7 +238,7 @@ def get_weekly_documents(user_id: str, week_number: int) -> list[str]:
 def delete_weekly_document(user_id: str, week_number: int, filename: str) -> bool:
     """Delete a reference document record for a trainee's specific week."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "DELETE FROM weekly_documents WHERE user_id = ? AND week_number = ? AND filename = ?",
@@ -252,7 +252,7 @@ def delete_weekly_document(user_id: str, week_number: int, filename: str) -> boo
 
 def get_all_interview_evaluations() -> list[dict]:
     """Retrieve all mock interview evaluations (for admin review)."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM interview_evaluations")
@@ -264,7 +264,7 @@ def get_all_interview_evaluations() -> list[dict]:
 def save_study_plan(domain: str, week_number: int, title: str, tasks_json: str, day5_exam_id: str, day6_interview_prompt: str, reference_files_json: str = "[]") -> bool:
     """Create or update a weekly study plan for a domain and auto-assign to trainees."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Check if already exists
@@ -325,7 +325,7 @@ def save_study_plan(domain: str, week_number: int, title: str, tasks_json: str, 
 
 def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str = None) -> dict:
     """Retrieve study plan by plan_id, or exact domain/week, or week fallback, or latest custom plan, or default."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -388,7 +388,7 @@ def get_study_plan(domain: str = "general", week_number: int = 1, plan_id: str =
 
 def get_study_plans_by_domain(domain: str = "general") -> list[dict]:
     """Retrieve all study plans for a specific domain ordered by week_number."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute(
@@ -402,7 +402,7 @@ def get_study_plans_by_domain(domain: str = "general") -> list[dict]:
 
 def get_all_study_plans() -> list[dict]:
     """Retrieve all custom weekly study plans."""
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM weekly_study_plans ORDER BY domain ASC, week_number ASC")
@@ -453,7 +453,7 @@ def delete_study_plan(plan_id: str) -> bool:
         from src.config import DOCUMENTS_DIR
         from src.exams import delete_exam
         import json
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Fetch day5_exam_id and reference_files_json to clean up exam and files
@@ -499,7 +499,7 @@ def delete_study_plan(plan_id: str) -> bool:
 def assign_study_plan_to_user(user_id: str, plan_id: str) -> bool:
     """Assign a specific study plan to a trainee user, updating domain and schedule row."""
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Get plan details to retrieve domain and week_number

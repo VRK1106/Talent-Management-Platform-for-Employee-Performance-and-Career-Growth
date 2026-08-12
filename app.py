@@ -451,7 +451,7 @@ def get_log_analytics(emp_id=None):
     import datetime
     analytics = {}
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
         
         # 1. Peak Study Hours (hourly distribution)
@@ -647,7 +647,7 @@ def dashboard():
             avg_score_pct = sum_pcts / len(completed_subs)
             
         try:
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             c = conn.cursor()
             c.execute("SELECT COUNT(*) FROM chat_messages WHERE role = 'assistant' AND sources IS NOT NULL AND sources != '[]' AND sources != ''")
             rag_use_count = c.fetchone()[0]
@@ -1352,7 +1352,7 @@ def admin_logs():
         
     search_query = request.args.get('search', '').strip()
     
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -1382,7 +1382,7 @@ def admin_logs_clear():
     if session.get('user_role') != 'admin':
         return redirect(url_for('dashboard'))
         
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM activity_logs")
     conn.commit()
@@ -1751,7 +1751,7 @@ def exams_assignment_delete():
     
     if assignment_id:
         try:
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             c = conn.cursor()
             c.execute("DELETE FROM assignments WHERE assignment_id = ?", (assignment_id,))
             conn.commit()
@@ -3115,7 +3115,7 @@ def chat_stream():
         list_items = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
         list_item_type = "document"
     elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("trainee" in query_lower or "student" in query_lower or "user" in query_lower):
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id, full_name FROM users WHERE role = 'trainee'")
@@ -3348,7 +3348,7 @@ def assistant_clear():
     active_id = session.get('active_chat_session_id')
     if active_id:
         try:
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             cursor = conn.cursor()
             cursor.execute("DELETE FROM chat_messages WHERE session_id = ?", (active_id,))
             conn.commit()
@@ -3535,7 +3535,7 @@ def assistant_wizard_trainees():
         return jsonify({"error": "Admin role required"}), 403
     try:
         import sqlite3
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id, full_name, domain FROM users WHERE role = 'trainee'")
@@ -3808,7 +3808,7 @@ def assistant_wizard_save():
         full_desc = f"[Duration: {duration} minutes]\n\n{description}"
         
         init_exams_db()
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute(
@@ -3831,7 +3831,7 @@ def assistant_wizard_save():
         
         trainees_to_assign = []
         if assignee_id == 'all':
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
@@ -3841,7 +3841,7 @@ def assistant_wizard_save():
             trainees_to_assign = [assignee_id]
             
         for t_id in trainees_to_assign:
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -3868,7 +3868,7 @@ def api_get_face_descriptor():
     if not employee_id:
         return jsonify({"error": "Missing employee_id"}), 400
     
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = get_db_connection(_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT face_descriptor, accommodation_proctoring FROM users WHERE employee_id = ?", (employee_id,))
@@ -4076,7 +4076,7 @@ def admin_kill_overall():
         
     # Clear all study plans and sprint database tables
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
         c.execute("DELETE FROM sprint_schedules")
         c.execute("DELETE FROM weekly_study_plans")
@@ -4097,7 +4097,7 @@ def admin_kill_sprints():
         return redirect(url_for('dashboard'))
     
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
         c.execute("DELETE FROM sprint_schedules")
         c.execute("DELETE FROM weekly_study_plans")
@@ -4134,7 +4134,7 @@ def study_plans_page():
 
     all_trainees = []
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute("SELECT employee_id, full_name, email, domain FROM users WHERE role = 'trainee'")
@@ -4185,7 +4185,7 @@ def study_plans_assign():
     assigned_emails = []
 
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
 
         if assign_all:
@@ -4239,7 +4239,7 @@ def sprint_page():
     domain = user_info.get('domain', 'general')
 
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
         c.execute("SELECT domain FROM users WHERE employee_id = ?", (emp_id,))
         r = c.fetchone()

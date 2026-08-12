@@ -2,7 +2,7 @@ import json
 import re
 import sqlite3
 import traceback
-from src.users import _DB_PATH
+from src.users import get_db_connection, _DB_PATH
 from src.exams import add_exam, add_announcement, get_all_exams, get_all_announcements, add_exam_and_get_id, assign_exam_to_all_students
 from src.student_performance import get_student_performance_context, get_aggregate_performance_context
 from src.llm import generate_chat_answer, clean_json_response
@@ -60,7 +60,7 @@ def execute_agent_action(command_dict: dict) -> str:
             return f"Ingested reference documents: {', '.join(docs)}"
 
         elif action == "list_trainees":
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT employee_id, full_name, domain FROM users WHERE role = 'trainee'")
@@ -103,7 +103,7 @@ def execute_agent_action(command_dict: dict) -> str:
 
         elif action == "get_all_performance":
             context = get_aggregate_performance_context("admin")
-            conn = sqlite3.connect(str(_DB_PATH))
+            conn = get_db_connection(_DB_PATH)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT employee_id, full_name FROM users WHERE role = 'trainee'")

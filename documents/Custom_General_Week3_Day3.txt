@@ -1,0 +1,8 @@
+============================================================
+WEEK 3 (GENERAL) - DAY 3 STUDY SPECIFICATION
+============================================================
+
+LEARNING OBJECTIVES & TOPIC BREAKDOWN:
+• Fundamental Design Paradigms: Dynamic Programming and Greedy Paradigm
+• Dynamic Programming (DP): Applicable to problems exhibiting overlapping subproblems and optimal substructure. Instead of recomputing solutions to subproblems, DP stores previously computed results in a table (memoization for top-down approaches or tabular iteration for bottom-up approaches).
+• Checkpoint task: Describe the application of Dynamic Programming in the 0/1 Knapsack problem and explain the trade-offs between space and time complexity.

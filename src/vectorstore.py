@@ -282,7 +282,7 @@ def _fetch_stats_raw() -> dict:
 
 
 def stats() -> dict:
-    """Return index stats with strict 0.5s non-blocking thread timeout protection."""
+    """Return index stats safely and instantly without blocking page load."""
     global _stats_cache, _stats_cache_time
     import time
     now = time.time()
@@ -296,16 +296,18 @@ def stats() -> dict:
         "source_details": [],
     }
 
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError
     try:
-        executor = ThreadPoolExecutor(max_workers=1)
-        future = executor.submit(_fetch_stats_raw)
-        res = future.result(timeout=0.5)
+        if _client_instance is None:
+            _stats_cache = fallback
+            _stats_cache_time = now
+            return fallback
+
+        res = _fetch_stats_raw()
         _stats_cache = res
         _stats_cache_time = now
         return res
-    except (TimeoutError, Exception) as e:
-        print(f"[WARN] Non-blocking stats fallback triggered: {e}")
+    except Exception as e:
+        print(f"[WARN] Vectorstore stats fallback: {e}")
         return _stats_cache if _stats_cache is not None else fallback
 
 
