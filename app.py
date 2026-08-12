@@ -76,7 +76,7 @@ init_exams_db()
 init_chats_db()
 
 def get_all_available_documents() -> list[str]:
-    """Return external user document filenames from disk in DOCUMENTS_DIR and vectorstore stats (filtering out internal Custom_ files)."""
+    """Return external user document filenames from disk in DOCUMENTS_DIR (filtering out internal Custom_ files)."""
     docs_set = set()
     try:
         from src.config import DOCUMENTS_DIR
@@ -87,14 +87,6 @@ def get_all_available_documents() -> list[str]:
                     docs_set.add(f.name)
     except Exception as ex:
         print(f"Error scanning documents dir: {ex}")
-        
-    try:
-        st = stats()
-        for src in st.get("source_names", []):
-            if src and not src.startswith('Custom_'):
-                docs_set.add(src)
-    except Exception as ex:
-        print(f"Error fetching stats source names: {ex}")
         
     return sorted(list(docs_set))
 
@@ -5100,22 +5092,26 @@ def sprint_voice_interview_submit():
     })
 
 
+def kill_port_owner(port: int):
+    try:
+        import subprocess, time
+        cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :{port} ^| findstr LISTENING\') do taskkill /F /PID %a'
+        subprocess.run(cmd, shell=True, capture_output=True)
+        time.sleep(0.3)
+    except Exception:
+        pass
+
+
 def find_available_port(preferred_ports=(8000, 8080, 3000, 5000)):
     import socket
     for p in preferred_ports:
+        kill_port_owner(p)
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(('0.0.0.0', p))
                 return p
         except OSError:
             continue
-    try:
-        import subprocess, time
-        cmd = f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8000 ^| findstr LISTENING\') do taskkill /F /PID %a'
-        subprocess.run(cmd, shell=True, capture_output=True)
-        time.sleep(1)
-    except Exception:
-        pass
     return 8000
 
 
@@ -5143,5 +5139,10 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    print(f"Starting Talent Sphere Elevate FastAPI/Uvicorn Server on http://127.0.0.1:{port} (0.0.0.0:{port})")
+    print("\n" + "="*65)
+    print("  TALENT SPHERE ELEVATE SERVER IS LIVE & READY FOR PRESENTATION!")
+    print(f"  OPEN IN YOUR BROWSER: http://127.0.0.1:{port}")
+    print(f"  ALTERNATIVE URL:      http://localhost:{port}")
+    print("="*65 + "\n")
+
     uvicorn.run("app:asgi_app", host="0.0.0.0", port=port, log_level="warning", access_log=False)
