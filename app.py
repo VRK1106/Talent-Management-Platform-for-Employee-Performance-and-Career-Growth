@@ -326,7 +326,7 @@ def inject_global_data():
     progress_pct = 0
     progress_text = "0% Completed"
     try:
-        conn = sqlite3.connect(str(_DB_PATH))
+        conn = get_db_connection(_DB_PATH)
         c = conn.cursor()
         if role == 'admin':
             c.execute("SELECT COUNT(*) FROM assignments")
