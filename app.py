@@ -3519,11 +3519,7 @@ def assistant_wizard_docs():
     if session.get('user_role') != 'admin':
         return jsonify({"error": "Admin role required"}), 403
     try:
-        from src.vectorstore import get_collection
-        coll = get_collection()
-        res = coll.get(include=["metadatas"])
-        metadatas = res.get("metadatas") or []
-        docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+        docs = stats().get("source_names", [])
         return jsonify({"documents": docs})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -4124,11 +4120,7 @@ def study_plans_page():
 
     all_docs = []
     try:
-        from src.vectorstore import get_collection
-        coll = get_collection()
-        res = coll.get(include=["metadatas"])
-        metadatas = res.get("metadatas") or []
-        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+        all_docs = stats().get("source_names", [])
     except Exception:
         all_docs = []
 
@@ -4310,11 +4302,7 @@ def sprint_page():
 
     all_docs = []
     try:
-        from src.vectorstore import get_collection
-        coll = get_collection()
-        res = coll.get(include=["metadatas"])
-        metadatas = res.get("metadatas") or []
-        all_docs = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
+        all_docs = stats().get("source_names", [])
     except Exception:
         all_docs = []
 
