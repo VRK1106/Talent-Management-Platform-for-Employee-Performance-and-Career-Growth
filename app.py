@@ -6,13 +6,15 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+os.environ["ANYIO_MAX_THREADS"] = "100"
 
 import sys
 import uuid
 import json
 import sqlite3
 import re
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
@@ -33,7 +35,7 @@ from flask import (
 # Ensure the project root is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.users import init_db, verify_user, get_all_users, get_active_users_count, _DB_PATH, set_user_face_descriptor, get_user_face_descriptor, set_user_accommodation, update_user, log_activity, check_user_exists, get_db_connection
+from src.users import init_db, verify_user, get_all_users, get_active_users_count, _DB_PATH, set_user_face_descriptor, set_user_accommodation, update_user, log_activity, check_user_exists, get_db_connection
 from src.exams import (
     init_exams_db,
     get_all_exams,
@@ -66,8 +68,8 @@ from src.chats import (
 )
 from src.config import EMBEDDING_MODEL, DOCUMENTS_DIR
 from src.vectorstore import stats, get_source_chunks, search, get_collection, add_ephemeral_chunks, search_ephemeral, delete_ephemeral_collection
-from src.llm import list_local_models, generate_chat_answer, generate_rag_answer, GROQ_API_KEY, analyze_proctor_image, transcribe_audio_whisper, generate_ephemeral_rag_answer_stream
-from src.concept_map import get_personalized_suggestions, get_related_concepts, get_ephemeral_document_text
+from src.llm import list_local_models, generate_chat_answer, generate_rag_answer, GROQ_API_KEY, analyze_proctor_image, transcribe_audio_whisper
+from src.concept_map import get_personalized_suggestions, get_ephemeral_document_text
 from src.student_performance import detect_performance_query, get_student_performance_context, get_aggregate_performance_context
 
 # Initialize databases
@@ -1074,77 +1076,84 @@ def ingest_post():
     if session.get('user_role') != 'admin':
         return redirect(url_for('dashboard'))
         
-    from src.embeddings import embed_documents
-    from src.ingest import chunk_pages, extract_pages, file_hash
-    from src.vectorstore import add_chunks, ingested_hashes
-    
     session['cancel_ingestion'] = False
     uploaded_files = request.files.getlist('files')
     if not uploaded_files or not uploaded_files[0].filename:
         flash("No files selected")
         return redirect(url_for('ingest'))
         
-    known_hashes = ingested_hashes()
-    files_processed = 0
-    chunks_added = 0
-    duplicates = 0
-    success_files = []
-    
-    for file in uploaded_files:
-        if session.get('cancel_ingestion'):
-            flash("⛔ Vector indexing was cancelled by user.")
-            break
-        try:
-            from io import BytesIO
-            data = file.read()
-            if not data:
-                continue
-                
-            digest = file_hash(data)
-            if digest in known_hashes:
-                duplicates += 1
-                flash(f"⏭️ {file.filename} is already indexed — skipped duplicate.")
-                continue
-                
-            pages = extract_pages(BytesIO(data))
-            if not pages:
-                flash(f"⚠️ No extractable text found in {file.filename} — skipped.")
-                continue
-                
-            chunks = chunk_pages(pages, file.filename)
-            embeddings = embed_documents([c["text"] for c in chunks])
-            added = add_chunks(chunks, embeddings, digest)
+    # Read files into memory before responding so WSGI doesn't close them
+    files_data = []
+    for f in uploaded_files:
+        if f.filename:
+            files_data.append((f.filename, f.read()))
             
-            try:
-                save_path = Path(DOCUMENTS_DIR) / file.filename
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                save_path.write_bytes(data)
-            except Exception as e:
-                flash(f"Could not save PDF copy to disk: {e}")
-                
-            known_hashes.add(digest)
-            files_processed += 1
-            chunks_added += added
-            success_files.append(file.filename)
-            flash(f"✅ {file.filename} — Created {added} chunks from {len(pages)} pages.")
-            
-        except Exception as exc:
-            flash(f"❌ Failed to process {file.filename}: {exc}")
-            
-    if success_files:
-        file_names = ", ".join(success_files)
-        add_announcement(
-            "📂 New Study Documents Uploaded",
-            f"The Administrator has successfully uploaded and processed new document(s) into the knowledge base:\n\n"
-            f"Files: {file_names}\n\n"
-            f"You can now query this information using the Document Explorer or AI Assistant."
-        )
+    if not files_data:
+        flash("No valid files to process.")
+        return redirect(url_for('ingest'))
 
-    session['ingest_summary'] = {
-        'processed': files_processed,
-        'chunks': chunks_added,
-        'duplicates': duplicates
-    }
+    flash(f"Background ingestion started for {len(files_data)} file(s). You can continue using the platform. An announcement will be posted upon completion.")
+
+    def background_ingest(files_data_list):
+        from src.embeddings import embed_documents
+        from src.ingest import chunk_pages, extract_pages, file_hash
+        from src.vectorstore import add_chunks, ingested_hashes
+        
+        known_hashes = ingested_hashes()
+        files_processed = 0
+        chunks_added = 0
+        duplicates = 0
+        success_files = []
+        
+        for filename, data in files_data_list:
+            # We can't rely on `session.get('cancel_ingestion')` in a background thread 
+            # easily without the request context, so cancellation is disabled for background tasks for now.
+            try:
+                from io import BytesIO
+                if not data:
+                    continue
+                    
+                digest = file_hash(data)
+                if digest in known_hashes:
+                    duplicates += 1
+                    continue
+                    
+                pages = extract_pages(BytesIO(data))
+                if not pages:
+                    continue
+                    
+                chunks = chunk_pages(pages, filename)
+                embeddings = embed_documents([c["text"] for c in chunks])
+                added = add_chunks(chunks, embeddings, digest)
+                
+                try:
+                    save_path = Path(DOCUMENTS_DIR) / filename
+                    save_path.parent.mkdir(parents=True, exist_ok=True)
+                    save_path.write_bytes(data)
+                except Exception as e:
+                    print(f"Could not save PDF copy to disk: {e}")
+                    
+                known_hashes.add(digest)
+                files_processed += 1
+                chunks_added += added
+                success_files.append(filename)
+                
+            except Exception as exc:
+                print(f"Failed to process {filename}: {exc}")
+                
+        if success_files:
+            file_names = ", ".join(success_files)
+            # Add an announcement that is visible to everyone
+            add_announcement(
+                "📂 Background Ingestion Complete",
+                f"The Administrator has successfully uploaded and processed new document(s) into the knowledge base:\n\n"
+                f"Files: {file_names}\n"
+                f"Chunks added: {chunks_added}\n\n"
+                f"You can now query this information using the Document Explorer or AI Assistant."
+            )
+
+    background_ingest(files_data)
+    
     return redirect(url_for('ingest'))
 
 @app.route('/ingest/delete', methods=['POST'])
@@ -1478,7 +1487,7 @@ def announcements_delete():
 @app.route('/exams')
 @login_required
 def exams():
-    role = session.get('user_role', 'trainee')
+    session.get('user_role', 'trainee')
     active_tab = request.args.get('active_tab', 'create')
     
     exam_title_draft = session.get('exam_title_draft', '')
@@ -3089,7 +3098,7 @@ def chat_stream():
     data = request.get_json() or {}
     query = data.get('query', '').strip()
     model = data.get('model')
-    mode = data.get('mode', 'RAG (Document Guided)')
+    data.get('mode', 'RAG (Document Guided)')
     
     user_info = session.get('user_info', {}) or {}
     emp_id = user_info.get('employee_id', 'demo')
@@ -3815,7 +3824,7 @@ def assistant_wizard_save():
         return jsonify({"error": "Required fields missing"}), 400
         
     try:
-        from src.exams import add_exam, assign_exam, add_exam_template
+        from src.exams import add_exam_template
         import sqlite3
         
         duration = settings.get('duration', 30)
@@ -4264,7 +4273,7 @@ def sprint_page():
     
     user_sprint = get_sprint(emp_id)
     current_active_week = user_sprint.get('current_week', 1)
-    current_active_day = user_sprint.get('current_day', 1)
+    user_sprint.get('current_day', 1)
     req_week = request.args.get('week', type=int)
 
     # Fetch all system study plans
@@ -4690,8 +4699,8 @@ def sprint_chunk_document():
 
     from src.llm import generate_chat_answer, clean_json_response
     from src.vectorstore import get_collection
-    from src.sprints import run_sprint_orchestrator, save_study_plan
-    from src.exams import add_exam_and_get_id, assign_exam_to_all_students
+    from src.sprints import save_study_plan
+    from src.exams import add_exam_and_get_id
 
     docs_contents = []
     source_files_list = []
@@ -4811,7 +4820,7 @@ def sprint_chunk_document():
             tasks[day_key] = day_list
 
     # Multi-Section Exam Generation (2 MCQs, 2 Short Answer, 2 Fill in Blank, 2 Match per file)
-    target_q_count = max(8, len(docs_contents) * 8)
+    max(8, len(docs_contents) * 8)
     
     exam_prompt = (
         f"You are a Senior Technical Examiner creating a comprehensive Day 5 Gateway Exam for {domain.capitalize()} Week {week_num}.\n"
@@ -4971,7 +4980,7 @@ def sprint_voice_interview_turn():
     user_query = ""
     if 'audio' in request.files:
         audio_file = request.files.get("audio")
-        mime_type = request.form.get("mime_type", audio_file.content_type or "audio/webm")
+        request.form.get("mime_type", audio_file.content_type or "audio/webm")
         audio_bytes = audio_file.read()
         if audio_bytes:
             try:

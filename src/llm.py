@@ -553,7 +553,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
     # Construct context block
     context_parts = []
     for i, chunk in enumerate(chunks, start=1):
-        source = chunk.get("source", "Uploaded Document")
+        chunk.get("source", "Uploaded Document")
         page = chunk.get("page", "?")
         text = chunk.get("text", "")
         context_parts.append(f"Content from page {page}:\n{text}")

@@ -117,6 +117,7 @@
             <div class="ts-metric-value" style="font-size: 1.8rem; font-weight: 700;">{{ admin_stats.active_now }}</div>
             <div class="ts-metric-label" style="font-size: 0.8rem; text-transform: uppercase; font-weight: 600; margin-top: 0.3rem; color: var(--ts-secondary);">Active Now</div>
         </div>
+        {% if session.get('user_role') == 'admin' %}
         <div class="ts-metric ts-metric-card" onclick="window.location.href='/documents'" style="padding: 1.2rem; border-radius: 12px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
             <div class="ts-metric-value" style="font-size: 1.8rem; font-weight: 700;">{{ admin_stats.doc_count }}</div>
             <div class="ts-metric-label" style="font-size: 0.8rem; text-transform: uppercase; font-weight: 600; margin-top: 0.3rem; color: var(--ts-accent);">Documents</div>
@@ -125,6 +126,7 @@
             <div class="ts-metric-value" style="font-size: 1.8rem; font-weight: 700;">{{ admin_stats.chunk_count }}</div>
             <div class="ts-metric-label" style="font-size: 0.8rem; text-transform: uppercase; font-weight: 600; margin-top: 0.3rem; color: var(--ts-primary);">Knowledge Chunks</div>
         </div>
+        {% endif %}
     </div>
     
     <div class="ts-metrics-grid">
@@ -461,7 +463,6 @@
                         </div>
                         <div style="font-size: 0.85rem; color: var(--ts-text-muted); margin-top: 0.5rem;">Recommended to review based on your learning domain requirements.</div>
                     </div>
-                    <a href="/documents" class="btn-ts btn-ts-secondary" style="margin-top: 0.5rem;">Open Document 🔍</a>
                 </div>
                 {% endfor %}
             </div>
