@@ -278,6 +278,11 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
                             yield delta
                     except Exception:
                         pass
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            yield "Error: Groq API Rate Limit Exceeded (429). Please wait a moment and try again."
+        else:
+            yield f"Error connecting to Groq API: HTTP {e.code} {e.reason}."
     except urllib.error.URLError as e:
         yield f"Error connecting to Groq API: {e.reason}."
     except Exception as e:
@@ -331,6 +336,11 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
                             yield delta
                     except Exception:
                         pass
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            yield "Error: Groq API Rate Limit Exceeded (429). Please wait a moment and try again."
+        else:
+            yield f"Error connecting to Groq API: HTTP {e.code} {e.reason}."
     except urllib.error.URLError as e:
         yield f"Error connecting to Groq API: {e.reason}."
     except Exception as e:
@@ -609,6 +619,11 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
                             yield delta
                     except Exception:
                         pass
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            yield "Error: Groq API Rate Limit Exceeded (429). Please wait a moment and try again."
+        else:
+            yield f"Error connecting to Groq API: HTTP {e.code} {e.reason}."
     except urllib.error.URLError as e:
         yield f"Error: Connecting to Groq API failed: {e.reason}."
     except Exception as e:

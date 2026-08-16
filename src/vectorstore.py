@@ -9,31 +9,45 @@ known hashes to skip files that were already indexed.
 from __future__ import annotations
 
 import re
+import sys
+try:
+    import pysqlite3
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import chromadb
 from chromadb.api import ClientAPI
 from chromadb.api.models.Collection import Collection
 
 from src.config import CHROMA_COLLECTION, CHROMA_DB_PATH
 
+import threading
+_chroma_lock = threading.Lock()
 _client_instance = None
 
 def get_client() -> ClientAPI:
     """Return a cached, disk-persistent Chroma client with self-healing recovery."""
     global _client_instance
-    if _client_instance is None:
-        try:
-            _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-        except Exception as e:
-            print(f"[WARN] ChromaDB init error: {e}. Executing self-healing index reset...")
-            import shutil, time, pathlib
-            backup_dir = f"{CHROMA_DB_PATH}_corrupt_{int(time.time())}"
+    with _chroma_lock:
+        if _client_instance is None:
             try:
-                if pathlib.Path(CHROMA_DB_PATH).exists():
-                    shutil.move(CHROMA_DB_PATH, backup_dir)
-            except Exception as ex:
-                print(f"[WARN] Failed to move corrupt DB dir: {ex}")
-            _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-    return _client_instance
+                _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "sqlite" in error_msg and "version" in error_msg:
+                    print(f"[ERROR] ChromaDB requires a newer SQLite3 version. Install pysqlite3-binary. Error: {e}")
+                    raise
+                print(f"[WARN] ChromaDB init error: {e}. Executing self-healing index reset...")
+                import shutil, time, pathlib
+                backup_dir = f"{CHROMA_DB_PATH}_corrupt_{int(time.time())}"
+                try:
+                    if pathlib.Path(CHROMA_DB_PATH).exists():
+                        shutil.move(CHROMA_DB_PATH, backup_dir)
+                except Exception as ex:
+                    print(f"[WARN] Failed to move corrupt DB dir: {ex}")
+                _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        return _client_instance
 
 
 def get_collection() -> Collection | None:
@@ -60,20 +74,22 @@ def get_collection() -> Collection | None:
 
 
 def ingested_hashes() -> set[str]:
-    """Return the set of file hashes already present in the index."""
-    collection = get_collection()
-    if not collection:
-        return set()
-    try:
-        result = collection.get(include=["metadatas"])
-    except Exception:
-        return set()
-
+    """Return the set of file hashes already present in DOCUMENTS_DIR."""
     hashes: set[str] = set()
-    for meta in (result.get("metadatas") or []):
-        file_hash = (meta or {}).get("file_hash")
-        if file_hash:
-            hashes.add(file_hash)
+    try:
+        from pathlib import Path
+        from src.config import DOCUMENTS_DIR
+        from src.ingest import file_hash
+        doc_dir = Path(DOCUMENTS_DIR)
+        if doc_dir.exists():
+            for f in doc_dir.iterdir():
+                if f.is_file() and not f.name.startswith('.') and not f.name.startswith('Custom_'):
+                    try:
+                        hashes.add(file_hash(f.read_bytes()))
+                    except Exception:
+                        pass
+    except Exception as ex:
+        print(f"Error reading ingested hashes: {ex}")
     return hashes
 
 
@@ -90,20 +106,22 @@ def add_chunks(chunks: list[dict], embeddings: list[list[float]], file_hash: str
         meta["file_hash"] = file_hash
         metadatas.append(meta)
 
-    collection = get_collection()
-    if not collection:
-        return 0
-    try:
-        collection.upsert(
-            ids=ids,
-            documents=documents,
-            metadatas=metadatas,
-            embeddings=embeddings,
-        )
-        return len(ids)
-    except Exception as e:
-        print(f"[ERROR] Failed to upsert chunks: {e}")
-        return 0
+    with _chroma_lock:
+        collection = get_collection()
+        if not collection:
+            return 0
+        try:
+            collection.upsert(
+                ids=ids,
+                documents=documents,
+                metadatas=metadatas,
+                embeddings=embeddings,
+            )
+            invalidate_stats_cache()
+            return len(ids)
+        except Exception as e:
+            print(f"[ERROR] Failed to upsert chunks: {e}")
+            return 0
 
 
 def search(
@@ -113,125 +131,128 @@ def search(
     threshold: float = 0.0,
 ) -> list[dict]:
     """Run a cosine similarity search and return ranked results."""
-    collection = get_collection()
-    if not collection:
-        return []
-    try:
-        total_count = collection.count()
-        if total_count == 0:
+    with _chroma_lock:
+        collection = get_collection()
+        if not collection:
+            return []
+        try:
+            total_count = collection.count()
+            if total_count == 0:
+                return []
+
+            where_clause = None
+            if source_filters:
+                if len(source_filters) == 1:
+                    where_clause = {"source": source_filters[0]}
+                elif len(source_filters) > 1:
+                    where_clause = {"$or": [{"source": src} for src in source_filters]}
+
+            query_k = min(max(top_k * 2, 20), total_count)
+
+            result = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=query_k,
+                where=where_clause,
+                include=["documents", "metadatas", "distances"],
+            )
+        except Exception as e:
+            print(f"[ERROR] Vector search failed: {e}")
             return []
 
-        where_clause = None
-        if source_filters:
-            if len(source_filters) == 1:
-                where_clause = {"source": source_filters[0]}
-            elif len(source_filters) > 1:
-                where_clause = {"$or": [{"source": src} for src in source_filters]}
+        documents = (result.get("documents") or [[]])[0]
+        metadatas = (result.get("metadatas") or [[]])[0]
+        distances = (result.get("distances") or [[]])[0]
 
-        query_k = min(max(top_k * 2, 20), total_count)
+        hits: list[dict] = []
+        for text, meta, distance in zip(documents, metadatas, distances):
+            meta = meta or {}
+            score = 1.0 - float(distance)
+            if score >= threshold:
+                hits.append(
+                    {
+                        "text": text,
+                        "source": meta.get("source", "unknown"),
+                        "page": meta.get("page", "—"),
+                        "chunk_index": meta.get("chunk_index", 0),
+                        "score": score,
+                    }
+                )
 
-        result = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=query_k,
-            where=where_clause,
-            include=["documents", "metadatas", "distances"],
-        )
-    except Exception as e:
-        print(f"[ERROR] Vector search failed: {e}")
-        return []
-
-    documents = (result.get("documents") or [[]])[0]
-    metadatas = (result.get("metadatas") or [[]])[0]
-    distances = (result.get("distances") or [[]])[0]
-
-    hits: list[dict] = []
-    for text, meta, distance in zip(documents, metadatas, distances):
-        meta = meta or {}
-        score = 1.0 - float(distance)
-        if score >= threshold:
-            hits.append(
-                {
-                    "text": text,
-                    "source": meta.get("source", "unknown"),
-                    "page": meta.get("page", "—"),
-                    "chunk_index": meta.get("chunk_index", 0),
-                    "score": score,
-                }
-            )
-
-    hits.sort(key=lambda hit: hit["score"], reverse=True)
-    return hits[:top_k]
+        hits.sort(key=lambda hit: hit["score"], reverse=True)
+        return hits[:top_k]
 
 
 def delete_source(source_name: str, file_hash: str | None = None) -> None:
-    """Delete all chunks associated with a specific source document or file_hash."""
-    collection = get_collection()
-    if not collection:
-        return
-    import urllib.parse
-    names_to_delete = {source_name, urllib.parse.unquote(source_name), urllib.parse.quote(source_name)}
-    
-    hashes_to_delete = set()
-    if file_hash:
-        hashes_to_delete.add(file_hash)
+    """Delete all chunks associated with a specific source document or file_hash by exact IDs."""
+    with _chroma_lock:
+        collection = get_collection()
+        if not collection:
+            return
+        import urllib.parse
+        names_to_delete = {source_name, urllib.parse.unquote(source_name), urllib.parse.quote(source_name)}
         
-    try:
-        # Collect all file_hashes associated with the target source name(s)
-        res = collection.get(include=["metadatas"])
-        for meta in res.get("metadatas") or []:
-            meta = meta or {}
-            if meta.get("source") in names_to_delete:
-                h = meta.get("file_hash")
-                if h:
-                    hashes_to_delete.add(h)
-    except Exception as e:
-        print(f"Error querying metadatas for deletion: {e}")
-
-    # Delete all matching source names
-    for name in names_to_delete:
-        try:
-            collection.delete(where={"source": name})
-        except Exception as e:
-            print(f"Error deleting source '{name}' from Chroma: {e}")
+        hashes_to_delete = set()
+        if file_hash:
+            hashes_to_delete.add(file_hash)
             
-    # Delete all matching file_hashes so re-ingesting is never skipped as duplicate
-    for h in hashes_to_delete:
-        try:
-            collection.delete(where={"file_hash": h})
-        except Exception as e:
-            print(f"Error deleting file_hash '{h}' from Chroma: {e}")
+        for name in names_to_delete:
+            try:
+                res = collection.get(where={"source": name}, include=["metadatas"])
+                ids = res.get("ids") or []
+                if ids:
+                    for meta in res.get("metadatas") or []:
+                        meta = meta or {}
+                        h = meta.get("file_hash")
+                        if h:
+                            hashes_to_delete.add(h)
+                    collection.delete(ids=ids)
+            except Exception as e:
+                print(f"Error querying/deleting metadata for source '{name}': {e}")
+
+        # Delete any remaining matching file_hashes by exact IDs
+        for h in hashes_to_delete:
+            try:
+                res = collection.get(where={"file_hash": h}, include=["metadatas"])
+                ids = res.get("ids") or []
+                if ids:
+                    collection.delete(ids=ids)
+            except Exception as e:
+                print(f"Error deleting file_hash '{h}': {e}")
+
+        invalidate_stats_cache()
 
 
 def get_source_chunks(source_name: str) -> list[dict]:
     """Retrieve all chunks for a specific source filename (for the chunk browser)."""
-    if _client_instance is None:
-        return []
-    collection = get_collection()
-    if not collection:
-        return []
-    try:
-        result = collection.get(
-            where={"source": source_name},
-            include=["documents", "metadatas"],
-        )
-        documents = result.get("documents") or []
-        metadatas = result.get("metadatas") or []
-        ids = result.get("ids") or []
-        
-        chunks = []
-        for doc_id, text, meta in zip(ids, documents, metadatas):
-            meta = meta or {}
-            chunks.append({
-                "id": doc_id,
-                "text": text,
-                "page": meta.get("page", "—"),
-                "chunk_index": meta.get("chunk_index", 0)
-            })
-        # Sort chunks by page then by index
-        chunks.sort(key=lambda x: (int(x["page"]) if isinstance(x["page"], int) or (isinstance(x["page"], str) and x["page"].isdigit()) else 0, x["chunk_index"]))
-        return chunks
-    except Exception:
-        return []
+    with _chroma_lock:
+        if _client_instance is None:
+            return []
+        collection = get_collection()
+        if not collection:
+            return []
+        try:
+            result = collection.get(
+                where={"source": source_name},
+                include=["documents", "metadatas"],
+            )
+            documents = result.get("documents") or []
+            metadatas = result.get("metadatas") or []
+            ids = result.get("ids") or []
+            
+            chunks = []
+            for doc_id, text, meta in zip(ids, documents, metadatas):
+                meta = meta or {}
+                chunks.append({
+                    "id": doc_id,
+                    "text": text,
+                    "page": meta.get("page", "—"),
+                    "chunk_index": meta.get("chunk_index", 0)
+                })
+            # Sort chunks by page then by index
+            chunks.sort(key=lambda x: (int(x["page"]) if isinstance(x["page"], int) or (isinstance(x["page"], str) and x["page"].isdigit()) else 0, x["chunk_index"]))
+            return chunks
+        except Exception:
+            return []
 
 
 _stats_cache = None
@@ -242,45 +263,61 @@ def invalidate_stats_cache():
     _stats_cache_time = 0.0
 
 def _fetch_stats_raw() -> dict:
-    collection = get_collection()
-    if not collection:
-        return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
-    total = collection.count()
-    if not total:
-        return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
+    with _chroma_lock:
+        collection = get_collection()
+        if not collection:
+            return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
+        total = collection.count()
+        if not total:
+            return {"total_chunks": 0, "sources": 0, "source_names": [], "source_details": []}
 
-    sources_dict: dict[str, int] = {}
-    source_pages: dict[str, set[int]] = {}
-    result = collection.get(include=["metadatas"])
-    for meta in result.get("metadatas") or []:
-        meta = meta or {}
-        source = meta.get("source")
-        if source and not source.startswith("Custom_"):
-            sources_dict[source] = sources_dict.get(source, 0) + 1
-            page = meta.get("page")
-            if page is not None:
-                if source not in source_pages:
-                    source_pages[source] = set()
-                source_pages[source].add(page)
+        from pathlib import Path
+        from src.config import DOCUMENTS_DIR
+        doc_dir = Path(DOCUMENTS_DIR)
+        doc_names = []
+        if doc_dir.exists():
+            for f in doc_dir.iterdir():
+                if f.is_file() and not f.name.startswith('.') and not f.name.startswith('Custom_'):
+                    doc_names.append(f.name)
+        doc_names = sorted(doc_names)
 
-    source_details = []
-    for src in sorted(sources_dict.keys()):
-        pages_set = source_pages.get(src, set())
-        pages_count = len(pages_set)
-        source_details.append(
-            {
-                "name": src,
-                "chunks": sources_dict[src],
-                "pages": pages_count if pages_count > 0 else 1,
-            }
-        )
+        sources_dict: dict[str, int] = {}
+        source_pages: dict[str, set[int]] = {}
+        
+        for src in doc_names:
+            try:
+                result = collection.get(where={"source": src}, include=["metadatas"])
+                metadatas = result.get("metadatas") or []
+                if metadatas:
+                    sources_dict[src] = len(metadatas)
+                    pages_set = set()
+                    for meta in metadatas:
+                        meta = meta or {}
+                        page = meta.get("page")
+                        if page is not None:
+                            pages_set.add(page)
+                    source_pages[src] = pages_set
+            except Exception as e:
+                print(f"Error getting stats for document {src}: {e}")
 
-    return {
-        "total_chunks": total,
-        "sources": len(sources_dict),
-        "source_names": sorted(sources_dict.keys()),
-        "source_details": source_details,
-    }
+        source_details = []
+        for src in sorted(sources_dict.keys()):
+            pages_set = source_pages.get(src, set())
+            pages_count = len(pages_set)
+            source_details.append(
+                {
+                    "name": src,
+                    "chunks": sources_dict[src],
+                    "pages": pages_count if pages_count > 0 else 1,
+                }
+            )
+
+        return {
+            "total_chunks": total,
+            "sources": len(sources_dict),
+            "source_names": sorted(sources_dict.keys()),
+            "source_details": source_details,
+        }
 
 
 def stats() -> dict:

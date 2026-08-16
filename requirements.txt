@@ -6,3 +6,4 @@ langchain-text-splitters
 pandas
 python-dotenv
 Flask
+groq
