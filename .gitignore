@@ -100,3 +100,7 @@ Thumbs.db
 *.avi
 *.mkv
 *.mov
+
+# Sub-projects
+Local_Database_QA/
+
