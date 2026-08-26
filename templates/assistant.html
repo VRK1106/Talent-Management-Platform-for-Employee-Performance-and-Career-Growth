@@ -1073,12 +1073,17 @@
         let cleanText = text;
         cleanText = cleanText.replace(/\[ITEMS_JSON_START\][\s\S]*?\[ITEMS_JSON_END\]/g, "");
         let html = marked.parse(cleanText);
+        
+        // Replace [1], [2] with clickable marker links/badges
         html = html.replace(/\[([0-9]+)\]/g, '<span class="citation-marker" onclick="showCitation(this, $1)">[$1]</span>');
         
-        // Sanitize output to neutralize malicious tags
+        // Neutralize malicious tags and XSS payloads before DOM injection
         if (typeof DOMPurify !== 'undefined') {
             html = DOMPurify.sanitize(html);
+        } else {
+            console.error("DOMPurify not loaded. XSS protection disabled.");
         }
+        
         return html;
     }
 
@@ -1478,18 +1483,26 @@
                 document.getElementById('activeNotFoundNotice').style.display = 'none';
             }
 
-            finishGeneration();
-            if (!skipReload) {
-                window.location.reload();
-            }
-
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log("Generation aborted by user.");
             } else {
                 console.error("Error during streaming:", err);
-                document.getElementById('activeResponseText').innerText = "An error occurred during generation.";
-                finishGeneration();
+                const activeTextEl = document.getElementById('activeResponseText');
+                
+                // Append error notice instead of wiping the DOM
+                const errorNotice = `<br><br><span style="color: #ef4444;">[Network Interrupted: ${err.message}]</span>`;
+                if (activeTextEl.innerHTML.trim() === '') {
+                    activeTextEl.innerHTML = "An error occurred during generation." + errorNotice;
+                } else {
+                    activeTextEl.innerHTML += errorNotice;
+                }
+            }
+        } finally {
+            // PATCH: Always reset UI state to unlock inputs
+            finishGeneration();
+            if (!skipReload) {
+                window.location.reload();
             }
         }
     }

@@ -1432,24 +1432,6 @@ def announcements():
         email_enabled = get_system_setting("email_notifications_enabled", "true").lower() == "true"
     return render_template('announcements.html', announcements=anns, email_logs=email_logs, email_enabled=email_enabled)
 
-@app.route('/announcements/settings/toggle', methods=['POST'])
-@login_required
-def announcements_settings_toggle():
-    if session.get('user_role') != 'admin':
-        return redirect(url_for('dashboard'))
-    
-    from src.exams import get_system_setting, set_system_setting
-    current_val = get_system_setting("email_notifications_enabled", "true").lower() == "true"
-    new_val = "false" if current_val else "true"
-    set_system_setting("email_notifications_enabled", new_val)
-    
-    if new_val == "true":
-        flash("Email notifications enabled.")
-    else:
-        flash("Email notifications disabled.")
-        
-    return redirect(url_for('announcements'))
-
 @app.route('/announcements/create', methods=['POST'])
 @login_required
 def announcements_create():
@@ -2211,7 +2193,7 @@ Format required:
             query_emb = embed_query(query_text)
             search_results = search(query_emb, top_k=3)
             if search_results:
-                response_text = generate_rag_answer(query_text, search_results, selected_model=model)
+                response_text = generate_rag_answer(query_text, search_results, model_name=model)
                 if selected_lang != 'en-US':
                     response_text = generate_chat_answer(f"Translate the following response into the target language requested ({selected_lang}):\n\n{response_text}", model_name=model, system_instruction=sys_lang_prompt)
             else:
@@ -3105,7 +3087,10 @@ def chat_stream():
     active_session_id = session.get('active_chat_session_id')
     
     if not active_session_id:
-        return jsonify({"error": "No active chat session"}), 400
+        from src.chats import create_chat_session
+        active_session_id = create_chat_session(emp_id, "Welcome Conversation")
+        session['active_chat_session_id'] = active_session_id
+        session.modified = True
         
     add_chat_message(active_session_id, "user", query)
     
@@ -3576,17 +3561,6 @@ def assistant_wizard_previous_exams():
     try:
         from src.exams import get_all_exams
         return jsonify({"exams": get_all_exams()})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/assistant/wizard/templates')
-@login_required
-def assistant_wizard_get_templates():
-    if session.get('user_role') != 'admin':
-        return jsonify({"error": "Admin role required"}), 403
-    try:
-        from src.exams import get_exam_templates
-        return jsonify({"templates": get_exam_templates()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

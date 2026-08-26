@@ -142,7 +142,7 @@ def chunk_pages(pages: list[dict], source_name: str) -> list[dict]:
         A list of chunk dicts, each shaped as::
 
             {
-                "id": "<source>::p<page>::c<chunk_index>",
+                "id": "<hash>",
                 "text": "<chunk text>",
                 "metadata": {
                     "source": source_name,
@@ -164,9 +164,10 @@ def chunk_pages(pages: list[dict], source_name: str) -> list[dict]:
             piece = piece.strip()
             if not piece:
                 continue
+            chunk_id = hashlib.sha256(piece.encode('utf-8')).hexdigest()
             chunks.append(
                 {
-                    "id": f"{source_name}::p{page_number}::c{running_index}",
+                    "id": chunk_id,
                     "text": piece,
                     "metadata": {
                         "source": source_name,

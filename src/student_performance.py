@@ -8,6 +8,7 @@ import re
 import sqlite3
 import datetime
 from pathlib import Path
+from src.users import get_db_connection
 
 _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 
@@ -19,7 +20,8 @@ _PERF_KEYWORDS = {
     "weak", "strength", "improve", "improvement", "rank", "average",
     "avg", "overview", "summary", "exam", "exams", "test", "quiz",
     "assignment", "assignments", "completed", "pending", "topic",
-    "topics", "suggest", "recommendation", "recommend",
+    "topics", "suggest", "recommendation", "recommend", "insight",
+    "insights", "info", "detail", "details"
 }
 
 # Aggregate / admin signals — no specific person, refers to ALL trainees
@@ -97,7 +99,7 @@ def detect_performance_query(query: str) -> str | None:
 
     # ── 4. Regex fallback for explicit "of/for <name>" patterns ──
     pattern_specific = [
-        r"\b(?:performance|score|scores|progress|grade|grades|result|results|report|stats|marks?|average|avg)\b.{0,30}\b(?:of|for)\b\s+(?:student|trainee|user)?\s*([A-Za-z][A-Za-z0-9_\-]{1,})",
+        r"\b(?:performance|score|scores|progress|grade|grades|result|results|report|stats|marks?|average|avg|insights?|analytics|info|details?)\b.{0,30}\b(?:of|for|about)\b\s+(?:student|trainee|user)?\s*([A-Za-z][A-Za-z0-9_\-]{1,})",
         r"\bhow\s+(?:is|was|has)\s+(?:student|trainee|user)?\s*([A-Za-z][A-Za-z0-9_\-]{1,})\s+(?:doing|performing|progressing|scoring)\b",
         r"\bshow\s+(?:me\s+)?(?:student|trainee|user)?\s*([A-Za-z][A-Za-z0-9_\-]{1,})['\u2019s]*\s*(?:performance|score|scores|progress|grade|report|stats|result)\b",
         r"\b(?:improve|improving|improvement)\b.{0,20}([A-Za-z][A-Za-z0-9_\-]{1,})['\u2019s]?\s*(?:score|performance|grade|marks?|result)\b",

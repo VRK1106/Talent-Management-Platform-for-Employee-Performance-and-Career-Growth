@@ -10,6 +10,8 @@ import os
 import re
 import urllib.error
 import urllib.request
+import time
+import random
 from typing import Any
 from dotenv import load_dotenv
 
@@ -47,8 +49,42 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
 
-PRIMARY_MODEL = "openai/gpt-oss-20b"
-FALLBACK_MODEL = "qwen/qwen3.6-27b"
+def execute_with_backoff(req, max_retries=5, base_delay=1.0):
+    """Executes a urllib Request with Retry-After awareness and exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            return urllib.request.urlopen(req, timeout=180.0)
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"Groq API rate limit persists after {max_retries} retries.")
+                
+                # 1. Prefer Groq's explicit Retry-After header
+                retry_after = e.headers.get("Retry-After")
+                
+                if retry_after and retry_after.replace('.', '', 1).isdigit():
+                    wait_time = float(retry_after)
+                else:
+                    # 2. Fall back to exponential backoff with jitter
+                    exponential_delay = base_delay * (2 ** attempt)
+                    wait_time = exponential_delay * (0.5 + random.random() * 0.5)
+                
+                print(f"[WARN] Groq 429 Rate Limit. Retrying in {wait_time:.1f}s (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+            
+            # Retry on 5xx Server Errors
+            elif e.code >= 500:
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(base_delay * (2 ** attempt))
+                continue
+            
+            # Fail immediately on 400, 401, 403, 404
+            raise
+
+PRIMARY_MODEL = "deepseek-r1-distill-llama-70b"
+FALLBACK_MODEL = "mixtral-8x7b-32768"
 
 _groq_client = None
 
@@ -191,7 +227,7 @@ def generate_rag_answer(query: str, chunks: list[dict[str, Any]], model_name: st
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=180.0) as resp:
+        with execute_with_backoff(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return data["choices"][0]["message"]["content"].strip()
     except urllib.error.URLError as e:
@@ -239,7 +275,7 @@ def generate_chat_answer(prompt: str, model_name: str, system_instruction: str |
                 method="POST",
             )
 
-            with urllib.request.urlopen(req, timeout=180.0) as resp:
+            with execute_with_backoff(req) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"].strip()
         except urllib.error.HTTPError as e:
@@ -314,7 +350,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=180.0) as resp:
+        with execute_with_backoff(req) as resp:
             for line in resp:
                 line_str = line.decode("utf-8").strip()
                 if line_str.startswith("data: "):
@@ -373,7 +409,7 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=180.0) as resp:
+        with execute_with_backoff(req) as resp:
             for line in resp:
                 line_str = line.decode("utf-8").strip()
                 if line_str.startswith("data: "):
@@ -500,7 +536,7 @@ def analyze_proctor_image(image_base64: str) -> str:
             method="POST",
         )
         
-        with urllib.request.urlopen(req, timeout=10.0) as resp:
+        with execute_with_backoff(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             answer = data["choices"][0]["message"]["content"].strip().lower()
             for label in ["phone", "second_person", "absent", "none"]:
@@ -655,7 +691,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=180.0) as resp:
+        with execute_with_backoff(req) as resp:
             for line in resp:
                 line_str = line.decode("utf-8").strip()
                 if line_str.startswith("data: "):
@@ -732,7 +768,7 @@ def generate_study_plan(prompt: str, domain: str, week_number: int, model_name: 
             method="POST"
         )
         
-        with urllib.request.urlopen(req, timeout=15.0) as resp:
+        with execute_with_backoff(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             content = data["choices"][0]["message"]["content"].strip()
             # Parse the JSON string
