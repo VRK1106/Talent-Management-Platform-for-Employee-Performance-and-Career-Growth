@@ -32,6 +32,13 @@ def get_model():
     """Load and cache the sentence-transformer model (once per process singleton)."""
     global _model_instance
     if _model_instance is None:
+        import os
+        import torch
+        
+        # Disable OpenMP multithreading to prevent worker thread deadlocks on Windows
+        os.environ["OMP_NUM_THREADS"] = "1"
+        torch.set_num_threads(1)
+        
         from sentence_transformers import SentenceTransformer
         _model_instance = SentenceTransformer(EMBEDDING_MODEL, device=_auto_device())
     return _model_instance
@@ -74,3 +81,24 @@ def embed_query(text: str) -> list[float]:
         show_progress_bar=False,
     )
     return vector.tolist()
+def embed_query(text: str) -> list[float]:
+    """Embed a single search query with the required BGE instruction prefix.
+
+    Args:
+        text: The user's raw search query.
+
+    Returns:
+        A single 1024-dim, L2-normalized embedding vector.
+    """
+    model = get_model()
+    vector = model.encode(
+        QUERY_INSTRUCTION + text,
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
+    return vector.tolist()
+
+# --- ADD THIS LINE TO THE VERY BOTTOM OF THE FILE ---
+# Pre-load the BGE model globally during script initialization 
+# to prevent thread-locking during the first API request.
+get_model()

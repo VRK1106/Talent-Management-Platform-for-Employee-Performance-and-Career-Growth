@@ -15,121 +15,123 @@ _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 def init_exams_db() -> None:
     """Initialize SQLite tables for exams, assignments, and announcements."""
     conn = get_db_connection(_DB_PATH)
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
     
-    # 1. Create exams table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS exams (
-            exam_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            total_marks INTEGER NOT NULL,
-            questions TEXT NOT NULL,  -- JSON serialized questions list
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        # 1. Create exams table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS exams (
+                exam_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                total_marks INTEGER NOT NULL,
+                questions TEXT NOT NULL,  -- JSON serialized questions list
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
     
-    # 2. Create assignments table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS assignments (
-            assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            exam_id INTEGER NOT NULL,
-            trainee_id TEXT NOT NULL,
-            due_date TEXT,
-            status TEXT DEFAULT 'assigned',  -- 'assigned', 'completed'
-            score REAL,
-            answers TEXT,  -- JSON serialized trainee answers
-            ai_feedback TEXT,  -- AI grading response feedback
-            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TEXT,
-            FOREIGN KEY (exam_id) REFERENCES exams (exam_id) ON DELETE CASCADE,
-            FOREIGN KEY (trainee_id) REFERENCES users (employee_id) ON DELETE CASCADE
+        # 2. Create assignments table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS assignments (
+                assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exam_id INTEGER NOT NULL,
+                trainee_id TEXT NOT NULL,
+                due_date TEXT,
+                status TEXT DEFAULT 'assigned',  -- 'assigned', 'completed'
+                score REAL,
+                answers TEXT,  -- JSON serialized trainee answers
+                ai_feedback TEXT,  -- AI grading response feedback
+                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TEXT,
+                FOREIGN KEY (exam_id) REFERENCES exams (exam_id) ON DELETE CASCADE,
+                FOREIGN KEY (trainee_id) REFERENCES users (employee_id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
     
-    # 3. Create announcements table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS announcements (
-            announcement_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        # 3. Create announcements table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS announcements (
+                announcement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    # Migrations for new settings columns
-    cursor.execute("PRAGMA table_info(exams)")
-    exams_cols = [row[1] for row in cursor.fetchall()]
-    if "settings" not in exams_cols:
-        cursor.execute("ALTER TABLE exams ADD COLUMN settings TEXT")
+        # Migrations for new settings columns
+        cursor.execute("PRAGMA table_info(exams)")
+        exams_cols = [row[1] for row in cursor.fetchall()]
+        if "settings" not in exams_cols:
+            cursor.execute("ALTER TABLE exams ADD COLUMN settings TEXT")
 
-    cursor.execute("PRAGMA table_info(assignments)")
-    assignments_cols = [row[1] for row in cursor.fetchall()]
-    if "settings" not in assignments_cols:
-        cursor.execute("ALTER TABLE assignments ADD COLUMN settings TEXT")
+        cursor.execute("PRAGMA table_info(assignments)")
+        assignments_cols = [row[1] for row in cursor.fetchall()]
+        if "settings" not in assignments_cols:
+            cursor.execute("ALTER TABLE assignments ADD COLUMN settings TEXT")
 
-    # 4. Create exam_templates table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS exam_templates (
-            template_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            config TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        # 4. Create exam_templates table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS exam_templates (
+                template_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                config TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
     
-    # 5. Create email_logs table for tracking delivery status
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS email_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            recipient TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            status TEXT NOT NULL,
-            error_message TEXT,
-            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        # 5. Create email_logs table for tracking delivery status
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_logs (
+                log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                status TEXT NOT NULL,
+                error_message TEXT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
     
-    # 6. Create system_settings table for feature toggles
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS system_settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
+        # 6. Create system_settings table for feature toggles
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """
         )
-        """
-    )
-    # Insert default settings
-    cursor.execute("INSERT OR IGNORE INTO system_settings (key, value) VALUES ('email_notifications_enabled', 'true')")
+        # Insert default settings
+        cursor.execute("INSERT OR IGNORE INTO system_settings (key, value) VALUES ('email_notifications_enabled', 'true')")
     
-    # 7. Create proctor_logs table for webcam proctoring violations
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS proctor_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assignment_id INTEGER NOT NULL,
-            trigger_reason TEXT NOT NULL,
-            groq_label TEXT NOT NULL,
-            snapshot_data TEXT NOT NULL,
-            score REAL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (assignment_id) REFERENCES assignments (assignment_id) ON DELETE CASCADE
+        # 7. Create proctor_logs table for webcam proctoring violations
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS proctor_logs (
+                log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                assignment_id INTEGER NOT NULL,
+                trigger_reason TEXT NOT NULL,
+                groq_label TEXT NOT NULL,
+                snapshot_data TEXT NOT NULL,
+                score REAL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (assignment_id) REFERENCES assignments (assignment_id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
     
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def sanitize_exam_questions(questions: list, exam_title: str = "") -> list:
@@ -193,13 +195,13 @@ def sanitize_exam_questions(questions: list, exam_title: str = "") -> list:
 def get_all_exams(include_gateway: bool = False) -> list[dict[str, Any]]:
     """Fetch all created exams. By default excludes private Day 5 Gateway exams created for weekly sprint plans."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT exam_id, title, description, total_marks, questions, created_at, settings FROM exams ORDER BY exam_id DESC")
         rows = cursor.fetchall()
-        conn.close()
+        pass
         
         result = []
         for r in rows:
@@ -222,18 +224,20 @@ def get_all_exams(include_gateway: bool = False) -> list[dict[str, Any]]:
         return result
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_exam_by_id(exam_id: int) -> dict[str, Any] | None:
     """Fetch a single exam by ID."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT exam_id, title, description, total_marks, questions, created_at, settings FROM exams WHERE exam_id = ?", (exam_id,))
         row = cursor.fetchone()
-        conn.close()
+        pass
         if row:
             d = dict(row)
             try:
@@ -249,6 +253,8 @@ def get_exam_by_id(exam_id: int) -> dict[str, Any] | None:
         return None
     except Exception:
         return None
+    finally:
+        if 'conn' in locals() and conn: conn.close()
     return None
 
 
@@ -260,8 +266,8 @@ def add_exam(title: str, description: str, total_marks: int, questions: list[dic
 def add_exam_and_get_id(title: str, description: str, total_marks: int, questions: list[dict[str, Any]], settings: dict[str, Any] | None = None) -> int | None:
     """Add a new exam containing a list of questions and return its created exam_id."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -272,44 +278,50 @@ def add_exam_and_get_id(title: str, description: str, total_marks: int, question
         )
         exam_id = cursor.lastrowid
         conn.commit()
-        conn.close()
+        pass
         return exam_id
     except Exception as e:
         print(f"Error adding exam: {e}")
         return None
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 def assign_exam_to_all_students(exam_id: int) -> int:
     """Assign an exam to all trainee users in SQLite."""
     init_exams_db()
     count = 0
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id FROM users WHERE role = 'trainee'")
         trainees = [r['employee_id'] for r in cursor.fetchall()]
-        conn.close()
+        pass
         for t_id in trainees:
             if assign_exam(exam_id, t_id, None):
                 count += 1
     except Exception as e:
         print(f"Error assigning exam to all: {e}")
+    finally:
+        if 'conn' in locals() and conn: conn.close()
     return count
 
 def delete_exam(exam_id: int) -> bool:
     """Delete an exam and cascade delete its assignments."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         # Enable FK cascade support explicitly in SQLite
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute("DELETE FROM exams WHERE exam_id = ?", (exam_id,))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 # --- Assignments operations ---
@@ -317,8 +329,8 @@ def delete_exam(exam_id: int) -> bool:
 def assign_exam(exam_id: int, trainee_id: str, due_date: str | None) -> bool:
     """Assign an exam to a trainee."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Check if already assigned
@@ -327,7 +339,7 @@ def assign_exam(exam_id: int, trainee_id: str, due_date: str | None) -> bool:
             (exam_id, trainee_id)
         )
         if cursor.fetchone()[0] > 0:
-            conn.close()
+            pass
             return False  # Already assigned and active
             
         # Get exam settings
@@ -354,17 +366,19 @@ def assign_exam(exam_id: int, trainee_id: str, due_date: str | None) -> bool:
             (exam_id, trainee_id, due_date, json.dumps(assignment_settings)),
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_assignments_for_exam(exam_id: int) -> list[dict[str, Any]]:
     """Get all trainee assignments for a specific exam."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -379,7 +393,7 @@ def get_assignments_for_exam(exam_id: int) -> list[dict[str, Any]]:
             (exam_id,),
         )
         rows = cursor.fetchall()
-        conn.close()
+        pass
         
         result = []
         for r in rows:
@@ -396,13 +410,15 @@ def get_assignments_for_exam(exam_id: int) -> list[dict[str, Any]]:
         return result
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_assignments_for_trainee(trainee_id: str) -> list[dict[str, Any]]:
     """Get all exam assignments for a specific trainee."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -417,7 +433,7 @@ def get_assignments_for_trainee(trainee_id: str) -> list[dict[str, Any]]:
             (trainee_id,),
         )
         rows = cursor.fetchall()
-        conn.close()
+        pass
         
         result = []
         for r in rows:
@@ -434,13 +450,15 @@ def get_assignments_for_trainee(trainee_id: str) -> list[dict[str, Any]]:
         return result
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
     """Fetch a single assignment details."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -455,7 +473,7 @@ def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
             (assignment_id,),
         )
         row = cursor.fetchone()
-        conn.close()
+        pass
         if row:
             d = dict(row)
             d["description"] = d.get("description") or ""
@@ -478,14 +496,16 @@ def get_assignment_by_id(assignment_id: int) -> dict[str, Any] | None:
             return d
     except Exception:
         pass
+    finally:
+        if 'conn' in locals() and conn: conn.close()
     return None
 
 
 def submit_exam_answers(assignment_id: int, answers: dict[str, Any], score: float, ai_feedback: str) -> bool:
     """Submit trainee exam responses and save grade results."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -500,24 +520,28 @@ def submit_exam_answers(assignment_id: int, answers: dict[str, Any], score: floa
             (json.dumps(answers), score, ai_feedback, assignment_id),
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def delete_assignment(assignment_id: int) -> bool:
     """Delete a trainee assignment by ID."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM assignments WHERE assignment_id = ?", (assignment_id,))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 # --- Announcements operations ---
@@ -525,16 +549,18 @@ def delete_assignment(assignment_id: int) -> bool:
 def get_all_announcements() -> list[dict[str, Any]]:
     """Fetch all announcements."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT announcement_id, title, content, created_at FROM announcements ORDER BY announcement_id DESC")
         rows = cursor.fetchall()
-        conn.close()
+        pass
         return [dict(r) for r in rows]
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def add_announcement(title: str, content: str, send_email: bool = True) -> bool:
@@ -555,16 +581,18 @@ def add_announcement(title: str, content: str, send_email: bool = True) -> bool:
         content = re.sub(pat, current_dt_str, content, flags=re.IGNORECASE)
 
         conn = get_db_connection(_DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO announcements (title, content)
-            VALUES (?, ?)
-            """,
-            (title, content),
-        )
-        conn.commit()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO announcements (title, content)
+                VALUES (?, ?)
+                """,
+                (title, content),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
         # Broadcast via email
         if send_email:
@@ -582,22 +610,24 @@ def add_announcement(title: str, content: str, send_email: bool = True) -> bool:
 def delete_announcement(announcement_id: int) -> bool:
     """Delete an announcement by ID."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM announcements WHERE announcement_id = ?", (announcement_id,))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def add_exam_template(name: str, config: dict) -> bool:
     """Add or replace an exam template configuration."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -607,22 +637,24 @@ def add_exam_template(name: str, config: dict) -> bool:
             (name.strip(), json.dumps(config)),
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_exam_templates() -> list[dict[str, Any]]:
     """Fetch all saved exam templates."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT template_id, name, config, created_at FROM exam_templates ORDER BY template_id DESC")
         rows = cursor.fetchall()
-        conn.close()
+        pass
         
         result = []
         for r in rows:
@@ -635,13 +667,15 @@ def get_exam_templates() -> list[dict[str, Any]]:
         return result
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def add_email_log(recipient: str, subject: str, status: str, error_message: str | None = None) -> int | None:
     """Insert a new email delivery log and return the row ID."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -652,17 +686,19 @@ def add_email_log(recipient: str, subject: str, status: str, error_message: str 
         )
         log_id = cursor.lastrowid
         conn.commit()
-        conn.close()
+        pass
         return log_id
     except Exception as e:
         print(f"Failed to write email log: {e}")
         return None
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def update_email_log(log_id: int, status: str, error_message: str | None = None) -> bool:
     """Update the status of an existing email delivery log."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -673,18 +709,20 @@ def update_email_log(log_id: int, status: str, error_message: str | None = None)
             (status, error_message, log_id),
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Failed to update email log: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_all_email_logs(limit: int = 50) -> list[dict[str, Any]]:
     """Retrieve the most recent email delivery logs."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -692,31 +730,35 @@ def get_all_email_logs(limit: int = 50) -> list[dict[str, Any]]:
             (limit,)
         )
         rows = cursor.fetchall()
-        conn.close()
+        pass
         return [dict(r) for r in rows]
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_system_setting(key: str, default: str = "") -> str:
     """Retrieve a system setting value by key."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
         row = cursor.fetchone()
-        conn.close()
+        pass
         return row[0] if row else default
     except Exception:
         return default
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def set_system_setting(key: str, value: str) -> bool:
     """Set/update a system setting value."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -727,18 +769,20 @@ def set_system_setting(key: str, value: str) -> bool:
             (key, str(value)),
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Failed to set system setting: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def add_proctor_log(assignment_id: int, trigger_reason: str, groq_label: str, snapshot_data: str, score: float | None = None) -> int | None:
     """Insert a new proctoring violation log."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -749,32 +793,36 @@ def add_proctor_log(assignment_id: int, trigger_reason: str, groq_label: str, sn
         )
         log_id = cursor.lastrowid
         conn.commit()
-        conn.close()
+        pass
         return log_id
     except Exception as e:
         print(f"Failed to add proctor log: {e}")
         return None
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_proctor_logs_for_assignment(assignment_id: int) -> list[dict[str, Any]]:
     """Fetch all proctoring logs for a given assignment."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT log_id, assignment_id, trigger_reason, groq_label, snapshot_data, score, timestamp FROM proctor_logs WHERE assignment_id = ? ORDER BY timestamp ASC", (assignment_id,))
         rows = cursor.fetchall()
-        conn.close()
+        pass
         return [dict(r) for r in rows]
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def publish_assignment_results(assignment_id: int) -> bool:
     """Publish results for a completed manual-release assignment."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT settings FROM assignments WHERE assignment_id = ?", (assignment_id,))
         row = cursor.fetchone()
@@ -789,19 +837,21 @@ def publish_assignment_results(assignment_id: int) -> bool:
                 (json.dumps(settings), assignment_id)
             )
             conn.commit()
-            conn.close()
+            pass
             return True
-        conn.close()
+        pass
     except Exception as e:
         print(f"Error publishing results: {e}")
+    finally:
+        if 'conn' in locals() and conn: conn.close()
     return False
 
 
 def get_all_assignments() -> list[dict[str, Any]]:
     """Get all trainee assignments across every exam, ordered newest first."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -825,18 +875,20 @@ def get_all_assignments() -> list[dict[str, Any]]:
             except Exception:
                 asg["settings"] = {}
             assignments.append(asg)
-        conn.close()
+        pass
         return assignments
     except Exception as e:
         print(f"Error in get_all_assignments: {e}")
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def clear_all_exams() -> bool:
     """Delete all exams, templates, assignments, and proctor logs."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         # Enable foreign key cascading
         cursor.execute("PRAGMA foreign_keys = ON")
@@ -845,24 +897,28 @@ def clear_all_exams() -> bool:
         cursor.execute("DELETE FROM assignments")
         cursor.execute("DELETE FROM proctor_logs")
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Error clearing exams: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def clear_all_announcements() -> bool:
     """Delete all announcements and email logs."""
     init_exams_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM announcements")
         cursor.execute("DELETE FROM email_logs")
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Error clearing announcements: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()

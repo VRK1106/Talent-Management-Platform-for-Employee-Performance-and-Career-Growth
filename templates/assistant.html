@@ -1073,8 +1073,12 @@
         let cleanText = text;
         cleanText = cleanText.replace(/\[ITEMS_JSON_START\][\s\S]*?\[ITEMS_JSON_END\]/g, "");
         let html = marked.parse(cleanText);
-        // Replace [1], [2] with clickable marker links/badges
         html = html.replace(/\[([0-9]+)\]/g, '<span class="citation-marker" onclick="showCitation(this, $1)">[$1]</span>');
+        
+        // Sanitize output to neutralize malicious tags
+        if (typeof DOMPurify !== 'undefined') {
+            html = DOMPurify.sanitize(html);
+        }
         return html;
     }
 
@@ -1237,45 +1241,31 @@
         const queryLower = query.toLowerCase();
         const isExamRequest = (USER_ROLE === 'admin') && (queryLower.includes("create") || queryLower.includes("make") || queryLower.includes("generate") || queryLower.includes("setup") || queryLower.includes("new")) && (queryLower.includes("exam") || queryLower.includes("test") || queryLower.includes("assessment") || queryLower.includes("quiz"));
         if (isExamRequest) {
-            // Clear query field
             queryField.value = '';
-            
-            // Expand the wizard inside the chat input area container
             const wizContainer = document.getElementById('wizardContainer');
             wizContainer.style.display = 'block';
             wizContainer.innerHTML = getExamWizardHtml();
             initExamWizard();
-            
-            // Hide standard chat input row
             document.getElementById('chatInputRow').style.display = 'none';
             scrollToBottom();
-            return; // Early return to prevent normal message sending
+            return;
         }
 
         const isAnnRequest = (USER_ROLE === 'admin') && (queryLower.includes("create") || queryLower.includes("make") || queryLower.includes("generate") || queryLower.includes("post") || queryLower.includes("new")) && (queryLower.includes("announcement") || queryLower.includes("notice") || queryLower.includes("broadcast") || queryLower.includes("alert"));
         if (isAnnRequest) {
-            // Clear query field
             queryField.value = '';
-            
-            // Expand the wizard inside the chat input area container
             const wizContainer = document.getElementById('wizardContainer');
             wizContainer.style.display = 'block';
             wizContainer.innerHTML = getAnnWizardHtml();
             initAnnWizard(query);
-            
-            // Hide standard chat input row
             document.getElementById('chatInputRow').style.display = 'none';
             scrollToBottom();
-            return; // Early return to prevent normal message sending
+            return;
         }
 
-        // Clear query field
         queryField.value = '';
-
-        // Add user message to UI
         const messagesBox = document.getElementById('chatMessages');
         
-        // Remove empty state if present
         if (messagesBox.innerHTML.includes('Hello! I am your AI Study Coach')) {
             messagesBox.innerHTML = '';
         }
@@ -1291,7 +1281,6 @@
         messagesBox.appendChild(userRow);
         scrollToBottom();
 
-        // Create Assistant response bubble placeholder
         const assistantRow = document.createElement('div');
         assistantRow.className = 'message-row assistant';
         assistantRow.innerHTML = `
@@ -1302,7 +1291,6 @@
                     ⚠️ Info not found in ingested document chunks.
                 </div>
                 <div id="activeSourcesBox" style="display: none;" class="sources-box"></div>
-                <!-- Suggested explore concepts box -->
                 <div id="activeSuggestionsBox" style="display: none; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed var(--ts-border);">
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--ts-text-secondary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem;">
                         🔍 Suggested areas to explore:
@@ -1314,7 +1302,6 @@
         messagesBox.appendChild(assistantRow);
         scrollToBottom();
 
-        // Show/Hide buttons
         document.getElementById('sendBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-flex';
         isGenerating = true;
@@ -1343,7 +1330,7 @@
             let receivedSources = null;
 
             const activeTextEl = document.getElementById('activeResponseText');
-            activeTextEl.innerHTML = ''; // Clear thinking
+            activeTextEl.innerHTML = ''; 
 
             const activeSessionId = "{{ active_chat_session_id }}";
             const activeLink = document.querySelector(`.chat-history-sidebar-box a[href*="${activeSessionId}"]`);
@@ -1370,7 +1357,6 @@
                     break;
                 }
                 
-                // Strip metadata blocks from the text to render it dynamically while streaming
                 let renderText = streamBuffer;
                 const srcStartIdx = renderText.indexOf('[SOURCES_JSON_START]');
                 if (srcStartIdx !== -1) {
@@ -1386,7 +1372,6 @@
                 scrollToBottom();
             }
 
-            // Parse metadata from full buffer
             if (streamBuffer.includes('[SOURCES_JSON_START]')) {
                 const parts = streamBuffer.split('[SOURCES_JSON_START]');
                 const sourcesStr = parts[1].split('[SOURCES_JSON_END]')[0].trim();
@@ -1409,12 +1394,10 @@
                 }
             }
 
-            // Render citations if present
             if (receivedSources && receivedSources.length > 0) {
                 renderCitations(receivedSources);
             }
 
-            // Render items selection list if present
             if (streamBuffer.includes('[ITEMS_JSON_START]')) {
                 try {
                     const itemsStr = streamBuffer.split('[ITEMS_JSON_START]')[1].split('[ITEMS_JSON_END]')[0].trim();
@@ -1448,7 +1431,6 @@
                 }
             }
 
-            // Render explore suggestions if present
             if (receivedSuggestions && receivedSuggestions.length > 0) {
                 const sugBox = document.getElementById('activeSuggestionsBox');
                 const sugList = document.getElementById('activeSuggestionsList');
@@ -1475,10 +1457,8 @@
                 }
             }
 
-            // Post render processing (Mermaid diagrams)
             await postRenderProcessing();
 
-            // Check if not found
             const contentLower = assistantResponseText.toLowerCase();
             const notFound = (mode === "RAG (Document Guided)" || mode === "Ephemeral Doc Q&A") && (
                 (!receivedSources || receivedSources.length === 0) ||
@@ -1489,7 +1469,6 @@
             );
             if (notFound) {
                 document.getElementById('activeNotFoundNotice').style.display = 'flex';
-                // Adjust text if ephemeral
                 if (mode === "Ephemeral Doc Q&A") {
                     document.getElementById('activeNotFoundNotice').innerText = "⚠️ Info not found in ephemeral session document.";
                 } else {
@@ -1500,7 +1479,6 @@
             }
 
             finishGeneration();
-            // Refresh conversation in sidebar
             if (!skipReload) {
                 window.location.reload();
             }
@@ -1517,7 +1495,10 @@
     }
 
     function renderCitations(sources) {
+        if (!sources || sources.length === 0) return;
+        window.activeSources = sources;
         const box = document.getElementById('activeSourcesBox');
+        if (!box) return;
         box.style.display = 'block';
         
         let detailsHtml = `
@@ -1550,6 +1531,34 @@
         detailsHtml += `</div></details>`;
         box.innerHTML = detailsHtml;
         scrollToBottom();
+    }
+
+    function renderExploreSuggestions(suggestions) {
+        if (!suggestions || suggestions.length === 0) return;
+        const sugBox = document.getElementById('activeSuggestionsBox');
+        const sugList = document.getElementById('activeSuggestionsList');
+        if (sugBox && sugList) {
+            sugList.innerHTML = '';
+            suggestions.forEach(concept => {
+                const badge = document.createElement('button');
+                badge.className = 'btn-ts btn-ts-secondary';
+                badge.style.padding = '0.25rem 0.6rem';
+                badge.style.fontSize = '0.75rem';
+                badge.style.borderRadius = '6px';
+                badge.style.height = 'auto';
+                badge.style.width = 'auto';
+                badge.style.border = '1px solid var(--ts-border)';
+                badge.innerText = concept;
+                badge.onclick = () => {
+                    const input = document.getElementById('queryInput');
+                    input.value = `Tell me more about ${concept}.`;
+                    submitMessage();
+                };
+                sugList.appendChild(badge);
+            });
+            sugBox.style.display = 'block';
+            scrollToBottom();
+        }
     }
 
     async function stopGeneration() {

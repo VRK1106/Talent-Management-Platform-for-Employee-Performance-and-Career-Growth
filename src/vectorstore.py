@@ -10,6 +10,14 @@ from __future__ import annotations
 
 import re
 import sys
+from chromadb.api.types import EmbeddingFunction
+
+class DummyEmbeddingFunction(EmbeddingFunction):
+    """Prevents Chroma from downloading its default Hugging Face model."""
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        return []
+
+dummy_ef = DummyEmbeddingFunction()
 try:
     import pysqlite3
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -20,33 +28,18 @@ import chromadb
 from chromadb.api import ClientAPI
 from chromadb.api.models.Collection import Collection
 
-from src.config import CHROMA_COLLECTION, CHROMA_DB_PATH
+from src.config import CHROMA_COLLECTION, CHROMA_HOST, CHROMA_PORT
 
 import threading
 _chroma_lock = threading.Lock()
 _client_instance = None
 
 def get_client() -> ClientAPI:
-    """Return a cached, disk-persistent Chroma client with self-healing recovery."""
+    """Return a global singleton Chroma HttpClient connecting over HTTP."""
     global _client_instance
     with _chroma_lock:
         if _client_instance is None:
-            try:
-                _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-            except Exception as e:
-                error_msg = str(e).lower()
-                if "sqlite" in error_msg and "version" in error_msg:
-                    print(f"[ERROR] ChromaDB requires a newer SQLite3 version. Install pysqlite3-binary. Error: {e}")
-                    raise
-                print(f"[WARN] ChromaDB init error: {e}. Executing self-healing index reset...")
-                import shutil, time, pathlib
-                backup_dir = f"{CHROMA_DB_PATH}_corrupt_{int(time.time())}"
-                try:
-                    if pathlib.Path(CHROMA_DB_PATH).exists():
-                        shutil.move(CHROMA_DB_PATH, backup_dir)
-                except Exception as ex:
-                    print(f"[WARN] Failed to move corrupt DB dir: {ex}")
-                _client_instance = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+            _client_instance = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         return _client_instance
 
 
@@ -58,6 +51,7 @@ def get_collection() -> Collection | None:
         return client.get_or_create_collection(
             name=CHROMA_COLLECTION,
             metadata={"hnsw:space": "cosine"},
+            embedding_function=dummy_ef,
         )
     except Exception as e:
         print(f"[WARN] Error accessing collection: {e}. Resetting client...")
@@ -67,6 +61,7 @@ def get_collection() -> Collection | None:
             return client.get_or_create_collection(
                 name=CHROMA_COLLECTION,
                 metadata={"hnsw:space": "cosine"},
+                embedding_function=dummy_ef,
             )
         except Exception as ex:
             print(f"[ERROR] Failed to obtain vector collection: {ex}")
@@ -392,6 +387,7 @@ def get_ephemeral_collection(session_id: str) -> Collection:
     return client.get_or_create_collection(
         name=coll_name,
         metadata={"hnsw:space": "cosine"},
+        embedding_function=dummy_ef,
     )
 
 

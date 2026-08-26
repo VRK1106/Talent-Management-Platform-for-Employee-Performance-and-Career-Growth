@@ -272,7 +272,7 @@ def get_history_based_suggestions(emp_id: str) -> list[str]:
     )
     
     local_models = list_local_models()
-    model_name = local_models[0] if local_models else "llama3-8b-8192"
+    model_name = local_models[0] if local_models else "llama-3.1-8b-instant"
     
     try:
         resp = generate_chat_answer(

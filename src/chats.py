@@ -15,72 +15,76 @@ _DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 def init_chats_db() -> None:
     """Initialize persistent chat tables in the SQLite database."""
     conn = get_db_connection(_DB_PATH)
-    cursor = conn.cursor()
-    
-    # 1. Create chat_sessions table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS chat_sessions (
-            session_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            title TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (employee_id) ON DELETE CASCADE
-        )
-        """
-    )
-    
-    # Run migrations to add missing columns
-    cursor.execute("PRAGMA table_info(chat_sessions)")
-    session_columns = [row[1] for row in cursor.fetchall()]
-    if "week_number" not in session_columns:
-        cursor.execute("ALTER TABLE chat_sessions ADD COLUMN week_number INTEGER DEFAULT 1")
-
-    # 2. Create chat_messages table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS chat_messages (
-            message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            role TEXT NOT NULL,  -- 'user' or 'assistant'
-            content TEXT NOT NULL,
-            sources TEXT,  -- JSON serialized list of sources cited
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES chat_sessions (session_id) ON DELETE CASCADE
-        )
-        """
-    )
-    
-    # Run migration to add followups column if missing
-    cursor.execute("PRAGMA table_info(chat_messages)")
-    columns = [row[1] for row in cursor.fetchall()]
-    if "followups" not in columns:
-        cursor.execute("ALTER TABLE chat_messages ADD COLUMN followups TEXT")
+    try:
+        cursor = conn.cursor()
         
-    conn.commit()
-    conn.close()
+        # 1. Create chat_sessions table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chat_sessions (
+                session_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (employee_id) ON DELETE CASCADE
+            )
+            """
+        )
+        
+        # Run migrations to add missing columns
+        cursor.execute("PRAGMA table_info(chat_sessions)")
+        session_columns = [row[1] for row in cursor.fetchall()]
+        if "week_number" not in session_columns:
+            cursor.execute("ALTER TABLE chat_sessions ADD COLUMN week_number INTEGER DEFAULT 1")
+    
+        # 2. Create chat_messages table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                role TEXT NOT NULL,  -- 'user' or 'assistant'
+                content TEXT NOT NULL,
+                sources TEXT,  -- JSON serialized list of sources cited
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES chat_sessions (session_id) ON DELETE CASCADE
+            )
+            """
+        )
+        
+        # Run migration to add followups column if missing
+        cursor.execute("PRAGMA table_info(chat_messages)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "followups" not in columns:
+            cursor.execute("ALTER TABLE chat_messages ADD COLUMN followups TEXT")
+            
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def create_chat_session(session_id: str, user_id: str, title: str, week_number: int = 1) -> bool:
     """Create a new chat session."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO chat_sessions (session_id, user_id, title, week_number) VALUES (?, ?, ?, ?)",
             (session_id, user_id, title.strip(), week_number)
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def add_chat_message(session_id: str, role: str, content: str, sources: list[dict[str, Any]] | None = None) -> bool:
     """Add a message to an active chat session."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         sources_str = json.dumps(sources) if sources else None
         cursor.execute(
@@ -88,16 +92,18 @@ def add_chat_message(session_id: str, role: str, content: str, sources: list[dic
             (session_id, role, content, sources_str)
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_chat_sessions_for_user(user_id: str, week_number: int = None) -> list[dict[str, Any]]:
     """Retrieve all chat sessions created by a specific user, optionally filtered by week."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         if week_number is not None:
@@ -111,17 +117,19 @@ def get_chat_sessions_for_user(user_id: str, week_number: int = None) -> list[di
                 (user_id,)
             )
         rows = cursor.fetchall()
-        conn.close()
+        pass
         return [dict(r) for r in rows]
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_chat_messages(session_id: str) -> list[dict[str, Any]]:
     """Retrieve all messages in chronological order for a chat session."""
     init_chats_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -129,7 +137,7 @@ def get_chat_messages(session_id: str) -> list[dict[str, Any]]:
             (session_id,)
         )
         rows = cursor.fetchall()
-        conn.close()
+        pass
         
         result = []
         for r in rows:
@@ -146,12 +154,14 @@ def get_chat_messages(session_id: str) -> list[dict[str, Any]]:
         return result
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def update_last_chat_message_followups(session_id: str, followups: list[str]) -> bool:
     """Update the followups column of the most recent message in the session."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         followups_str = json.dumps(followups) if followups else None
         cursor.execute(
@@ -167,51 +177,57 @@ def update_last_chat_message_followups(session_id: str, followups: list[str]) ->
             (followups_str, session_id)
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Error updating message followups: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def delete_chat_session(session_id: str) -> bool:
     """Delete a chat session and all cascading messages."""
     init_chats_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def rename_chat_session(session_id: str, new_title: str) -> bool:
     """Rename an existing chat session."""
     init_chats_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE chat_sessions SET title = ? WHERE session_id = ?",
             (new_title.strip(), session_id)
         )
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 
 def get_global_chat_stats() -> dict[str, Any]:
     """Compile global statistics across all chat conversations (for Admin view)."""
     init_chats_db()
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # 1. Total chat sessions
@@ -233,7 +249,7 @@ def get_global_chat_stats() -> dict[str, Any]:
         )
         msg_per_day = [{"date": r[0], "count": r[1]} for r in cursor.fetchall()]
         
-        conn.close()
+        pass
         return {
             "total_sessions": total_sessions,
             "total_messages": total_messages,
@@ -245,3 +261,5 @@ def get_global_chat_stats() -> dict[str, Any]:
             "total_messages": 0,
             "messages_per_day": []
         }
+    finally:
+        if 'conn' in locals() and conn: conn.close()

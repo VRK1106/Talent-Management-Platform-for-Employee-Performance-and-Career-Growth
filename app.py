@@ -6,8 +6,8 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["OMP_NUM_THREADS"] = "4"
-os.environ["MKL_NUM_THREADS"] = "4"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["ANYIO_MAX_THREADS"] = "100"
 
 import sys
@@ -71,7 +71,7 @@ from src.vectorstore import stats, get_source_chunks, search, get_collection, ad
 from src.llm import list_local_models, generate_chat_answer, generate_rag_answer, GROQ_API_KEY, analyze_proctor_image, transcribe_audio_whisper
 from src.concept_map import get_personalized_suggestions, get_ephemeral_document_text
 from src.student_performance import detect_performance_query, get_student_performance_context, get_aggregate_performance_context
-
+import src.embeddings
 # Initialize databases
 init_db()
 init_exams_db()
@@ -3054,7 +3054,7 @@ def assistant_suggestions():
                 f"--- DOCUMENT CONTENT ---\n{text[:2500]}"
             )
             local_models = list_local_models()
-            model_name = local_models[0] if local_models else "llama3-8b-8192"
+            model_name = local_models[0] if local_models else "llama-3.1-8b-instant"
             try:
                 resp = generate_chat_answer(
                     prompt=prompt,
@@ -3307,7 +3307,7 @@ def chat_stream():
                 try:
                     from src.llm import generate_chat_answer, list_local_models
                     local_models = list_local_models()
-                    model_name = local_models[0] if local_models else "llama3-8b-8192"
+                    model_name = local_models[0] if local_models else "llama-3.1-8b-instant"
                     followup_prompt = (
                         f"Based on this AI Coach response to a student's question, generate exactly 3 short, direct "
                         f"follow-up questions the student might want to ask next to continue learning:\n\n"
@@ -3885,6 +3885,7 @@ def assistant_wizard_save():
 
 
 @app.route('/api/get_face_descriptor', methods=['GET'])
+@login_required
 def api_get_face_descriptor():
     # employee_id sent as query param by the Jinja-embedded PROCTOR_EMP_ID constant
     employee_id = request.args.get('emp_id') or (session.get('user_info') or {}).get('employee_id')
@@ -3912,6 +3913,7 @@ def api_get_face_descriptor():
 
 
 @app.route('/api/enroll_face', methods=['POST'])
+@login_required
 def api_enroll_face():
     data = request.get_json() or {}
     employee_id = data.get('emp_id') or (session.get('user_info') or {}).get('employee_id')
@@ -5127,13 +5129,14 @@ def find_available_port(preferred_ports=(8000, 8080, 3000, 5000)):
 try:
     from a2wsgi import WSGIMiddleware
     asgi_app = WSGIMiddleware(app)
-except Exception:
+except ImportError:
     from fastapi import FastAPI
     from fastapi.middleware.wsgi import WSGIMiddleware
     asgi_app = FastAPI(title="Talent Sphere Elevate ASGI Server", docs_url=None, redoc_url=None)
     asgi_app.mount("/", WSGIMiddleware(app))
-
-
+from src.embeddings import get_model, embed_query
+get_model()
+embed_query("dummy initialization")
 if __name__ == '__main__':
     import sys, uvicorn
 
@@ -5154,4 +5157,4 @@ if __name__ == '__main__':
     print(f"  ALTERNATIVE URL:      http://localhost:{port}")
     print("="*65 + "\n")
 
-    uvicorn.run("app:asgi_app", host="0.0.0.0", port=port, log_level="warning", access_log=False)
+    uvicorn.run("app:asgi_app", host="0.0.0.0", port=port, log_level="info", access_log=True)

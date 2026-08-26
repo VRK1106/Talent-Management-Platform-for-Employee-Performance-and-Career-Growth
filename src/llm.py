@@ -47,6 +47,57 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
 
+PRIMARY_MODEL = "openai/gpt-oss-20b"
+FALLBACK_MODEL = "qwen/qwen3.6-27b"
+
+_groq_client = None
+
+def get_groq_client():
+    """Return global singleton Groq SDK client, instantiated once at app startup."""
+    global _groq_client
+    if _groq_client is None and GROQ_API_KEY:
+        try:
+            from groq import Groq
+            _groq_client = Groq(api_key=GROQ_API_KEY)
+        except Exception as e:
+            print(f"[WARN] Failed to initialize Groq client: {e}")
+    return _groq_client
+
+
+def generate_text(prompt: str) -> str:
+    """Generate completion from prompt using PRIMARY_MODEL with seamless failover to FALLBACK_MODEL."""
+    client = get_groq_client()
+    if not client:
+        raise RuntimeError("Groq client is not initialized or GROQ_API_KEY is missing.")
+    try:
+        # Attempt primary execution
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model=PRIMARY_MODEL,
+            max_tokens=1024
+        )
+        return response.choices[0].message.content
+        
+    except Exception as e:
+        error_msg = str(e)
+        # Only fall back if the model itself is missing or dead
+        if "model_not_found" in error_msg or "model_decommissioned" in error_msg:
+            print(f"[Warning] {PRIMARY_MODEL} unavailable. Falling back to {FALLBACK_MODEL}.")
+            try:
+                fallback_resp = client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=FALLBACK_MODEL,
+                    max_tokens=1024
+                )
+                return fallback_resp.choices[0].message.content
+            except Exception as fallback_err:
+                print(f"[Fatal] Fallback model also failed: {fallback_err}")
+                raise
+        else:
+            # If the error is a rate limit or bad prompt, don't waste time falling back
+            print(f"[Error] Groq API execution failed: {error_msg}")
+            raise
+
 
 def list_local_models() -> list[str]:
     """Fetch the list of model names currently available in Groq API.
@@ -54,10 +105,10 @@ def list_local_models() -> list[str]:
     If the API key is not set or request fails, falls back to a list of standard Groq models.
     """
     fallback_models = [
-        "llama-3.3-70b-versatile",
+        PRIMARY_MODEL,
+        FALLBACK_MODEL,
         "llama-3.1-8b-instant",
-        "mixtral-8x7b-32768",
-        "gemma2-9b-it"
+        "groq/compound-mini"
     ]
     if not GROQ_API_KEY:
         return fallback_models
@@ -218,7 +269,6 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
         yield "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
         return
 
-    # Construct context block
     context_parts = []
     for i, chunk in enumerate(chunks, start=1):
         source = chunk.get("source", "Unknown Source")
@@ -241,7 +291,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
     )
 
     try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
+        url = "[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)"
         payload = {
             "model": model_name,
             "messages": [
@@ -249,7 +299,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
                 {"role": "user", "content": f"--- CONTEXT PASSAGES ---\n{context_str}\n\n--- USER QUERY ---\n{query}"}
             ],
             "temperature": 0.2,
-            "max_tokens": 1024,
+            "max_tokens": 4096,
             "top_p": 0.9,
             "stream": True
         }
@@ -273,9 +323,10 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
                         break
                     try:
                         chunk_data = json.loads(data_content)
-                        delta = chunk_data["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield delta
+                        delta = chunk_data["choices"][0].get("delta", {})
+                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        if token:
+                            yield token
                     except Exception:
                         pass
     except urllib.error.HTTPError as e:
@@ -290,7 +341,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
 
 
 def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction: str | None = None):
-    """Yield chunks of text generated from a prompt via Groq API."""
+    """Yield chunks of text generated from a prompt via Groq API with reasoning and content extraction."""
     if not GROQ_API_KEY:
         yield "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
         return
@@ -307,7 +358,7 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
             "model": model_name,
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 1024,
+            "max_tokens": 4096,
             "top_p": 0.9,
             "stream": True
         }
@@ -331,9 +382,11 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
                         break
                     try:
                         chunk_data = json.loads(data_content)
-                        delta = chunk_data["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield delta
+                        delta = chunk_data["choices"][0].get("delta", {})
+                        # Support standard content and reasoning deltas
+                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        if token:
+                            yield token
                     except Exception:
                         pass
     except urllib.error.HTTPError as e:
@@ -536,7 +589,6 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
     """Yield chunks of text generated using retrieved document contexts, strictly retrieval-only (no fallback) unless is_admin is True."""
     if not chunks:
         if is_admin:
-            # Fall back to general chat answer
             system_prompt = (
                 "You are a helpful learning coach. Provide clear, professional explanations or advice. "
                 "You may fall back to your general model knowledge because no document context is currently available."
@@ -550,10 +602,8 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
         yield "Error: Groq API Key is not configured. Please set GROQ_API_KEY in your environment."
         return
 
-    # Construct context block
     context_parts = []
     for i, chunk in enumerate(chunks, start=1):
-        chunk.get("source", "Uploaded Document")
         page = chunk.get("page", "?")
         text = chunk.get("text", "")
         context_parts.append(f"Content from page {page}:\n{text}")
@@ -582,7 +632,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
         )
 
     try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
+        url = "[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)"
         payload = {
             "model": model_name,
             "messages": [
@@ -590,7 +640,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
                 {"role": "user", "content": f"--- CONTEXT PASSAGES ---\n{context_str}\n\n--- USER QUERY ---\n{query}"}
             ],
             "temperature": 0.0,
-            "max_tokens": 1024,
+            "max_tokens": 4096,
             "top_p": 0.9,
             "stream": True
         }
@@ -614,9 +664,10 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
                         break
                     try:
                         chunk_data = json.loads(data_content)
-                        delta = chunk_data["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield delta
+                        delta = chunk_data["choices"][0].get("delta", {})
+                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        if token:
+                            yield token
                     except Exception:
                         pass
     except urllib.error.HTTPError as e:

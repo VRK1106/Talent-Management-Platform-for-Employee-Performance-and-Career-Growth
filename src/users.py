@@ -29,157 +29,159 @@ def _hash_password(password: str) -> str:
 def init_db() -> None:
     """Initialize the SQLite database and create users table if it does not exist."""
     conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
     
-    # Create users table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            employee_id TEXT PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            full_name TEXT NOT NULL,
-            domain TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'trainee',
-            password_plain TEXT
-        )
-        """
-    )
-    
-    # Check if table needs password_plain column (migration for existing db)
-    cursor.execute("PRAGMA table_info(users)")
-    columns = [row[1] for row in cursor.fetchall()]
-    if "password_plain" not in columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN password_plain TEXT")
-    if "last_active" not in columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
-    if "face_descriptor" not in columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN face_descriptor TEXT")
-    if "accommodation_proctoring" not in columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN accommodation_proctoring INTEGER DEFAULT 0")
-        
-    # Create activity_logs table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS activity_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_id TEXT NOT NULL,
-            method TEXT NOT NULL,
-            path TEXT NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    )
-    
-    # Delete demo user if it exists (clean migration)
-    cursor.execute("DELETE FROM users WHERE employee_id = 'demo'")
-    
-    # Check if table is empty, if so, seed default accounts
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        # Seed admin user only
+        # Create users table
         cursor.execute(
             """
-            INSERT INTO users (employee_id, email, full_name, domain, password_hash, role, password_plain)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "admin",
-                "admin@company.com",
-                "Administrator",
-                "general",
-                _hash_password("admin123"),
-                "admin",
-                "admin123",
-            ),
+            CREATE TABLE IF NOT EXISTS users (
+                employee_id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                full_name TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT DEFAULT 'trainee',
+                password_plain TEXT
+            )
+            """
         )
     
-    # Create sprint_schedules table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS sprint_schedules (
-            sprint_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            current_week INTEGER DEFAULT 1,
-            current_day INTEGER DEFAULT 1,
-            sprint_progress REAL DEFAULT 0.0,
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(employee_id)
-        )
-        """
-    )
-
-    # Create qa_errors table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS qa_errors (
-            error_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            week_number INTEGER NOT NULL,
-            incorrect_topic TEXT NOT NULL,
-            exam_question_text TEXT NOT NULL,
-            logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(employee_id)
-        )
-        """
-    )
-
-    # Create interview_evaluations table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS interview_evaluations (
-            evaluation_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            week_number INTEGER NOT NULL,
-            technical_score REAL,
-            confidence_score REAL,
-            filler_words_count INTEGER,
-            words_per_minute REAL,
-            feedback_report TEXT,
-            graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(employee_id)
-        )
-        """
-    )
-    # Create weekly_documents table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS weekly_documents (
-            doc_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            week_number INTEGER NOT NULL,
-            day_number INTEGER NOT NULL,
-            filename TEXT NOT NULL,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(employee_id)
-        )
-        """
-    )
-    # Create weekly_study_plans table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS weekly_study_plans (
-            plan_id TEXT PRIMARY KEY,
-            domain TEXT NOT NULL,
-            week_number INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            tasks_json TEXT NOT NULL,
-            day5_exam_id TEXT,
-            day6_interview_prompt TEXT,
-            reference_files_json TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    )
-    
-    # Ensure reference_files_json column exists in case DB was already created
-    try:
-        cursor.execute("ALTER TABLE weekly_study_plans ADD COLUMN reference_files_json TEXT")
-    except sqlite3.OperationalError:
-        pass
+        # Check if table needs password_plain column (migration for existing db)
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "password_plain" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN password_plain TEXT")
+        if "last_active" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
+        if "face_descriptor" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN face_descriptor TEXT")
+        if "accommodation_proctoring" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN accommodation_proctoring INTEGER DEFAULT 0")
         
-    conn.commit()
-    conn.close()
+        # Create activity_logs table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                employee_id TEXT NOT NULL,
+                method TEXT NOT NULL,
+                path TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    
+        # Delete demo user if it exists (clean migration)
+        cursor.execute("DELETE FROM users WHERE employee_id = 'demo'")
+    
+        # Check if table is empty, if so, seed default accounts
+        cursor.execute("SELECT COUNT(*) FROM users")
+        if cursor.fetchone()[0] == 0:
+            # Seed admin user only
+            cursor.execute(
+                """
+                INSERT INTO users (employee_id, email, full_name, domain, password_hash, role, password_plain)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "admin",
+                    "admin@company.com",
+                    "Administrator",
+                    "general",
+                    _hash_password("admin123"),
+                    "admin",
+                    "admin123",
+                ),
+            )
+    
+        # Create sprint_schedules table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sprint_schedules (
+                sprint_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                current_week INTEGER DEFAULT 1,
+                current_day INTEGER DEFAULT 1,
+                sprint_progress REAL DEFAULT 0.0,
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(employee_id)
+            )
+            """
+        )
+
+        # Create qa_errors table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS qa_errors (
+                error_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                week_number INTEGER NOT NULL,
+                incorrect_topic TEXT NOT NULL,
+                exam_question_text TEXT NOT NULL,
+                logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(employee_id)
+            )
+            """
+        )
+
+        # Create interview_evaluations table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS interview_evaluations (
+                evaluation_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                week_number INTEGER NOT NULL,
+                technical_score REAL,
+                confidence_score REAL,
+                filler_words_count INTEGER,
+                words_per_minute REAL,
+                feedback_report TEXT,
+                graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(employee_id)
+            )
+            """
+        )
+        # Create weekly_documents table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS weekly_documents (
+                doc_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                week_number INTEGER NOT NULL,
+                day_number INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(employee_id)
+            )
+            """
+        )
+        # Create weekly_study_plans table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS weekly_study_plans (
+                plan_id TEXT PRIMARY KEY,
+                domain TEXT NOT NULL,
+                week_number INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                tasks_json TEXT NOT NULL,
+                day5_exam_id TEXT,
+                day6_interview_prompt TEXT,
+                reference_files_json TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    
+        # Ensure reference_files_json column exists in case DB was already created
+        try:
+            cursor.execute("ALTER TABLE weekly_study_plans ADD COLUMN reference_files_json TEXT")
+        except sqlite3.OperationalError:
+            pass
+        
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def add_user(
@@ -191,8 +193,8 @@ def add_user(
     role: str = "trainee",
 ) -> tuple[bool, str]:
     """Add a new user to the database. Returns (success, message)."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute(
@@ -211,7 +213,7 @@ def add_user(
             ),
         )
         conn.commit()
-        conn.close()
+        pass
         return True, "User created successfully."
     except sqlite3.IntegrityError as e:
         err_msg = str(e)
@@ -222,34 +224,40 @@ def add_user(
         return False, f"Registration failed: {err_msg}"
     except Exception as e:
         return False, f"Database error: {e}"
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def delete_user(employee_id: str) -> bool:
     """Delete a user from the database by Employee ID."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE employee_id = ?", (employee_id,))
         rows_affected = cursor.rowcount
         conn.commit()
-        conn.close()
+        pass
         return rows_affected > 0
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_all_users() -> list[dict[str, Any]]:
     """Return all users in the database (excluding administrators)."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT employee_id, email, full_name, domain, role, password_plain, last_active, accommodation_proctoring FROM users WHERE role != 'admin'")
         rows = cursor.fetchall()
-        conn.close()
+        pass
         return [dict(r) for r in rows]
     except Exception:
         return []
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def verify_user(username_or_email: str, password_plain: str) -> dict[str, Any] | None:
@@ -285,81 +293,91 @@ def verify_user(username_or_email: str, password_plain: str) -> dict[str, Any] |
 
 def update_user_activity(employee_id: str) -> None:
     """Update the last_active timestamp for a user to CURRENT_TIMESTAMP."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE users SET last_active = datetime('now', 'localtime') WHERE employee_id = ?",
             (employee_id,)
         )
         conn.commit()
-        conn.close()
+        pass
     except Exception:
         pass
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_active_users_count(hours: int = 1) -> int:
     """Count the number of users who have been active within the last N hours."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT COUNT(*) FROM users WHERE last_active >= datetime('now', 'localtime', ?)",
             (f"-{hours} hours",)
         )
         count = cursor.fetchone()[0]
-        conn.close()
+        pass
         # Always return at least 1 if an active session exists
         return max(count, 1)
     except Exception:
         return 1
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def set_user_face_descriptor(employee_id: str, descriptor_json: str) -> bool:
     """Set the 128-float face descriptor for a user."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET face_descriptor = ? WHERE employee_id = ?", (descriptor_json, employee_id))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Failed to set face descriptor: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def get_user_face_descriptor(employee_id: str) -> str | None:
     """Get the 128-float face descriptor for a user."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT face_descriptor FROM users WHERE employee_id = ?", (employee_id,))
         row = cursor.fetchone()
-        conn.close()
+        pass
         return row[0] if row else None
     except Exception:
         return None
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def set_user_accommodation(employee_id: str, enabled: int) -> bool:
     """Set the proctoring accommodation flag (0 or 1) for a user."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET accommodation_proctoring = ? WHERE employee_id = ?", (enabled, employee_id))
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Failed to set user accommodation: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def clear_all_trainee_users() -> bool:
     """Delete all users in the database where role == 'trainee'."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         # Get list of trainee employee IDs to delete their chat sessions/messages too
@@ -381,45 +399,51 @@ def clear_all_trainee_users() -> bool:
             cursor.execute("DELETE FROM chat_sessions WHERE user_id = ?", (t_id,))
             
         conn.commit()
-        conn.close()
+        pass
         return True
     except Exception as e:
         print(f"Error clearing trainees: {e}")
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def check_user_exists(employee_id: str) -> bool:
     """Check if a user with the given employee_id exists."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM users WHERE LOWER(employee_id) = ?", (employee_id.strip().lower(),))
         exists = cursor.fetchone() is not None
-        conn.close()
+        pass
         return exists
     except Exception:
         return False
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def log_activity(employee_id: str, method: str, path: str) -> None:
     """Log an activity request for an authenticated user."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO activity_logs (employee_id, method, path) VALUES (?, ?, ?)",
             (employee_id, method, path)
         )
         conn.commit()
-        conn.close()
+        pass
     except Exception as e:
         print(f"Failed to log activity: {e}")
+    finally:
+        if 'conn' in locals() and conn: conn.close()
 
 
 def update_user(employee_id: str, full_name: str, email: str, domain: str, role: str, password_plain: str = None) -> tuple[bool, str]:
     """Update an existing user's details, including optional password change."""
+    conn = get_db_connection(_DB_PATH)
     try:
-        conn = get_db_connection(_DB_PATH)
         cursor = conn.cursor()
         
         if password_plain and password_plain.strip():
@@ -443,7 +467,7 @@ def update_user(employee_id: str, full_name: str, email: str, domain: str, role:
             
         rows_affected = cursor.rowcount
         conn.commit()
-        conn.close()
+        pass
         
         if rows_affected > 0:
             return True, "User updated successfully."
@@ -455,3 +479,5 @@ def update_user(employee_id: str, full_name: str, email: str, domain: str, role:
         return False, f"Update failed: {e}"
     except Exception as e:
         return False, f"Database error: {e}"
+    finally:
+        if 'conn' in locals() and conn: conn.close()

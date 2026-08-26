@@ -41,6 +41,8 @@ QUERY_INSTRUCTION: str = "Represent this sentence for searching relevant passage
 # --- Vector store ----------------------------------------------------------
 CHROMA_DB_PATH: str = _get_str("CHROMA_DB_PATH", "./chroma_db")
 CHROMA_COLLECTION: str = _get_str("CHROMA_COLLECTION", "talent_sphere_docs")
+CHROMA_HOST: str = _get_str("CHROMA_HOST", "localhost")
+CHROMA_PORT: int = _get_int("CHROMA_PORT", 8001)
 
 # --- Chunking --------------------------------------------------------------
 CHUNK_SIZE: int = _get_int("CHUNK_SIZE", 800)
