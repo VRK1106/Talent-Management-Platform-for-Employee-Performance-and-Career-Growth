@@ -1,8 +1,0 @@
-============================================================
-WEEK 3 (GENERAL) - DAY 4 STUDY SPECIFICATION
-============================================================
-
-LEARNING OBJECTIVES & TOPIC BREAKDOWN:
-• Graph and Network Traversal, Advanced Computational Trade-offs
-• Breadth-First Search (BFS): Uses a FIFO queue to explore nodes level-by-level. It guarantees finding the shortest path in unweighted graphs with a time complexity of $O(V + E)$ and a space complexity of $O(V)$.
-• Checkpoint task: Compare the time and space complexities of BFS and DFS and explain the scenarios where each is more suitable.

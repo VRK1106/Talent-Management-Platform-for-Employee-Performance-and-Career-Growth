@@ -33,8 +33,8 @@ def _get_int(key: str, default: int) -> int:
 
 
 # --- Embedding model -------------------------------------------------------
-EMBEDDING_MODEL: str = _get_str("EMBEDDING_MODEL", "BAAI/bge-large-en-v1.5")
-EMBEDDING_DIM: int = 1024
+EMBEDDING_MODEL: str = _get_str("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+EMBEDDING_DIM: int = 384
 # BGE requires this instruction prefix on *queries only* (never on documents).
 QUERY_INSTRUCTION: str = "Represent this sentence for searching relevant passages: "
 

@@ -31,7 +31,7 @@ from chromadb.api.models.Collection import Collection
 from src.config import CHROMA_COLLECTION, CHROMA_HOST, CHROMA_PORT
 
 import threading
-_chroma_lock = threading.Lock()
+_chroma_lock = threading.RLock()
 _client_instance = None
 
 def get_client() -> ClientAPI:

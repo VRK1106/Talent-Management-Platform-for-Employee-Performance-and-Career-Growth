@@ -104,3 +104,6 @@ Thumbs.db
 # Sub-projects
 Local_Database_QA/
 
+
+scratch/
+import_trace.txt

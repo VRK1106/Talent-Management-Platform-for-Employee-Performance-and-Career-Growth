@@ -39,6 +39,10 @@ def get_model():
         os.environ["OMP_NUM_THREADS"] = "1"
         torch.set_num_threads(1)
         
+        # Force HuggingFace transformers to use PyTorch only to avoid TensorFlow deadlocks
+        os.environ["USE_TF"] = "0"
+        os.environ["USE_TORCH"] = "1"
+        
         from sentence_transformers import SentenceTransformer
         _model_instance = SentenceTransformer(EMBEDDING_MODEL, device=_auto_device())
     return _model_instance

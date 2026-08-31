@@ -41,6 +41,8 @@ from flask import (
 # Ensure the project root is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from src.embeddings import embed_documents
+
 from src.users import init_db, verify_user, get_all_users, get_active_users_count, _DB_PATH, set_user_face_descriptor, set_user_accommodation, update_user, log_activity, check_user_exists, get_db_connection
 from src.exams import (
     init_exams_db,
@@ -1117,7 +1119,6 @@ def ingest_post():
             log("Thread started.")
             from io import BytesIO
             from pathlib import Path
-            from src.embeddings import embed_documents
             from src.ingest import chunk_pages, extract_pages, file_hash
             from src.vectorstore import add_chunks, ingested_hashes
             from src.config import DOCUMENTS_DIR
@@ -1134,19 +1135,27 @@ def ingest_post():
         
             for filename, data in files_data_list:
                 try:
+                    log(f"Processing file: {filename} ({len(data)} bytes)")
                     if not data:
+                        log("No data, skipping.")
                         continue
                         
                     digest = file_hash(data)
+                    log(f"Hash computed: {digest}")
                     if digest in known_hashes:
+                        log("Duplicate found, skipping.")
                         duplicates += 1
                         continue
                         
+                    log("Extracting pages...")
                     pages = extract_pages(BytesIO(data))
+                    log(f"Extracted {len(pages) if pages else 0} pages.")
                     if not pages:
                         continue
                         
+                    log("Chunking pages...")
                     chunks = chunk_pages(pages, filename)
+                    log(f"Created {len(chunks) if chunks else 0} chunks.")
                     if not chunks:
                         continue
     
@@ -1154,11 +1163,16 @@ def ingest_post():
                     batch_size = 32
                     chunk_texts = [c["text"] for c in chunks]
                     all_embeddings = []
+                    log(f"Starting embeddings for {len(chunk_texts)} chunks...")
                     for i in range(0, len(chunk_texts), batch_size):
                         batch = chunk_texts[i:i + batch_size]
+                        log(f"Embedding batch {i} to {i+len(batch)}...")
                         all_embeddings.extend(embed_documents(batch))
+                        log(f"Finished embedding batch {i} to {i+len(batch)}.")
     
+                    log("Saving chunks to Chroma...")
                     added = add_chunks(chunks, all_embeddings, digest)
+                    log(f"Added {added} chunks to Chroma.")
                     
                     try:
                         save_path = Path(DOCUMENTS_DIR) / filename
@@ -1203,12 +1217,10 @@ def ingest_post():
                 pass
 
 
-    # Dispatch to an isolated background thread
-    import threading
-    worker = threading.Thread(target=background_ingest, args=(files_data,), daemon=True)
-    worker.start()
+    # Execute ingestion synchronously to ensure embeddings are complete before returning
+    background_ingest(files_data)
 
-    flash(f"Background ingestion started for {len(files_data)} file(s). You can continue using the platform.")
+    flash(f"Ingestion completed for {len(files_data)} file(s).")
     return redirect(url_for('ingest'))
 
 @app.route('/ingest/delete', methods=['POST'])
@@ -3091,7 +3103,7 @@ def assistant_suggestions():
                 f"--- DOCUMENT CONTENT ---\n{text[:2500]}"
             )
             local_models = list_local_models()
-            model_name = local_models[0] if local_models else "llama-3.1-8b-instant"
+            model_name = local_models[0] if local_models else "qwen/qwen3.8-27b"
             try:
                 resp = generate_chat_answer(
                     prompt=prompt,
@@ -3347,7 +3359,7 @@ def chat_stream():
                 try:
                     from src.llm import generate_chat_answer, list_local_models
                     local_models = list_local_models()
-                    model_name = local_models[0] if local_models else "llama-3.1-8b-instant"
+                    model_name = local_models[0] if local_models else "qwen/qwen3.8-27b"
                     followup_prompt = (
                         f"Based on this AI Coach response to a student's question, generate exactly 3 short, direct "
                         f"follow-up questions the student might want to ask next to continue learning:\n\n"

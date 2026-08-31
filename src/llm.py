@@ -83,8 +83,8 @@ def execute_with_backoff(req, max_retries=5, base_delay=1.0):
             # Fail immediately on 400, 401, 403, 404
             raise
 
-PRIMARY_MODEL = "deepseek-r1-distill-llama-70b"
-FALLBACK_MODEL = "mixtral-8x7b-32768"
+PRIMARY_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = "groq/compound"
 
 _groq_client = None
 
@@ -143,7 +143,7 @@ def list_local_models() -> list[str]:
     fallback_models = [
         PRIMARY_MODEL,
         FALLBACK_MODEL,
-        "llama-3.1-8b-instant",
+        "qwen/qwen3.8-27b",
         "groq/compound-mini"
     ]
     if not GROQ_API_KEY:
@@ -241,7 +241,7 @@ def generate_chat_answer(prompt: str, model_name: str, system_instruction: str |
     if not GROQ_API_KEY:
         return "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
 
-    candidate_models = [model_name, "llama-3.1-8b-instant", "gemma2-9b-it", "mixtral-8x7b-32768"]
+    candidate_models = [model_name, "qwen/qwen3.8-27b", "openai/gpt-oss-20b", "groq/compound"]
     models_to_try = []
     for m in candidate_models:
         if m and m not in models_to_try:

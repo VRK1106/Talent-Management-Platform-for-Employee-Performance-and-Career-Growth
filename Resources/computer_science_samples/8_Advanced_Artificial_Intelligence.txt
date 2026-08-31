@@ -1,0 +1,10 @@
+Artificial Intelligence (AI) has rapidly evolved from theoretical concepts to practical applications that affect daily life. 
+Modern AI primarily relies on deep learning, a subset of machine learning where artificial neural networks with multiple layers are trained on large amounts of data. 
+
+Key subfields of AI include:
+1. Natural Language Processing (NLP): Allows machines to understand, interpret, and generate human language. Large Language Models (LLMs) like GPT and Claude are prime examples.
+2. Computer Vision: Enables computers to derive meaningful information from digital images, videos, and other visual inputs. Applications include facial recognition, medical image analysis, and autonomous vehicles.
+3. Reinforcement Learning: An area of machine learning concerned with how intelligent agents ought to take actions in an environment in order to maximize the notion of cumulative reward. It is heavily used in robotics and game-playing AI (like AlphaGo).
+4. Generative AI: AI systems capable of generating text, images, or other media in response to prompts. These systems learn the patterns and structure of their input training data and then generate new data that has similar characteristics.
+
+Ethical considerations in AI are becoming increasingly important. Issues such as algorithmic bias, data privacy, job displacement, and the black-box nature of deep neural networks require careful regulation and responsible AI development practices to ensure these systems are aligned with human values.
