@@ -1,3 +1,12 @@
+import os
+# Force PyTorch & OpenMP to use a single thread to prevent deadlocks in ASGI/worker threads
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import subprocess
 import sys
 import time

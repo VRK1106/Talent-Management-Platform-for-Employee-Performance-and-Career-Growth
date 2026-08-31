@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import os
+# Force PyTorch & OpenMP to use a single thread to prevent deadlocks in ASGI workers
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["CHROMA_TELEMETRY_DISABLED"] = "1"
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["ANYIO_MAX_THREADS"] = "100"
 
 import sys
@@ -172,17 +178,23 @@ class TabSessionInterface(SessionInterface):
         try:
             clean_dict = {k: v for k, v in session.items() if k != '_tab_id'}
             with _session_lock:
-                if _in_memory_tab_sessions.get(tab_id) == clean_dict:
-                    return
-                _in_memory_tab_sessions[tab_id] = dict(clean_dict)
+                if not clean_dict:
+                    _in_memory_tab_sessions.pop(tab_id, None)
+                else:
+                    if _in_memory_tab_sessions.get(tab_id) == clean_dict:
+                        return
+                    _in_memory_tab_sessions[tab_id] = dict(clean_dict)
 
-            data = json.dumps(clean_dict)
             conn = get_db_connection(_SESSIONS_DB)
-            conn.execute("""
-                INSERT INTO tab_sessions (tab_id, data, updated_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(tab_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
-            """, (tab_id, data))
+            if not clean_dict:
+                conn.execute("DELETE FROM tab_sessions WHERE tab_id=?", (tab_id,))
+            else:
+                data = json.dumps(clean_dict)
+                conn.execute("""
+                    INSERT INTO tab_sessions (tab_id, data, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(tab_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
+                """, (tab_id, data))
             conn.commit()
             conn.close()
         except Exception as e:
@@ -451,18 +463,25 @@ def login():
 
 @app.route('/logout')
 def logout():
-    tab_id = session.get('_tab_id')
+    tab_id = session.get('_tab_id') or request.args.get('tab_id') or request.cookies.get('fallback_tab_id')
     if tab_id:
         try:
             delete_ephemeral_collection(tab_id)
-            conn = sqlite3.connect(str(_SESSIONS_DB))
+        except Exception:
+            pass
+        with _session_lock:
+            _in_memory_tab_sessions.pop(tab_id, None)
+        try:
+            conn = get_db_connection(_SESSIONS_DB)
             conn.execute("DELETE FROM tab_sessions WHERE tab_id = ?", (tab_id,))
             conn.commit()
             conn.close()
         except Exception:
             pass
     session.clear()
-    return redirect(url_for('login'))
+    response = flask_redirect(url_for('login'))
+    response.set_cookie('fallback_tab_id', '', expires=0)
+    return response
 
 def get_log_analytics(emp_id=None):
     import datetime
@@ -1052,11 +1071,8 @@ def ingest():
         return redirect(url_for('dashboard'))
         
     idx_stats = stats()
-    
-    doc_chunks = {}
-    for name in idx_stats["source_names"]:
-        doc_chunks[name] = get_source_chunks(name)
-        
+    doc_chunks = {name: get_source_chunks(name) for name in idx_stats.get("source_names", [])}
+            
     return render_template(
         'ingest.html',
         stats=idx_stats,
@@ -1076,13 +1092,12 @@ def ingest_post():
     if session.get('user_role') != 'admin':
         return redirect(url_for('dashboard'))
         
-    session['cancel_ingestion'] = False
     uploaded_files = request.files.getlist('files')
     if not uploaded_files or not uploaded_files[0].filename:
         flash("No files selected")
         return redirect(url_for('ingest'))
         
-    # Read files into memory before responding so WSGI doesn't close them
+    # Read files into memory before returning so the request stream doesn't close them
     files_data = []
     for f in uploaded_files:
         if f.filename:
@@ -1092,68 +1107,108 @@ def ingest_post():
         flash("No valid files to process.")
         return redirect(url_for('ingest'))
 
-    flash(f"Background ingestion started for {len(files_data)} file(s). You can continue using the platform. An announcement will be posted upon completion.")
-
     def background_ingest(files_data_list):
-        from src.embeddings import embed_documents
-        from src.ingest import chunk_pages, extract_pages, file_hash
-        from src.vectorstore import add_chunks, ingested_hashes
-        
-        known_hashes = ingested_hashes()
-        files_processed = 0
-        chunks_added = 0
-        duplicates = 0
-        success_files = []
-        
-        for filename, data in files_data_list:
-            # We can't rely on `session.get('cancel_ingestion')` in a background thread 
-            # easily without the request context, so cancellation is disabled for background tasks for now.
-            try:
-                from io import BytesIO
-                if not data:
-                    continue
-                    
-                digest = file_hash(data)
-                if digest in known_hashes:
-                    duplicates += 1
-                    continue
-                    
-                pages = extract_pages(BytesIO(data))
-                if not pages:
-                    continue
-                    
-                chunks = chunk_pages(pages, filename)
-                embeddings = embed_documents([c["text"] for c in chunks])
-                added = add_chunks(chunks, embeddings, digest)
+        import traceback
+        def log(msg):
+            with open('scratch/ingest_log.txt', 'a', encoding='utf-8') as f:
+                f.write(msg + '\n')
                 
+        try:
+            log("Thread started.")
+            from io import BytesIO
+            from pathlib import Path
+            from src.embeddings import embed_documents
+            from src.ingest import chunk_pages, extract_pages, file_hash
+            from src.vectorstore import add_chunks, ingested_hashes
+            from src.config import DOCUMENTS_DIR
+            from src.exams import add_announcement
+            
+            log("Imports successful.")
+            known_hashes = ingested_hashes()
+            log(f"Known hashes count: {len(known_hashes)}")
+            
+            files_processed = 0
+            chunks_added = 0
+            duplicates = 0
+            success_files = []
+        
+            for filename, data in files_data_list:
                 try:
-                    save_path = Path(DOCUMENTS_DIR) / filename
-                    save_path.parent.mkdir(parents=True, exist_ok=True)
-                    save_path.write_bytes(data)
-                except Exception as e:
-                    print(f"Could not save PDF copy to disk: {e}")
+                    if not data:
+                        continue
+                        
+                    digest = file_hash(data)
+                    if digest in known_hashes:
+                        duplicates += 1
+                        continue
+                        
+                    pages = extract_pages(BytesIO(data))
+                    if not pages:
+                        continue
+                        
+                    chunks = chunk_pages(pages, filename)
+                    if not chunks:
+                        continue
+    
+                    # Batch embeddings to prevent RAM spikes and PyTorch stalls
+                    batch_size = 32
+                    chunk_texts = [c["text"] for c in chunks]
+                    all_embeddings = []
+                    for i in range(0, len(chunk_texts), batch_size):
+                        batch = chunk_texts[i:i + batch_size]
+                        all_embeddings.extend(embed_documents(batch))
+    
+                    added = add_chunks(chunks, all_embeddings, digest)
                     
-                known_hashes.add(digest)
-                files_processed += 1
-                chunks_added += added
-                success_files.append(filename)
-                
-            except Exception as exc:
-                print(f"Failed to process {filename}: {exc}")
-                
-        if success_files:
-            file_names = ", ".join(success_files)
-            # Add an announcement that is visible to everyone
-            add_announcement(
+                    try:
+                        save_path = Path(DOCUMENTS_DIR) / filename
+                        save_path.parent.mkdir(parents=True, exist_ok=True)
+                        save_path.write_bytes(data)
+                    except Exception as e:
+                        print(f"Could not save PDF copy to disk: {e}")
+                        
+                    known_hashes.add(digest)
+                    files_processed += 1
+                    chunks_added += added
+                    success_files.append(filename)
+                    
+                except Exception as exc:
+                    print(f"Failed to process {filename}: {exc}")
+                    
+            if success_files:
+                file_names = ", ".join(success_files)
+                add_announcement(
                 "📂 Background Ingestion Complete",
                 f"The Administrator has successfully uploaded and processed new document(s) into the knowledge base:\n\n"
                 f"Files: {file_names}\n"
                 f"Chunks added: {chunks_added}\n\n"
                 f"You can now query this information using the Document Explorer or AI Assistant."
             )
+            elif duplicates > 0:
+                log(f"Skipped {duplicates} duplicate files.")
+                add_announcement(
+                    "⚠️ Duplicate Document Ignored",
+                    f"The Administrator attempted to upload {duplicates} document(s), but they were skipped because they already exist in the knowledge base."
+                )
+            log("Thread completed successfully.")
+        except Exception as e:
+            log(f"FATAL ERROR: {traceback.format_exc()}")
+            try:
+                from src.exams import add_announcement
+                add_announcement(
+                    "❌ Ingestion Failed",
+                    f"An unexpected error occurred during background ingestion:\n\n{str(e)}"
+                )
+            except:
+                pass
 
-    background_ingest(files_data)
-    
+
+    # Dispatch to an isolated background thread
+    import threading
+    worker = threading.Thread(target=background_ingest, args=(files_data,), daemon=True)
+    worker.start()
+
+    flash(f"Background ingestion started for {len(files_data)} file(s). You can continue using the platform.")
     return redirect(url_for('ingest'))
 
 @app.route('/ingest/delete', methods=['POST'])

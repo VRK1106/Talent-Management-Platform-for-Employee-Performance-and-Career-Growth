@@ -327,7 +327,7 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
     )
 
     try:
-        url = "[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)"
+        url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
             "model": model_name,
             "messages": [
@@ -360,7 +360,17 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
                     try:
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
+                        
+                        # 1. Capture standard text or reasoning tokens
                         token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        
+                        # 2. Intercept agentic tool calls from gpt-oss-120b
+                        tool_calls = delta.get("tool_calls")
+                        if tool_calls:
+                            for tool in tool_calls:
+                                if "function" in tool and "name" in tool["function"]:
+                                    token += f"\n\n> 🔍 **Agent Action:** Executing `{tool['function']['name']}`...\n\n"
+                                    
                         if token:
                             yield token
                     except Exception:
@@ -419,8 +429,17 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
                     try:
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
-                        # Support standard content and reasoning deltas
+                        
+                        # 1. Capture standard text or reasoning tokens
                         token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        
+                        # 2. Intercept agentic tool calls from gpt-oss-120b
+                        tool_calls = delta.get("tool_calls")
+                        if tool_calls:
+                            for tool in tool_calls:
+                                if "function" in tool and "name" in tool["function"]:
+                                    token += f"\n\n> 🔍 **Agent Action:** Executing `{tool['function']['name']}`...\n\n"
+                                    
                         if token:
                             yield token
                     except Exception:
@@ -668,7 +687,7 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
         )
 
     try:
-        url = "[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)"
+        url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
             "model": model_name,
             "messages": [
@@ -701,7 +720,17 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
                     try:
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
+                        
+                        # 1. Capture standard text or reasoning tokens
                         token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        
+                        # 2. Intercept agentic tool calls from gpt-oss-120b
+                        tool_calls = delta.get("tool_calls")
+                        if tool_calls:
+                            for tool in tool_calls:
+                                if "function" in tool and "name" in tool["function"]:
+                                    token += f"\n\n> 🔍 **Agent Action:** Executing `{tool['function']['name']}`...\n\n"
+                                    
                         if token:
                             yield token
                     except Exception:

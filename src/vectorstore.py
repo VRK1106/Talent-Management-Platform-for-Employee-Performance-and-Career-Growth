@@ -279,21 +279,21 @@ def _fetch_stats_raw() -> dict:
         sources_dict: dict[str, int] = {}
         source_pages: dict[str, set[int]] = {}
         
-        for src in doc_names:
-            try:
-                result = collection.get(where={"source": src}, include=["metadatas"])
-                metadatas = result.get("metadatas") or []
-                if metadatas:
-                    sources_dict[src] = len(metadatas)
-                    pages_set = set()
-                    for meta in metadatas:
-                        meta = meta or {}
-                        page = meta.get("page")
-                        if page is not None:
-                            pages_set.add(page)
-                    source_pages[src] = pages_set
-            except Exception as e:
-                print(f"Error getting stats for document {src}: {e}")
+        try:
+            result = collection.get(include=["metadatas"])
+            metadatas = result.get("metadatas") or []
+            for meta in metadatas:
+                meta = meta or {}
+                src = meta.get("source")
+                if src:
+                    sources_dict[src] = sources_dict.get(src, 0) + 1
+                    page = meta.get("page")
+                    if page is not None:
+                        if src not in source_pages:
+                            source_pages[src] = set()
+                        source_pages[src].add(page)
+        except Exception as e:
+            print(f"Error fetching stats from vectorstore: {e}")
 
         source_details = []
         for src in sorted(sources_dict.keys()):
