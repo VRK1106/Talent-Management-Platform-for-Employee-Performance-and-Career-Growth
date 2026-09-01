@@ -36,7 +36,7 @@ Available commands:
 4. `{"action": "list_announcements"}` - Returns list of announcements.
 5. `{"action": "get_performance", "identifier": "<employee_id or trainee_name>"}` - Returns trainee exam logs and analytics.
 6. `{"action": "get_all_performance"}` - Returns aggregate platform performance.
-7. `{"action": "create_announcement", "title": "<title>", "content": "<content>"}` - Generates and saves an announcement.
+7. `{"action": "create_announcement", "title": "<title>", "content": "<content>"}` - Generates and saves an announcement. IMPORTANT: If the user asks to create an announcement, you MUST ask them what the title and content should be FIRST. Do not guess or make them up.
 8. `{"action": "create_exam", "title": "<title>", "doc": "<document_filename or comma-separated filenames>", "question_count": <int>, "marks_per_question": <int>, "difficulty": "<easy|medium|hard>"}` - Generates and saves a new exam based on one or multiple combined documents.
 9. `{"action": "create_study_plan", "title": "<title>", "domain": "<domain>", "docs": "<document_filename or comma-separated filenames>", "week_number": <int>}` - Generates and saves a new 6-day Sprint Study Plan with daily tasks, reference files, and Day 5 Gateway Exam.
 

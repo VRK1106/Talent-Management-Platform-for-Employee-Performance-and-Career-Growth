@@ -164,7 +164,7 @@ def chunk_pages(pages: list[dict], source_name: str) -> list[dict]:
             piece = piece.strip()
             if not piece:
                 continue
-            chunk_id = hashlib.sha256(piece.encode('utf-8')).hexdigest()
+            chunk_id = hashlib.sha256(f"{source_name}_{running_index}_{piece}".encode('utf-8')).hexdigest()
             chunks.append(
                 {
                     "id": chunk_id,

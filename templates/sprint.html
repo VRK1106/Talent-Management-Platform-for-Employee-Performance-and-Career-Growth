@@ -823,7 +823,14 @@
                     <div style="background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.3); border-radius: 12px; padding: 1rem;">
                         <div style="font-weight: 700; color: #f59e0b; font-size: 0.9rem; margin-bottom: 0.4rem;">Phase 2 Gateway Assessment</div>
                         <div style="font-size: 0.82rem; color: var(--ts-text-secondary); margin-bottom: 0.85rem; line-height: 1.4;">Comprehensive multiple-choice test covering Days 1 to 4 topics.</div>
-                        ${(currWeek > viewWeek || currDay > 5) ? `<span class="s-tag s-tag-voice" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">✓ Gateway Exam Passed</span>` : `
+                        ${(currWeek > viewWeek || currDay > 5) ? `
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span class="s-tag s-tag-voice" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">✓ Gateway Exam Passed</span>
+                            <form action="/sprint/take_day5_exam" method="GET">
+                                <button type="submit" class="btn-ts btn-ts-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.8rem;">Review / Retake Exam</button>
+                            </form>
+                        </div>
+                        ` : `
                         <form action="/sprint/take_day5_exam" method="GET">
                             <button type="submit" class="btn-ts btn-ts-primary" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: #f59e0b; border-color: #f59e0b; color: #000 !important; font-weight: 700;">🚀 Launch Gateway Exam</button>
                         </form>`}

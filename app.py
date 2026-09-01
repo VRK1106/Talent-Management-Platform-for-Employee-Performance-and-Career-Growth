@@ -5047,7 +5047,7 @@ def sprint_voice_interview_turn():
     study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=user_sprint.get('assigned_plan_id'))
     plan_title = study_plan.get('title', f'{domain.capitalize()} Study Plan')
 
-    from src.llm import generate_chat_answer
+    from src.llm import generate_chat_answer, list_local_models
     socratic_system = (
         f"You are a Senior Technical Examiner conducting a 4-question Socratic Voice Mock Interview for {plan_title}.\n"
         f"The candidate is currently on Turn {turn_number} of 4.\n"
@@ -5062,12 +5062,15 @@ def sprint_voice_interview_turn():
         socratic_system += "\nThis is Turn 4 (Final Turn). Thank the candidate concisely for defending their knowledge and inform them the technical assessment is complete."
 
     try:
+        local_models = list_local_models()
+        model_name = local_models[0] if local_models else "qwen2.5:latest"
         ai_response = generate_chat_answer(
             prompt=prompt,
-            model_name="llama-3.3-70b-versatile",
+            model_name=model_name,
             system_instruction=socratic_system
         )
     except Exception as e:
+        print(f"Error in voice turn: {e}")
         ai_response = f"Thank you. Based on your explanation of {plan_title}, how would you implement this in a production environment?"
 
     return jsonify({
@@ -5095,7 +5098,7 @@ def sprint_voice_interview_submit():
     week_num = user_sprint.get('current_week', 1)
     study_plan = get_study_plan(domain=domain, week_number=week_num, plan_id=user_sprint.get('assigned_plan_id'))
 
-    from src.llm import generate_chat_answer, clean_json_response
+    from src.llm import generate_chat_answer, clean_json_response, list_local_models
     eval_prompt = (
         f"You are a Senior Technical Examiner grading a Day 6 Socratic Voice Interview for {study_plan.get('title')}.\n"
         f"Evaluate the following full candidate interview transcript:\n\n"
@@ -5117,7 +5120,9 @@ def sprint_voice_interview_submit():
     feedback = "Good technical understanding of core concepts. Recommended reviewing Day 2 and Day 4 architectural details."
 
     try:
-        resp = generate_chat_answer(prompt=eval_prompt, model_name="llama-3.3-70b-versatile", system_instruction="Output ONLY valid JSON object.")
+        local_models = list_local_models()
+        model_name = local_models[0] if local_models else "qwen2.5:latest"
+        resp = generate_chat_answer(prompt=eval_prompt, model_name=model_name, system_instruction="Output ONLY valid JSON object.")
         cleaned = clean_json_response(resp)
         eval_data = json.loads(cleaned)
         tech_score = float(eval_data.get('tech_score', 85.0))
