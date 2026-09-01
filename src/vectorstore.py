@@ -331,6 +331,7 @@ def stats() -> dict:
     }
 
     try:
+        get_client()
         if _client_instance is None:
             _stats_cache = fallback
             _stats_cache_time = now

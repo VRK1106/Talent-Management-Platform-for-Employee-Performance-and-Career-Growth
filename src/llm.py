@@ -241,7 +241,7 @@ def generate_chat_answer(prompt: str, model_name: str, system_instruction: str |
     if not GROQ_API_KEY:
         return "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
 
-    candidate_models = [model_name, "qwen/qwen3.8-27b", "openai/gpt-oss-20b", "groq/compound"]
+    candidate_models = [model_name, "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
     models_to_try = []
     for m in candidate_models:
         if m and m not in models_to_try:
@@ -361,8 +361,8 @@ def generate_rag_answer_stream(query: str, chunks: list[dict[str, Any]], model_n
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
                         
-                        # 1. Capture standard text or reasoning tokens
-                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        # 1. Capture standard text ONLY. Hide reasoning tokens to prevent CoT leakage.
+                        token = delta.get("content") or ""
                         
                         # 2. Intercept agentic tool calls from gpt-oss-120b
                         tool_calls = delta.get("tool_calls")
@@ -430,8 +430,8 @@ def generate_chat_answer_stream(prompt: str, model_name: str, system_instruction
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
                         
-                        # 1. Capture standard text or reasoning tokens
-                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        # 1. Capture standard text ONLY. Hide reasoning tokens to prevent CoT leakage.
+                        token = delta.get("content") or ""
                         
                         # 2. Intercept agentic tool calls from gpt-oss-120b
                         tool_calls = delta.get("tool_calls")
@@ -721,8 +721,8 @@ def generate_ephemeral_rag_answer_stream(query: str, chunks: list[dict[str, Any]
                         chunk_data = json.loads(data_content)
                         delta = chunk_data["choices"][0].get("delta", {})
                         
-                        # 1. Capture standard text or reasoning tokens
-                        token = delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        # 1. Capture standard text ONLY. Hide reasoning tokens to prevent CoT leakage.
+                        token = delta.get("content") or ""
                         
                         # 2. Intercept agentic tool calls from gpt-oss-120b
                         tool_calls = delta.get("tool_calls")

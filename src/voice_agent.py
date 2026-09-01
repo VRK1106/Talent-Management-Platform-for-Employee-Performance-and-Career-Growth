@@ -36,7 +36,7 @@ Available commands:
 4. `{"action": "list_announcements"}` - Returns list of announcements.
 5. `{"action": "get_performance", "identifier": "<employee_id or trainee_name>"}` - Returns trainee exam logs and analytics.
 6. `{"action": "get_all_performance"}` - Returns aggregate platform performance.
-7. `{"action": "create_announcement", "title": "<title>", "content": "<content>"}` - Generates and saves an announcement. IMPORTANT: If the user asks to create an announcement, you MUST ask them what the title and content should be FIRST. Do not guess or make them up.
+7. `{"action": "create_announcement", "title": "<title>", "content": "<content>"}` - Generates and saves an announcement. IMPORTANT: Do NOT execute this command immediately. You MUST first ask the user to explicitly dictate the exact title and the exact content. Only issue this command AFTER the user has provided both. NEVER use placeholder text like 'Voice Announcement' or 'published'. If the user says 'create an announcement', reply by asking them for the title and content.
 8. `{"action": "create_exam", "title": "<title>", "doc": "<document_filename or comma-separated filenames>", "question_count": <int>, "marks_per_question": <int>, "difficulty": "<easy|medium|hard>"}` - Generates and saves a new exam based on one or multiple combined documents.
 9. `{"action": "create_study_plan", "title": "<title>", "domain": "<domain>", "docs": "<document_filename or comma-separated filenames>", "week_number": <int>}` - Generates and saves a new 6-day Sprint Study Plan with daily tasks, reference files, and Day 5 Gateway Exam.
 
@@ -122,6 +122,16 @@ def execute_agent_action(command_dict: dict) -> str:
             if not title or not content:
                 return "Error: Both title and content are required to create an announcement."
             
+            # Anti-placeholder safeguard
+            is_placeholder = False
+            lower_title = title.lower()
+            if any(ph in lower_title for ph in ["voice announcement", "announcement", "new announcement", "<title>", "title"]):
+                if len(content.split()) < 6 or any(ph in content.lower() for ph in ["published", "<content>", "content"]):
+                    is_placeholder = True
+                    
+            if is_placeholder:
+                return "Error: You used placeholder text! DO NOT execute this command yet. You MUST reply to the user asking them for the exact title and content for the announcement."
+
             # Use exams.py function to save
             success = add_announcement(title, content, send_email=True)
             if success:

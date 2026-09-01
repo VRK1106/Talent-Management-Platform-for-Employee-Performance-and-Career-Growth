@@ -935,9 +935,11 @@
         {% endif %}
     </div>
 
+    <div id="wizardBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); z-index: 999; backdrop-filter: blur(4px);"></div>
+    <div id="wizardContainer" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; padding: 1.5rem; background: var(--ts-bg); border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid var(--ts-border); scrollbar-width: thin;"></div>
+
     <!-- Active Input / Form -->
     <div class="chat-input-area" style="padding: 0.85rem 1rem; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border-top: 1px solid var(--ts-border, rgba(255,255,255,0.12)); border-radius: 20px;">
-        <div id="wizardContainer" style="display: none; width: 100%; max-height: 50vh; overflow-y: auto; padding: 0.2rem; margin-bottom: 0.8rem; scrollbar-width: thin;"></div>
         <div class="chat-input-row" id="chatInputRow" style="gap: 0.65rem;">
             <textarea id="queryInput" placeholder="Ask a technical question or command..." class="chat-input-field" 
                       style="border-radius: 12px; border: 1px solid var(--ts-border, rgba(255,255,255,0.18)); font-size: 0.92rem; padding: 0.75rem 1rem;"
@@ -1249,6 +1251,7 @@
             queryField.value = '';
             const wizContainer = document.getElementById('wizardContainer');
             wizContainer.style.display = 'block';
+            document.getElementById('wizardBackdrop').style.display = 'block';
             wizContainer.innerHTML = getExamWizardHtml();
             initExamWizard();
             document.getElementById('chatInputRow').style.display = 'none';
@@ -1261,6 +1264,7 @@
             queryField.value = '';
             const wizContainer = document.getElementById('wizardContainer');
             wizContainer.style.display = 'block';
+            document.getElementById('wizardBackdrop').style.display = 'block';
             wizContainer.innerHTML = getAnnWizardHtml();
             initAnnWizard(query);
             document.getElementById('chatInputRow').style.display = 'none';
@@ -2821,6 +2825,13 @@
         }
     }
 
+    function cancelExamWizard() {
+        document.getElementById('wizardContainer').style.display = 'none';
+        document.getElementById('wizardBackdrop').style.display = 'none';
+        document.getElementById('wizardContainer').innerHTML = '';
+        document.getElementById('chatInputRow').style.display = 'flex';
+    }
+
     function closeExamWizard() {
         const chatContainer = document.querySelector('.chat-container');
         if (chatContainer) {
@@ -2829,6 +2840,7 @@
             chatContainer.style.overflow = '';
         }
         document.getElementById('wizardContainer').style.display = 'none';
+        document.getElementById('wizardBackdrop').style.display = 'none';
         document.getElementById('wizardContainer').innerHTML = '';
         document.getElementById('chatInputRow').style.display = 'flex';
     }
@@ -3172,6 +3184,7 @@
             chatContainer.style.overflow = '';
         }
         document.getElementById('wizardContainer').style.display = 'none';
+        document.getElementById('wizardBackdrop').style.display = 'none';
         document.getElementById('wizardContainer').innerHTML = '';
         document.getElementById('chatInputRow').style.display = 'flex';
     }
