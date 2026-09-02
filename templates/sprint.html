@@ -1059,6 +1059,7 @@
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
+    let isProcessing = false;
 
     function startVoiceInterview() {
         const currDay = {{ sprint.current_day }};
@@ -1123,6 +1124,8 @@
     }
 
     async function handleVoiceOrbClick() {
+        if (isProcessing) return;
+
         const orbBtn = document.getElementById('orbBtn');
         const orbIcon = document.getElementById('orbIcon');
         const statusEl = document.getElementById('voiceOverlayStatus');
@@ -1195,9 +1198,11 @@
                         }
                     } catch (err) {
                         console.error(err);
-                        statusEl.innerText = "Processing response... Click orb to continue.";
+                        statusEl.innerText = "Error processing response. Please click orb to try again.";
                         orbIcon.innerText = "🎙️";
                         orbBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+                    } finally {
+                        isProcessing = false;
                     }
                 };
 
@@ -1217,6 +1222,7 @@
                 alert("Microphone access is required for Day 6 Socratic Voice Mock Interview.");
             }
         } else {
+            isProcessing = true;
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
             }

@@ -241,7 +241,7 @@ def generate_chat_answer(prompt: str, model_name: str, system_instruction: str |
     if not GROQ_API_KEY:
         return "Groq API Key is not configured. Please add GROQ_API_KEY to your .env file."
 
-    candidate_models = [model_name, "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
+    candidate_models = [model_name, "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
     models_to_try = []
     for m in candidate_models:
         if m and m not in models_to_try:
@@ -279,12 +279,16 @@ def generate_chat_answer(prompt: str, model_name: str, system_instruction: str |
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"].strip()
         except urllib.error.HTTPError as e:
-            last_error = f"Error connecting to Groq API: {e.reason}."
+            try:
+                error_body = json.loads(e.read().decode("utf-8"))
+                err_msg = error_body.get("error", {}).get("message", e.reason)
+            except Exception:
+                err_msg = e.reason
+            last_error = f"Error connecting to Groq API: {err_msg}."
             if e.code == 429:
                 import time
                 time.sleep(0.5)
-                continue
-            return last_error
+            continue
         except urllib.error.URLError as e:
             last_error = f"Error connecting to Groq API: {e.reason}."
             continue
