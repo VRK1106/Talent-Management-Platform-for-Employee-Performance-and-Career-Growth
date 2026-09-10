@@ -3211,14 +3211,28 @@ def chat_stream():
         list_item_type = "announcement"
 
         
-    # 1. Performance Query Intent Classification
+    # 1. New Feature Query Intent Classification
+    from src.chatbot_context import detect_query_intent, get_feature_context
+    user_role = session.get('user_role', 'trainee')
+    feature_intent, privilege_error = detect_query_intent(query, user_role)
+    
+    if privilege_error:
+        def priv_error_generator():
+            add_chat_message(active_session_id, "assistant", privilege_error, [])
+            yield privilege_error
+        return Response(stream_with_context(priv_error_generator()), mimetype='text/event-stream')
+        
+    feature_context_data = None
+    if feature_intent != "GENERAL_RAG":
+        feature_context_data = get_feature_context(feature_intent, user_role, emp_id)
+
+    # 1b. Performance Query Intent Classification
     perf_target = detect_performance_query(query)
     perf_context = None
     aggregate_context = None
 
     if perf_target == "ALL":
         # Admin aggregate query — get summary of all trainees
-        user_role = session.get('user_role', 'trainee')
         aggregate_context = get_aggregate_performance_context(user_role)
         if "Unauthorized" in aggregate_context:
             def error_agg_generator():
@@ -3226,7 +3240,6 @@ def chat_stream():
                 yield aggregate_context
             return Response(stream_with_context(error_agg_generator()), mimetype='text/event-stream')
     elif perf_target:
-        user_role = session.get('user_role', 'trainee')
         perf_context = get_student_performance_context(perf_target, user_role, emp_id)
         
         # If unauthorized or not found, directly yield the message and exit
@@ -3240,7 +3253,7 @@ def chat_stream():
     sources = []
     selected_mode = "General Assistant"
     
-    if not perf_target:  # skip vector search for DB queries
+    if not perf_target and not feature_context_data:  # skip vector search for DB queries
         try:
             from src.embeddings import embed_query
             query_vec = embed_query(query)
@@ -3293,8 +3306,16 @@ def chat_stream():
             
         from src.llm import generate_rag_answer_stream, generate_chat_answer_stream, generate_ephemeral_rag_answer_stream
 
-        
-        if aggregate_context:
+        if feature_context_data:
+            system_prompt = (
+                "You are an AI Assistant for 'Talent Sphere Elevate', a corporate training platform. "
+                "Answer the user's question accurately using ONLY the provided real-time platform data below.\n"
+                "If the data answers the question, summarize it clearly (using markdown tables if appropriate).\n"
+                "If the data implies there is nothing to show, inform the user nicely.\n\n"
+                f"{feature_context_data}"
+            )
+            chunk_stream = generate_chat_answer_stream(query, model, system_prompt)
+        elif aggregate_context:
             system_prompt = (
                 "You are an AI Coach and Analytics Advisor for 'Talent Sphere Elevate', a corporate training platform. "
                 "You have been given a complete, real-time performance report for ALL trainees on the platform.\n"
