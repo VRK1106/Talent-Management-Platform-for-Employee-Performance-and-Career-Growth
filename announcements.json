@@ -1,17 +1,17 @@
 [
     [
-        "\ud83d\udce2 Voice Announcement",
-        "Create a new announcement. I will be telling the content later.",
-        "2026-08-26 12:20:18"
+        "\ud83d\udcdd New Exam Assigned: Thank you.",
+        "The Administrator has published a new exam 'Thank you.' (25 marks, 5 questions) generated from 8_Advanced_Artificial_Intelligence.pdf.",
+        "2026-09-08 14:12:22"
     ],
     [
-        "\ud83d\udce2 Voice Announcement",
-        "Create an Announcement",
-        "2026-08-26 12:20:04"
+        "\ud83d\udcdd New Exam Assigned: basics of AI",
+        "The Administrator has published a new exam 'basics of AI' (50 marks, 5 questions) generated from 11_Natural_Language_Processing.pdf.",
+        "2026-09-05 15:43:03"
     ],
     [
-        "\ud83d\uddd1\ufe0f Document Removed",
-        "The document 'Unit-1.pdf' has been removed from the knowledge base by the Administrator.",
-        "2026-08-16 10:59:01"
+        "\ud83d\udcdd New Exam Assigned: basic concepts of AI",
+        "The Administrator has published a new exam 'basic concepts of AI' (50 marks, 5 questions) generated from 11_Natural_Language_Processing.pdf.",
+        "2026-09-02 13:41:05"
     ]
 ]

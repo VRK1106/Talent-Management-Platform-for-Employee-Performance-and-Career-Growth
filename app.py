@@ -3184,63 +3184,21 @@ def chat_stream():
             add_chat_message(active_session_id, "assistant", "Interactive Exam Creator Wizard opened.", [])
         return Response(stream_with_context(wizard_event_generator()), mimetype='text/event-stream')
 
-    list_items = None
-    list_item_type = None
-    if ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("doc" in query_lower or "pdf" in query_lower or "file" in query_lower or "reference" in query_lower):
-        from src.vectorstore import get_collection
-        coll = get_collection()
-        res = coll.get(include=["metadatas"])
-        metadatas = res.get("metadatas") or []
-        list_items = sorted(list(set(m["source"] for m in metadatas if m and "source" in m)))
-        list_item_type = "document"
-    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("trainee" in query_lower or "student" in query_lower or "user" in query_lower):
-        conn = get_db_connection(_DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT employee_id, full_name FROM users WHERE role = 'trainee'")
-        list_items = [f"{r['full_name']} ({r['employee_id']})" for r in cursor.fetchall()]
-        conn.close()
-        list_item_type = "trainee"
-    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("exam" in query_lower or "test" in query_lower or "quiz" in query_lower):
-        from src.exams import get_all_exams
-        list_items = [e.get("title") for e in get_all_exams() if e.get("title")]
-        list_item_type = "exam"
-    elif ("list" in query_lower or "show" in query_lower or "display" in query_lower) and ("announcement" in query_lower or "notice" in query_lower):
-        from src.exams import get_all_announcements
-        list_items = [a.get("title") for a in get_all_announcements() if a.get("title")]
-        list_item_type = "announcement"
-
-        
-    # 1. New Feature Query Intent Classification
-    from src.chatbot_context import detect_query_intent, get_feature_context
-    user_role = session.get('user_role', 'trainee')
-    feature_intent, privilege_error = detect_query_intent(query, user_role)
-    
-    if privilege_error:
-        def priv_error_generator():
-            add_chat_message(active_session_id, "assistant", privilege_error, [])
-            yield privilege_error
-        return Response(stream_with_context(priv_error_generator()), mimetype='text/event-stream')
-        
-    feature_context_data = None
-    if feature_intent != "GENERAL_RAG":
-        feature_context_data = get_feature_context(feature_intent, user_role, emp_id)
-
-    # 1b. Performance Query Intent Classification
+    # 1. Performance Query Intent Classification
     perf_target = detect_performance_query(query)
     perf_context = None
     aggregate_context = None
 
     if perf_target == "ALL":
         # Admin aggregate query — get summary of all trainees
-        aggregate_context = get_aggregate_performance_context(user_role)
+        aggregate_context = get_aggregate_performance_context(session.get('user_role', 'trainee'))
         if "Unauthorized" in aggregate_context:
             def error_agg_generator():
                 add_chat_message(active_session_id, "assistant", aggregate_context, [])
                 yield aggregate_context
             return Response(stream_with_context(error_agg_generator()), mimetype='text/event-stream')
     elif perf_target:
-        perf_context = get_student_performance_context(perf_target, user_role, emp_id)
+        perf_context = get_student_performance_context(perf_target, session.get('user_role', 'trainee'), emp_id)
         
         # If unauthorized or not found, directly yield the message and exit
         if "Unauthorized" in perf_context or "not found" in perf_context or "not registered" in perf_context:
@@ -3248,7 +3206,23 @@ def chat_stream():
                 add_chat_message(active_session_id, "assistant", perf_context, [])
                 yield perf_context
             return Response(stream_with_context(error_event_generator()), mimetype='text/event-stream')
+
+    # 1b. New Feature Query Intent Classification
+    from src.chatbot_context import detect_query_intent, get_feature_context
+    user_role = session.get('user_role', 'trainee')
+    
+    feature_context_data = None
+    if not perf_target:
+        feature_intent, privilege_error = detect_query_intent(query, user_role)
+        
+        if privilege_error:
+            def priv_error_generator():
+                add_chat_message(active_session_id, "assistant", privilege_error, [])
+                yield privilege_error
+            return Response(stream_with_context(priv_error_generator()), mimetype='text/event-stream')
             
+        if feature_intent != "GENERAL_RAG":
+            feature_context_data = get_feature_context(feature_intent, user_role, emp_id)            
     # 2. Document-Grounded Context Retrieval (only if not a DB data query)
     sources = []
     selected_mode = "General Assistant"
@@ -3422,9 +3396,7 @@ def chat_stream():
                 suggestions_json = json.dumps(followups)
                 yield f"[SUGGESTIONS_JSON_START]{suggestions_json}[SUGGESTIONS_JSON_END]"
                 
-            if list_items:
-                items_json = json.dumps({"items": list_items, "select_mode": "multi", "item_type": list_item_type})
-                yield f"[ITEMS_JSON_START]{items_json}[ITEMS_JSON_END]"
+            # Removed list_items rendering for chatbot, as requested.
                 
         except Exception as e:
             yield f"Error in streaming: {e}"
