@@ -411,7 +411,10 @@ def inject_global_data():
     def get_trainee_completed_exams(trainee_id):
         return [a for a in get_assignments_for_trainee(trainee_id) if a["status"] == "completed"]
     
+    is_spa = request.headers.get('X-SPA-Request') == 'true'
     return {
+        'spa_request': is_spa,
+        'base_template': 'empty.html' if is_spa else 'base.html',
         'active_page': active_page,
         'health': {
             'sqlite_ok': sqlite_ok,

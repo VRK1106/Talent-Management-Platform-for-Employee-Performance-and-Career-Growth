@@ -766,10 +766,12 @@
 
     <!-- 2. Main Page Content Block -->
     <div class="main-content" {% if not session.get('authenticated') or session.get('taking_assignment_id') %}style="width: 100%; max-width: 100%; padding: 2rem;"{% endif %}>
-        <div class="main-container">
+        <div class="main-container" id="spa-content-area">
             {% block content %}{% endblock %}
         </div>
     </div>
 
+    <!-- SPA Router -->
+    <script src="/static/assets/js/spa_router.js"></script>
 </body>
 </html>
