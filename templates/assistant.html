@@ -1042,6 +1042,7 @@
 
 <script>
     window.onerror = function(message, source, lineno, colno, error) {
+        alert("JAVASCRIPT ERROR:\n" + message + "\nLine: " + lineno);
         fetch('/log_error', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1051,6 +1052,7 @@
     };
     
     window.addEventListener('unhandledrejection', function(event) {
+        alert("UNHANDLED PROMISE REJECTION:\n" + event.reason);
         fetch('/log_error', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1275,6 +1277,7 @@
         const queryField = document.getElementById('queryInput');
         const query = queryField.value.trim();
         if (!query || isGenerating) {
+            alert("Early return! query=" + !!query + ", isGenerating=" + isGenerating);
             try {
                 fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "submitMessage early return. query=" + !!query + " isGenerating=" + isGenerating, url: window.location.href})});
             } catch(e) {}
