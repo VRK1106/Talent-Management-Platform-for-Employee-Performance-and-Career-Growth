@@ -143,7 +143,7 @@
                                 const resultsData = {{ results | tojson | safe }};
                                 let html = container.innerHTML;
                                 
-                                html = html.replace(/\[([0-9]+)\]/g, function(match, p1) {
+                                html = html.replace(/(?:\[|【)\s*([0-9]+)[^\]】]*(?:\]|】)/g, function(match, p1) {
                                     const index = parseInt(p1, 10);
                                     if (resultsData && resultsData[index - 1]) {
                                         const s = resultsData[index - 1];
