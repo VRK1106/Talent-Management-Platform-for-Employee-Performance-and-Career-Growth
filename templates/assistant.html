@@ -1198,7 +1198,7 @@
         box.scrollTop = box.scrollHeight;
     }
     
-    document.addEventListener("DOMContentLoaded", async function() {
+    async function initAssistant() {
         scrollToBottom();
         // Parse all markdown messages in initial render
         const messageElList = document.querySelectorAll('.message-row.assistant .message-text');
@@ -1580,6 +1580,9 @@
         const activeSources = document.getElementById('activeSourcesBox');
         if (activeSources) activeSources.removeAttribute('id');
     }
+    
+    // Call initialization immediately
+    initAssistant();
 
     function escapeHtml(text) {
         return text
