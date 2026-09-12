@@ -101,7 +101,11 @@ def get_all_available_documents() -> list[str]:
     return sorted(list(docs_set))
 
 app = Flask(__name__, static_folder='assets', static_url_path='/assets')
-app.secret_key = os.environ.get('SECRET_KEY', 'talent-sphere-elevate-secret-key-12345')
+from datetime import timedelta
+app.secret_key = os.environ.get('SECRET_KEY', 'tsm_super_secret_key_123!')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB max upload
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Register TabSessionInterface — SQLite-backed so sessions survive server restarts
 from flask.sessions import SessionInterface, SessionMixin

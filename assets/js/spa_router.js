@@ -27,8 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        // Ignore logout and download routes as they should do a hard load
-        if (href.includes("/logout") || href.includes("/download")) {
+        // Ignore logout, download, and document view routes as they should do a hard load
+        if (href.includes("/logout") || href.includes("/download") || href.includes("/documents/view")) {
             return;
         }
 

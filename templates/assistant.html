@@ -1067,6 +1067,8 @@
     var activeStreamController = null;
     var isGenerating = false;
 
+    fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "assistant.html script executed successfully!", url: window.location.href})}).catch(e=>{});
+
     // Initialize mermaid
     if (typeof mermaid !== 'undefined') {
         mermaid.initialize({
@@ -1361,6 +1363,7 @@
         const mode = 'Unified';
         const modelSelect = document.getElementById('chatModel');
         const model = modelSelect ? modelSelect.value : '';
+        let skipReload = true;
 
         try {
             window.activeSources = null;
@@ -1387,7 +1390,7 @@
 
             const activeSessionId = "{{ active_chat_session_id }}";
             const activeLink = document.querySelector(`.chat-history-sidebar-box a[href*="${activeSessionId}"]`);
-            let skipReload = true;
+            
             if (activeLink) {
                 const title = activeLink.textContent.trim();
                 if (title === "New Chat" || title === "New Conversation" || title === "Welcome Conversation" || title.startsWith("Chat ")) {
