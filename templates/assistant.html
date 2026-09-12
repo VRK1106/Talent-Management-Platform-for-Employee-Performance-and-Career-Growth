@@ -1071,7 +1071,7 @@
     // Keep track of active sources for the currently streaming message
     window.activeSources = null;
 
-    function parseAndFormatMessage(text) {
+    function parseAndFormatMessage(text, messageRow = null) {
         let cleanText = text;
         cleanText = cleanText.replace(/\[ITEMS_JSON_START\][\s\S]*?\[ITEMS_JSON_END\]/g, "");
         let html = marked.parse(cleanText);
@@ -1079,9 +1079,25 @@
         // Replace [1], [2] with clickable marker links/badges
         html = html.replace(/\[([0-9]+)\]/g, function(match, p1) {
             const index = parseInt(p1, 10);
-            if (window.activeSources && window.activeSources[index - 1]) {
+            let filename = "";
+            let page = "";
+            
+            if (messageRow) {
+                const sourceItem = messageRow.querySelector(`.source-item[data-index="${index}"]`);
+                if (sourceItem) {
+                    const fnEl = sourceItem.querySelector('.source-filename');
+                    const pgEl = sourceItem.querySelector('.source-page');
+                    if (fnEl) filename = fnEl.textContent;
+                    if (pgEl) page = pgEl.textContent;
+                }
+            } else if (window.activeSources && window.activeSources[index - 1]) {
                 const s = window.activeSources[index - 1];
-                return `<a href="/documents/view/${encodeURIComponent(s.source)}#page=${s.page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none;" onclick="event.stopPropagation();">📄 ${escapeHtml(s.source)} (p.${s.page})</a>`;
+                filename = s.source;
+                page = s.page;
+            }
+            
+            if (filename) {
+                return `<a href="/documents/view/${encodeURIComponent(filename)}#page=${page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none;" onclick="event.stopPropagation();">📄 ${escapeHtml(filename)} (p.${page})</a>`;
             }
             return `<span class="citation-marker" onclick="showCitation(this, ${p1})">[${p1}]</span>`;
         });
@@ -1201,7 +1217,8 @@
         // Parse all markdown messages in initial render
         const messageElList = document.querySelectorAll('.message-row.assistant .message-text');
         messageElList.forEach(el => {
-            el.innerHTML = parseAndFormatMessage(el.textContent);
+            const row = el.closest('.message-row');
+            el.innerHTML = parseAndFormatMessage(el.textContent, row);
         });
         await postRenderProcessing();
         
