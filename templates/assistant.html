@@ -1077,7 +1077,14 @@
         let html = marked.parse(cleanText);
         
         // Replace [1], [2] with clickable marker links/badges
-        html = html.replace(/\[([0-9]+)\]/g, '<span class="citation-marker" onclick="showCitation(this, $1)">[$1]</span>');
+        html = html.replace(/\[([0-9]+)\]/g, function(match, p1) {
+            const index = parseInt(p1, 10);
+            if (window.activeSources && window.activeSources[index - 1]) {
+                const s = window.activeSources[index - 1];
+                return `<a href="/documents/view/${encodeURIComponent(s.source)}#page=${s.page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none;" onclick="event.stopPropagation();">📄 ${escapeHtml(s.source)} (p.${s.page})</a>`;
+            }
+            return `<span class="citation-marker" onclick="showCitation(this, ${p1})">[${p1}]</span>`;
+        });
         
         // Neutralize malicious tags and XSS payloads before DOM injection
         if (typeof DOMPurify !== 'undefined') {
@@ -1367,14 +1374,8 @@
                 }
                 
                 let renderText = streamBuffer;
-                const srcStartIdx = renderText.indexOf('[SOURCES_JSON_START]');
-                if (srcStartIdx !== -1) {
-                    renderText = renderText.substring(0, srcStartIdx);
-                }
-                const sugStartIdx = renderText.indexOf('[SUGGESTIONS_JSON_START]');
-                if (sugStartIdx !== -1) {
-                    renderText = renderText.substring(0, sugStartIdx);
-                }
+                renderText = renderText.replace(/\[SOURCES_JSON_START\][\s\S]*?\[SOURCES_JSON_END\]/g, "");
+                renderText = renderText.replace(/\[SUGGESTIONS_JSON_START\][\s\S]*?\[SUGGESTIONS_JSON_END\]/g, "");
                 
                 assistantResponseText = renderText;
                 activeTextEl.innerHTML = parseAndFormatMessage(assistantResponseText);
