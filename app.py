@@ -4477,7 +4477,12 @@ def view_document_pdf(filename):
 </body>
 </html>"""
             if target_file.suffix.lower() == '.pdf':
-                return send_from_directory(doc_dir, filename, as_attachment=False, mimetype='application/pdf')
+                with open(target_file, 'rb') as f:
+                    content = f.read()
+                from flask import Response
+                response = Response(content, mimetype='application/pdf')
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                return response
             return send_from_directory(doc_dir, filename, as_attachment=False)
     except Exception as e:
         print(f"Document view error: {e}")
