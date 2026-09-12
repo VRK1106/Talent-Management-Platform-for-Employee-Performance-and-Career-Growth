@@ -1002,9 +1002,42 @@ def documents():
 @app.route('/documents/download/<path:filename>')
 @login_required
 def download_document(filename):
-    preview = request.args.get('preview') == 'true'
+    """Serve documents from the DOCUMENTS_DIR."""
+    from src.config import DOCUMENTS_DIR
+    import os
+    from flask import send_from_directory, request
+    
+    preview = request.args.get('preview', 'false').lower() == 'true'
     return send_from_directory(DOCUMENTS_DIR, filename, as_attachment=(not preview))
 
+# --- Audio Overview Routes ---
+
+@app.route('/audio/generate', methods=['POST'])
+def audio_generate():
+    if session.get('user_role') not in ['admin', 'trainer', 'trainee']:
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.get_json()
+    doc_name = data.get('doc_name')
+    if not doc_name:
+        return jsonify({"error": "Missing doc_name"}), 400
+        
+    try:
+        from src.audio_overview import get_or_generate_overview
+        result = get_or_generate_overview(doc_name)
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/audio/overview/<path:filename>')
+def audio_serve(filename):
+    import os
+    from flask import send_from_directory
+    from src.audio_overview import AUDIO_CACHE_DIR
+    return send_from_directory(os.path.abspath(AUDIO_CACHE_DIR), filename)
+
+# --- Ingestion Routes ---
 # KNOWLEDGE SEARCH
 @app.route('/search')
 @login_required
