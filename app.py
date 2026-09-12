@@ -79,11 +79,13 @@ from src.vectorstore import stats, get_source_chunks, search, get_collection, ad
 from src.llm import list_local_models, generate_chat_answer, generate_rag_answer, GROQ_API_KEY, analyze_proctor_image, transcribe_audio_whisper
 from src.concept_map import get_personalized_suggestions, get_ephemeral_document_text
 from src.student_performance import detect_performance_query, get_student_performance_context, get_aggregate_performance_context
+from src.fsrs_scheduler import init_fsrs_db, get_due_and_new_counts, get_next_card, process_review, get_stats
 import src.embeddings
 # Initialize databases
 init_db()
 init_exams_db()
 init_chats_db()
+init_fsrs_db()
 
 def get_all_available_documents() -> list[str]:
     """Return external user document filenames from disk in DOCUMENTS_DIR (filtering out internal Custom_ files)."""
@@ -4290,6 +4292,57 @@ def study_plans_assign():
         print(f"Error sending assignment email: {mail_err}")
 
     return jsonify({'status': 'success', 'assigned_count': count})
+
+# --- FSRS ROUTES ---
+
+@app.route('/fsrs_review', methods=['GET'])
+@login_required
+def fsrs_review_page():
+    user_info = session.get('user_info', {}) or {}
+    return render_template('fsrs_review.html', user=user_info, active_page='fsrs_review')
+
+@app.route('/fsrs/queue', methods=['GET'])
+@login_required
+def fsrs_get_queue():
+    user_info = session.get('user_info', {}) or {}
+    user_id = user_info.get('employee_id', 'demo')
+    counts = get_due_and_new_counts(user_id)
+    next_card = get_next_card(user_id)
+    return jsonify({
+        "counts": counts,
+        "next_card": next_card
+    })
+
+@app.route('/fsrs/review', methods=['POST'])
+@login_required
+def fsrs_post_review():
+    user_info = session.get('user_info', {}) or {}
+    user_id = user_info.get('employee_id', 'demo')
+    data = request.json or {}
+    item_id = data.get("item_id")
+    rating = data.get("rating")
+    
+    if not item_id or not rating:
+        return jsonify({"success": False, "error": "Missing item_id or rating"})
+        
+    success = process_review(user_id, item_id, int(rating))
+    
+    next_card = get_next_card(user_id)
+    counts = get_due_and_new_counts(user_id)
+    
+    return jsonify({
+        "success": success,
+        "counts": counts,
+        "next_card": next_card
+    })
+
+@app.route('/fsrs/stats', methods=['GET'])
+@login_required
+def fsrs_get_stats():
+    user_info = session.get('user_info', {}) or {}
+    user_id = user_info.get('employee_id', 'demo')
+    stats_data = get_stats(user_id)
+    return jsonify(stats_data)
 
 @app.route('/sprint', methods=['GET'])
 @login_required
