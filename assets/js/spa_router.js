@@ -118,8 +118,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                 
                 if (newScript.src) {
-                    newScript.onload = resolve;
-                    newScript.onerror = resolve; // Continue on error
+                    const timeoutId = setTimeout(() => {
+                        console.warn('Script load timeout for', newScript.src);
+                        resolve();
+                    }, 500); // 500ms max wait
+                    
+                    newScript.onload = () => { clearTimeout(timeoutId); resolve(); };
+                    newScript.onerror = () => { clearTimeout(timeoutId); resolve(); }; // Continue on error
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 } else {
                     oldScript.parentNode.replaceChild(newScript, oldScript);

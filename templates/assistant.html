@@ -385,7 +385,8 @@
 <!-- Markdown Parser CDN for client-side streaming rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <!-- Mermaid.js CDN for flowchart rendering -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
     // ═══════════════════════════════════════════════════════════════════════════
     //  TOTALLY VOICE ASSISTANT AGENT CONTROLLER & SELECTION PANEL
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1240,8 +1241,7 @@
                 if (chevron) chevron.style.transform = 'rotate(180deg)';
             }
         }
-    });
-
+    }
 
     function handleKeyPress(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
