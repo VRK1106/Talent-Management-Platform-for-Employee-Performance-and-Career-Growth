@@ -3075,6 +3075,12 @@ def assistant():
 
 
 
+@app.route('/log_error', methods=['POST'])
+def log_error():
+    data = request.get_json()
+    print(f"\n[CLIENT ERROR]: {data.get('message')}\nURL: {data.get('url')}\nLine: {data.get('line')}\nCol: {data.get('col')}\nErrorObj: {data.get('error')}\n", flush=True)
+    return jsonify({"status": "ok"})
+
 @app.route('/assistant/suggestions', methods=['GET'])
 @login_required
 def assistant_suggestions():

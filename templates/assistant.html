@@ -1041,6 +1041,23 @@
 
 
 <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+        fetch('/log_error', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: message, url: source, line: lineno, col: colno, error: error ? error.stack : ''})
+        }).catch(e => console.error('Error logging failed', e));
+        return false;
+    };
+    
+    window.addEventListener('unhandledrejection', function(event) {
+        fetch('/log_error', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: 'Unhandled Rejection: ' + event.reason, url: window.location.href, line: 0, col: 0, error: event.reason ? event.reason.stack : ''})
+        }).catch(e => console.error('Error logging failed', e));
+    });
+
     const USER_ROLE = "{{ session.get('user_role', 'trainee') }}";
     let activeStreamController = null;
     let isGenerating = false;
@@ -1251,9 +1268,18 @@
     }
 
     async function submitMessage() {
+        try {
+            fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "submitMessage started", url: window.location.href})});
+        } catch(e) {}
+        
         const queryField = document.getElementById('queryInput');
         const query = queryField.value.trim();
-        if (!query || isGenerating) return;
+        if (!query || isGenerating) {
+            try {
+                fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "submitMessage early return. query=" + !!query + " isGenerating=" + isGenerating, url: window.location.href})});
+            } catch(e) {}
+            return;
+        }
 
         const queryLower = query.toLowerCase();
         const isExamRequest = (USER_ROLE === 'admin') && (queryLower.includes("create") || queryLower.includes("make") || queryLower.includes("generate") || queryLower.includes("setup") || queryLower.includes("new")) && (queryLower.includes("exam") || queryLower.includes("test") || queryLower.includes("assessment") || queryLower.includes("quiz"));
