@@ -3335,6 +3335,10 @@ def chat_stream():
             chunk_stream = generate_chat_answer_stream(query, model, system_prompt)
             
         try:
+            if gen_state["sources"]:
+                sources_json = json.dumps(gen_state["sources"])
+                yield f"[SOURCES_JSON_START]{sources_json}[SOURCES_JSON_END]"
+                
             for chunk in chunk_stream:
                 if gen_state.get("stop"):
                     break
@@ -3347,10 +3351,6 @@ def chat_stream():
                 
             add_chat_message(active_session_id, "assistant", final_text, gen_state["sources"])
             
-            if gen_state["sources"]:
-                sources_json = json.dumps(gen_state["sources"])
-                yield f"[SOURCES_JSON_START]{sources_json}[SOURCES_JSON_END]"
-                
             # Generate exactly 3 direct follow-up questions based on the assistant response
             followups = []
             if not gen_state.get("stop") and final_text:
