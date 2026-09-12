@@ -1345,7 +1345,7 @@
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
             let assistantResponseText = '';
-            let receivedSources = null;
+            let receivedSuggestions = null;
 
             const activeTextEl = document.getElementById('activeResponseText');
             activeTextEl.innerHTML = ''; 
@@ -1375,6 +1375,30 @@
                     break;
                 }
                 
+                if (!window.activeSources && streamBuffer.includes('[SOURCES_JSON_END]')) {
+                    const parts = streamBuffer.split('[SOURCES_JSON_START]');
+                    if (parts.length > 1) {
+                        const sourcesStr = parts[1].split('[SOURCES_JSON_END]')[0].trim();
+                        try {
+                            window.activeSources = JSON.parse(sourcesStr);
+                        } catch(e) {
+                            console.error("Failed to parse sources during stream", e);
+                        }
+                    }
+                }
+                
+                if (!receivedSuggestions && streamBuffer.includes('[SUGGESTIONS_JSON_END]')) {
+                    const parts = streamBuffer.split('[SUGGESTIONS_JSON_START]');
+                    if (parts.length > 1) {
+                        const suggestionsStr = parts[1].split('[SUGGESTIONS_JSON_END]')[0].trim();
+                        try {
+                            receivedSuggestions = JSON.parse(suggestionsStr);
+                        } catch(e) {
+                            console.error("Failed to parse suggestions", e);
+                        }
+                    }
+                }
+
                 let renderText = streamBuffer;
                 renderText = renderText.replace(/\[SOURCES_JSON_START\][\s\S]*?\[SOURCES_JSON_END\]/g, "");
                 renderText = renderText.replace(/\[SUGGESTIONS_JSON_START\][\s\S]*?\[SUGGESTIONS_JSON_END\]/g, "");
@@ -1384,32 +1408,7 @@
                 scrollToBottom();
             }
 
-            if (streamBuffer.includes('[SOURCES_JSON_START]')) {
-                const parts = streamBuffer.split('[SOURCES_JSON_START]');
-                const sourcesStr = parts[1].split('[SOURCES_JSON_END]')[0].trim();
-                try {
-                    receivedSources = JSON.parse(sourcesStr);
-                    window.activeSources = receivedSources;
-                } catch(e) {
-                    console.error("Failed to parse sources", e);
-                }
-            }
 
-            let receivedSuggestions = null;
-            if (streamBuffer.includes('[SUGGESTIONS_JSON_START]')) {
-                const parts = streamBuffer.split('[SUGGESTIONS_JSON_START]');
-                const suggestionsStr = parts[1].split('[SUGGESTIONS_JSON_END]')[0].trim();
-                try {
-                    receivedSuggestions = JSON.parse(suggestionsStr);
-                } catch(e) {
-                    console.error("Failed to parse suggestions", e);
-                }
-            }
-
-            if (receivedSources && receivedSources.length > 0) {
-                // Do not render chunk details at the bottom anymore per user request
-                // renderCitations(receivedSources);
-            }
 
             if (streamBuffer.includes('[ITEMS_JSON_START]')) {
                 try {
