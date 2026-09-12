@@ -132,9 +132,28 @@
                         <div style='font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ts-secondary); margin-bottom: 0.6rem;'>
                             🤖 Groq RAG Assistant (Compiled using {{ selected_model }})
                         </div>
-                        <div style='color: var(--ts-text); font-size: 1.02rem; line-height: 1.6; font-family: sans-serif; white-space: pre-line;'>
+                        <div id="ragAnswerContainer" style='color: var(--ts-text); font-size: 1.02rem; line-height: 1.6; font-family: sans-serif; white-space: pre-line;'>
                             {{ answer }}
                         </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const container = document.getElementById('ragAnswerContainer');
+                                if (!container) return;
+                                
+                                const resultsData = {{ results | tojson | safe }};
+                                let html = container.innerHTML;
+                                
+                                html = html.replace(/\[([0-9]+)\]/g, function(match, p1) {
+                                    const index = parseInt(p1, 10);
+                                    if (resultsData && resultsData[index - 1]) {
+                                        const s = resultsData[index - 1];
+                                        return `<a href="/documents/view/${encodeURIComponent(s.source)}#page=${s.page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none; padding: 2px 6px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--ts-primary); font-size: 0.8em; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.3);">📄 ${s.source} (p.${s.page})</a>`;
+                                    }
+                                    return match;
+                                });
+                                container.innerHTML = html;
+                            });
+                        </script>
                     </div>
                 </div>
             {% endif %}
