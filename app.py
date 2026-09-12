@@ -4476,6 +4476,8 @@ def view_document_pdf(filename):
     <div class="content-card">{safe_txt}</div>
 </body>
 </html>"""
+            if target_file.suffix.lower() == '.pdf':
+                return send_from_directory(doc_dir, filename, as_attachment=False, mimetype='application/pdf')
             return send_from_directory(doc_dir, filename, as_attachment=False)
     except Exception as e:
         print(f"Document view error: {e}")

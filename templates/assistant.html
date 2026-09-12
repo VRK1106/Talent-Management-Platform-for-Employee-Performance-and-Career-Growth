@@ -1329,6 +1329,7 @@
         const model = modelSelect ? modelSelect.value : '';
 
         try {
+            window.activeSources = null;
             const tabId = sessionStorage.getItem('ts_tab_id') || '';
             activeStreamController = new AbortController();
             const response = await fetch('/assistant/chat_stream?tab_id=' + tabId, {
