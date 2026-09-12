@@ -390,11 +390,11 @@
     // ═══════════════════════════════════════════════════════════════════════════
     //  TOTALLY VOICE ASSISTANT AGENT CONTROLLER & SELECTION PANEL
     // ═══════════════════════════════════════════════════════════════════════════
-    let voiceAgentActive = false;
-    let voiceAgentMediaRecorder = null;
-    let voiceAgentAudioChunks = [];
-    let voiceAgentSynth = window.speechSynthesis;
-    let voiceAgentUtterance = null;
+ voiceAgentActive = false;
+ voiceAgentMediaRecorder = null;
+ voiceAgentAudioChunks = [];
+ voiceAgentSynth = window.speechSynthesis;
+ voiceAgentUtterance = null;
 
     function setVoiceAgentState(state) {
         const orb = document.getElementById('voiceOrb');
@@ -1063,9 +1063,9 @@
         }).catch(e => console.error('Error logging failed', e));
     });
 
-    const USER_ROLE = "{{ session.get('user_role', 'trainee') }}";
-    let activeStreamController = null;
-    let isGenerating = false;
+    var USER_ROLE = "{{ session.get('user_role', 'trainee') }}";
+    var activeStreamController = null;
+    var isGenerating = false;
 
     // Initialize mermaid
     if (typeof mermaid !== 'undefined') {
@@ -1273,6 +1273,7 @@
     }
 
     async function submitMessage() {
+        alert("submitMessage was called!");
         try {
             fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "submitMessage started", url: window.location.href})});
         } catch(e) {}
@@ -1626,10 +1627,10 @@
     }
 
     // --- Interactive Exam Creator Wizard JS ---
-    let wizardDocs = [];
-    let wizardTrainees = [];
-    let wizardQuestions = [];
-    let wizardSections = [
+ wizardDocs = [];
+ wizardTrainees = [];
+ wizardQuestions = [];
+ wizardSections = [
         { name: 'Section A - MCQ', type: 'mcq', count: 2, marks: 10, negative: false, negative_value: 0, partial: false }
     ];
 
@@ -3195,10 +3196,10 @@
     // ═══════════════════════════════════════════════════════════════════════════
     //  VOICE INPUT — Groq Whisper Large V3
     // ═══════════════════════════════════════════════════════════════════════════
-    let _mediaRecorder   = null;
-    let _audioChunks     = [];
-    let _isRecording     = false;
-    let _recordingMimeType = 'audio/webm';
+ _mediaRecorder   = null;
+ _audioChunks     = [];
+ _isRecording     = false;
+ _recordingMimeType = 'audio/webm';
 
     /** Switch the mic button and status bar to the given state */
     function setVoiceMicState(state /* 'idle' | 'recording' | 'transcribing' */) {
@@ -3528,11 +3529,11 @@
     // ═══════════════════════════════════════════════════════════════════════════
     //  TOTALLY VOICE ASSISTANT AGENT CONTROLLER & SELECTION PANEL
     // ═══════════════════════════════════════════════════════════════════════════
-    let voiceAgentActive = false;
-    let voiceAgentMediaRecorder = null;
-    let voiceAgentAudioChunks = [];
-    let voiceAgentSynth = window.speechSynthesis;
-    let voiceAgentUtterance = null;
+ voiceAgentActive = false;
+ voiceAgentMediaRecorder = null;
+ voiceAgentAudioChunks = [];
+ voiceAgentSynth = window.speechSynthesis;
+ voiceAgentUtterance = null;
 
     function setVoiceAgentState(state) {
         const orb = document.getElementById('voiceOrb');

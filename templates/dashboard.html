@@ -703,9 +703,14 @@
         }
     });
 
-    // Auto-refresh every 30 seconds
-    setInterval(function() {
-        window.location.reload();
+    // Auto-refresh every 30 seconds silently without resetting scroll
+    if (window.dashboardRefreshInterval) {
+        clearInterval(window.dashboardRefreshInterval);
+    }
+    window.dashboardRefreshInterval = setInterval(function() {
+        if (typeof window.tsSilentReload === 'function') {
+            window.tsSilentReload();
+        }
     }, 30000);
 
     // Tab controller
