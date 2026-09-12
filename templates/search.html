@@ -147,7 +147,8 @@
                                     const index = parseInt(p1, 10);
                                     if (resultsData && resultsData[index - 1]) {
                                         const s = resultsData[index - 1];
-                                        return `<a href="/documents/view/${encodeURIComponent(s.source)}#page=${s.page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none; padding: 2px 6px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--ts-primary); font-size: 0.8em; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.3);">📄 ${s.source} (p.${s.page})</a>`;
+                                        const cb = new Date().getTime();
+                                        return `<a href="/documents/view/${encodeURIComponent(s.source)}?cb=${cb}#page=${s.page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none; padding: 2px 6px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--ts-primary); font-size: 0.8em; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.3);">📄 ${s.source} (p.${s.page})</a>`;
                                     }
                                     return match;
                                 });

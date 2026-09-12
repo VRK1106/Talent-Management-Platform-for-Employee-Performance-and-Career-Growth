@@ -1082,7 +1082,8 @@
             }
             
             if (filename) {
-                return `<a href="/documents/view/${encodeURIComponent(filename)}#page=${page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none;" onclick="event.stopPropagation();">📄 ${escapeHtml(filename)} (p.${page})</a>`;
+                const cb = new Date().getTime();
+                return `<a href="/documents/view/${encodeURIComponent(filename)}?cb=${cb}#page=${page}" target="_blank" class="citation-marker inline-citation" style="text-decoration: none;" onclick="event.stopPropagation();">📄 ${escapeHtml(filename)} (p.${page})</a>`;
             }
             return `<span class="citation-marker" onclick="showCitation(this, ${p1})">[${p1}]</span>`;
         });
