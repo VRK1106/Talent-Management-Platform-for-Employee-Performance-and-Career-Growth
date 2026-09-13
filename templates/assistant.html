@@ -834,7 +834,7 @@
                     <span id="noEphemeralDocs" style="font-size: 0.78rem; color: var(--ts-text-muted); font-style: italic;">No PDFs uploaded yet.</span>
                 {% else %}
                     {% for doc in ephemeral_docs %}
-                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem;
+                        <span class="ephemeral-doc-badge" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem;
                                      padding: 0.2rem 0.5rem; border-radius: 5px;
                                      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25);
                                      color: var(--ts-text);">
@@ -3388,7 +3388,7 @@
                 
                 // Add new document tag to UI with delete button
                 const docSpan = document.createElement('span');
-                docSpan.className = "ts-profile-badge";
+                docSpan.className = "ephemeral-doc-badge";
                 docSpan.style.fontSize = "0.75rem";
                 docSpan.style.padding = "0.2rem 0.5rem";
                 docSpan.style.background = "rgba(99, 102, 241, 0.1)";
@@ -3447,7 +3447,7 @@
                 statusDiv.textContent = data.message;
                 
                 // Remove the specific span from list
-                const badges = document.querySelectorAll('#ephemeralDocsList .ts-profile-badge');
+                const badges = document.querySelectorAll('#ephemeralDocsList .ephemeral-doc-badge');
                 badges.forEach(b => {
                     if (b.textContent.includes(filename)) {
                         b.remove();

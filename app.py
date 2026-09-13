@@ -3294,11 +3294,8 @@ def chat_stream():
             
             # Try Ephemeral first
             if has_ephemeral:
-                from src.sprints import get_sprint, get_weekly_documents
-                sprint = get_sprint(emp_id)
-                week = sprint.get("current_week", 1)
-                weekly_files = get_weekly_documents(emp_id, week)
-                results = search_ephemeral(tab_id, query_vec, top_k=10, source_filters=weekly_files)
+                from src.vectorstore import search_ephemeral
+                results = search_ephemeral(tab_id, query_vec, top_k=10)
                 if results:
                     sources = results
                     selected_mode = "Ephemeral Doc Q&A"
