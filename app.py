@@ -2589,15 +2589,6 @@ def assistant_upload_ephemeral():
         embeddings = embed_documents([c["text"] for c in chunks])
         added_count = add_ephemeral_chunks(tab_id, chunks, embeddings, digest)
         
-        user_info = session.get('user_info', {}) or {}
-        emp_id = user_info.get('employee_id', 'demo')
-        
-        from src.sprints import get_sprint, add_weekly_document
-        sprint = get_sprint(emp_id)
-        week = sprint.get("current_week", 1)
-        day = sprint.get("current_day", 1)
-        add_weekly_document(emp_id, week, day, file.filename)
-        
         ephemeral_docs = session.get('ephemeral_docs', [])
         if file.filename not in ephemeral_docs:
             ephemeral_docs.append(file.filename)
@@ -3304,8 +3295,8 @@ def chat_stream():
                     sources = results
                     selected_mode = "Ephemeral Doc Q&A"
                     
-            # Fall back to global doc store
-            if not sources:
+            # Fall back to global doc store ONLY if no ephemeral docs are active
+            if not has_ephemeral and not sources:
                 results = search(query_vec, top_k=6, threshold=0.1)
                 if results:
                     sources = results
