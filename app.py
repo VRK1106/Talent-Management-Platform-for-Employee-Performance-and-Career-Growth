@@ -3259,6 +3259,21 @@ def chat_stream():
     from src.chatbot_context import detect_query_intent, get_feature_context
     user_role = session.get('user_role', 'trainee')
     
+    # 2. Document-Grounded Context Retrieval (only if not a DB data query)
+    sources = []
+    selected_mode = "General Assistant"
+    
+    tab_id = session.get('_tab_id')
+    has_ephemeral = False
+    if tab_id:
+        try:
+            from src.vectorstore import get_ephemeral_collection
+            coll = get_ephemeral_collection(tab_id)
+            if coll.count() > 0:
+                has_ephemeral = True
+        except Exception:
+            pass
+
     feature_context_data = None
     if not perf_target:
         feature_intent, privilege_error = detect_query_intent(query, user_role)
@@ -3269,28 +3284,17 @@ def chat_stream():
                 yield privilege_error
             return Response(stream_with_context(priv_error_generator()), mimetype='text/event-stream')
             
+        # Bypass global document database query if ephemeral documents are active
+        if has_ephemeral and feature_intent == "DOCUMENTS_QUERY":
+            feature_intent = "GENERAL_RAG"
+            
         if feature_intent != "GENERAL_RAG":
             feature_context_data = get_feature_context(feature_intent, user_role, emp_id)            
-    # 2. Document-Grounded Context Retrieval (only if not a DB data query)
-    sources = []
-    selected_mode = "General Assistant"
-    
+
     if not perf_target and not feature_context_data:  # skip vector search for DB queries
         try:
             from src.embeddings import embed_query
             query_vec = embed_query(query)
-            
-            # Check if there are active session documents
-            tab_id = session.get('_tab_id')
-            has_ephemeral = False
-            if tab_id:
-                try:
-                    from src.vectorstore import get_ephemeral_collection
-                    coll = get_ephemeral_collection(tab_id)
-                    if coll.count() > 0:
-                        has_ephemeral = True
-                except Exception:
-                    pass
             
             # Try Ephemeral first
             if has_ephemeral:

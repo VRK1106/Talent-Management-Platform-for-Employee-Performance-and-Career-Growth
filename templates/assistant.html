@@ -3403,6 +3403,12 @@
                 `;
                 listDiv.appendChild(docSpan);
                 loadInputSuggestions();
+                
+                setTimeout(() => {
+                    if (statusDiv.style.display !== 'none') {
+                        statusDiv.style.display = 'none';
+                    }
+                }, 3000);
             } else {
                 statusDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
                 statusDiv.style.border = "1px solid rgba(239, 68, 68, 0.25)";
@@ -3462,6 +3468,12 @@
                 
                 // Reload suggestions back to fallbacks
                 loadInputSuggestions();
+                
+                setTimeout(() => {
+                    if (statusDiv.style.display !== 'none') {
+                        statusDiv.style.display = 'none';
+                    }
+                }, 3000);
             } else {
                 statusDiv.textContent = `Error: ${data.message}`;
             }
