@@ -503,11 +503,11 @@
 <script>
     // Embed data for student notifications
     {% if session.get('user_role') != 'admin' %}
-    const rawAnnouncements = {{ announcements|tojson if announcements is defined else '[]' }};
-    const rawPendingExams = {{ pending_exams|tojson if pending_exams is defined else '[]' }};
+    var rawAnnouncements = {{ announcements|tojson if announcements is defined else '[]' }};
+    var rawPendingExams = {{ pending_exams|tojson if pending_exams is defined else '[]' }};
     {% else %}
-    const rawAnnouncements = [];
-    const rawPendingExams = [];
+    var rawAnnouncements = [];
+    var rawPendingExams = [];
     {% endif %}
 
     // --- Student Dashboard Notifications Engine ---
@@ -708,6 +708,10 @@
         clearInterval(window.dashboardRefreshInterval);
     }
     window.dashboardRefreshInterval = setInterval(function() {
+        if (!window.location.pathname.includes('/dashboard') && window.location.pathname !== '/') {
+            clearInterval(window.dashboardRefreshInterval);
+            return;
+        }
         if (typeof window.tsSilentReload === 'function') {
             window.tsSilentReload();
         }

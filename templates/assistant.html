@@ -1067,8 +1067,6 @@
     var activeStreamController = null;
     var isGenerating = false;
 
-    fetch('/log_error', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message: "assistant.html script executed successfully!", url: window.location.href})}).catch(e=>{});
-
     // Initialize mermaid
     if (typeof mermaid !== 'undefined') {
         mermaid.initialize({

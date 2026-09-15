@@ -703,7 +703,7 @@
 
 <script>
     // Safe Jinja2 data payload object
-    const SPRINT_DAYS_DATA = {
+    var SPRINT_DAYS_DATA = {
         1: {
             title: "Module 1 Learning",
             tasks: {{ d1_tasks|tojson }},
@@ -734,8 +734,8 @@
         }
     };
 
-    let activeModalDay = 1;
-    let activeModalDoc = '';
+    var activeModalDay = 1;
+    var activeModalDoc = '';
 
     function isValidPdfDoc(docName) {
         if (!docName || typeof docName !== 'string') return false;
@@ -1117,12 +1117,12 @@
     });
 
     // --- DAY 6 VOICE-TO-VOICE SOCRATIC MOCK INTERVIEW ---
-    let voiceTurn = 1;
-    let voiceTranscript = [];
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let isProcessing = false;
+    var voiceTurn = 1;
+    var voiceTranscript = [];
+    var mediaRecorder = null;
+    var audioChunks = [];
+    var isRecording = false;
+    var isProcessing = false;
 
     function startVoiceInterview() {
         const currDay = {{ sprint.current_day }};
