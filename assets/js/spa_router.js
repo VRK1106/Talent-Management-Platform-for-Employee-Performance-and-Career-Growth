@@ -83,6 +83,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.title = titleMatch[1].trim();
             }
 
+            // Destroy all existing Chart.js instances to prevent animation errors
+            if (typeof Chart !== 'undefined' && Chart.instances) {
+                for (let id in Chart.instances) {
+                    Chart.instances[id].destroy();
+                }
+            }
+
             // Update content area
             contentArea.innerHTML = html;
             
@@ -173,6 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
             if (titleMatch && titleMatch[1]) {
                 document.title = titleMatch[1].trim();
+            }
+
+            // Destroy all existing Chart.js instances to prevent animation errors
+            if (typeof Chart !== 'undefined' && Chart.instances) {
+                for (let id in Chart.instances) {
+                    Chart.instances[id].destroy();
+                }
             }
 
             contentArea.innerHTML = html;
